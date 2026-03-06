@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>What's Happening in SF — The Bold Italic</title>
   <meta name="description" content="The Bold Italic's guide to the greatest events in San Francisco and the Bay Area.">
+  <meta name="robots" content="noindex, nofollow">
   <link rel="preconnect" href="https://fonts.bunny.net">
   <link href="https://fonts.bunny.net/css?family=playfair-display:400,600,700,800&display=swap" rel="stylesheet">
   <style>
@@ -1129,9 +1130,14 @@
     if (event.neighborhood) {
       html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon">\ud83c\udfd8</div><div><div class="ev-post-detail-label">Neighborhood</div><div class="ev-post-detail-value">' + esc(event.neighborhood) + '</div></div></div>';
     }
-    /* Performers */
+    /* Performers — parse JSON array if stored as ["name1","name2"] */
     if (event.performers) {
-      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon">\ud83c\udfb5</div><div><div class="ev-post-detail-label">Performers</div><div class="ev-post-detail-value">' + esc(event.performers) + '</div></div></div>';
+      var performersDisplay = event.performers;
+      try {
+        var parsed = JSON.parse(event.performers);
+        if (Array.isArray(parsed)) performersDisplay = parsed.join(', ');
+      } catch(e) {}
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon">\ud83c\udfb5</div><div><div class="ev-post-detail-label">Performers</div><div class="ev-post-detail-value">' + esc(performersDisplay) + '</div></div></div>';
     }
     /* Price — only show when price data exists */
     if (event.price) {
