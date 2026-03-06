@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -289,11 +288,14 @@
       width: 70px; height: 70px;
       border-radius: 8px;
       overflow: hidden;
-      background: rgb(200,200,200);
     }
     .ev-thumb img {
       width: 100%; height: 100%;
       object-fit: cover; display: block;
+    }
+    .ev-thumb-empty {
+      flex-shrink: 0;
+      width: 70px; height: 70px;
     }
 
     .ev-info { flex: 1 1 0%; min-width: 0; }
@@ -352,6 +354,116 @@
       text-transform: uppercase;
       color: var(--color-free-detail);
       margin-bottom: 2px;
+    }
+
+    /* ---- Featured Events Section ---- */
+    .ev-featured-wrap {
+      max-width: 1050px;
+      box-sizing: border-box;
+      margin: 0 auto 12px;
+      background: #ede3d5;
+      border: 1px solid #1E1B1B;
+      border-radius: 16px;
+      padding: 36px 60px 32px;
+      position: relative;
+    }
+    .ev-featured-label {
+      position: absolute;
+      top: -14px;
+      left: 24px;
+      background: #f9e2af;
+      color: #1E1B1B;
+      font-family: var(--epcl-font-family);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border: 1px solid #1E1B1B;
+      border-radius: 20px;
+      z-index: 2;
+    }
+    .ev-featured-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px 24px;
+    }
+    .ev-fcard {
+      position: relative;
+      cursor: pointer;
+      border-radius: 10px;
+      overflow: hidden;
+      display: block;
+    }
+    .ev-fcard .ev-fimg {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1 / 1;
+      background: #111;
+    }
+    .ev-fcard .ev-fimg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0.45;
+      transition: opacity 0.4s, transform 0.6s;
+    }
+    .ev-fcard:hover .ev-fimg img {
+      opacity: 0.6;
+      transform: scale(1.03);
+    }
+    .ev-fcard .ev-foverlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 50px 24px 20px;
+      z-index: 2;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    }
+    .ev-fcard .ev-foverlay .ev-badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-family: var(--epcl-font-family);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1E1B1B;
+    }
+    .ev-fcard .ev-foverlay h2 {
+      font-family: var(--epcl-title-font-family);
+      font-size: 22px;
+      font-weight: 800;
+      color: #f5f0e8;
+      line-height: 1.3;
+      margin: 8px 0 0;
+    }
+    .ev-fcard .ev-foverlay p {
+      font-family: Georgia, serif;
+      font-size: 14px;
+      color: #ddd8d0;
+      line-height: 1.55;
+      margin: 10px 0 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    @media (max-width: 1200px) {
+      .ev-featured-grid { grid-template-columns: repeat(2, 1fr); gap: 0 30px; }
+    }
+    @media (max-width: 900px) {
+      .ev-featured-grid { grid-template-columns: 1fr; gap: 20px 0; }
+    }
+    @media (max-width: 700px) {
+      .ev-featured-wrap { padding: 36px 40px 32px !important; }
+      .ev-featured-label { left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 9px; padding: 4px 10px; }
     }
 
     /* ---- Pagination ---- */
@@ -431,7 +543,6 @@
       border-radius: 10px;
       overflow: hidden;
       aspect-ratio: 4/3;
-      background: var(--bg-placeholder);
     }
     .ev-post-image img {
       width: 100%; height: 100%;
@@ -553,9 +664,9 @@
     }
     /* ---- No-image card variant ---- */
     .ev-post-card.no-image { max-width: 460px; margin-left: auto; margin-right: auto; }
-    .ev-post-card.no-image .ev-post-hero { justify-content: stretch; }
+    .ev-post-card.no-image .ev-post-hero { flex-direction: column; justify-content: center; align-items: center; }
     .ev-post-card.no-image .ev-post-image { display: none; }
-    .ev-post-card.no-image .ev-post-details { flex: 1; }
+    .ev-post-card.no-image .ev-post-details { flex: 1; width: 100%; }
     .ev-post-body {
       max-width: 680px;
       margin: 0 auto;
@@ -602,14 +713,57 @@
 
     /* ---- Broken Image Placeholder ---- */
     .ev-thumb-placeholder, .ev-post-image-placeholder {
+      display: none;
+    }
+
+    /* ---- Event Detail Page Header ---- */
+    .ev-post-header {
+      text-align: center;
+      max-width: 780px;
+      margin: 30px auto 24px;
+      padding: 0 20px;
+    }
+    .ev-post-header-line {
       display: flex;
       align-items: center;
-      justify-content: center;
-      background: var(--bg-placeholder);
-      color: var(--text-label);
-      font-size: 24px;
-      width: 100%;
-      height: 100%;
+      gap: 0;
+      margin-bottom: 10px;
+    }
+    .ev-post-header-line::before, .ev-post-header-line::after {
+      content: '';
+      flex: 1;
+      height: 0;
+      border-top: 0.5px solid #333;
+    }
+    .ev-post-header-pill {
+      font-family: var(--epcl-font-family);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6b5e50;
+      background: var(--bg-primary);
+      border: 0.5px solid #333;
+      padding: 5px 20px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .ev-post-header-date {
+      font-family: var(--epcl-font-family);
+      font-size: 13px;
+      color: #999;
+      text-align: center;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .ev-post-header-title {
+      font-family: var(--epcl-title-font-family);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+      max-width: 700px;
+      margin: 0 auto 8px;
     }
 
     /* ============================================
@@ -736,6 +890,64 @@
     }
 
     // ============================================
+    // GHOST CONTENT API (for Featured section)
+    // ============================================
+    const GHOST_URL = 'https://the-bold-italic.ghost.io';
+    const GHOST_CONTENT_KEY = '53dbcc02d5748f0a74e48cd3cc';
+
+    async function fetchFeaturedFromGhost() {
+      try {
+        const url = `${GHOST_URL}/ghost/api/content/posts/?key=${GHOST_CONTENT_KEY}`
+          + `&filter=tag:hash-featuredevent`
+          + `&limit=6&include=tags&formats=html`
+          + `&fields=id,slug,title,url,feature_image,custom_excerpt,html`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (!data.posts || data.posts.length === 0) return [];
+        return data.posts.map(post => {
+          let category = 'Events';
+          (post.tags || []).forEach(t => {
+            if (t.name.startsWith('#') && t.name !== '#featuredevent' && t.name !== '#eventscal' && t.name !== '#events' && t.name !== '#hidden') {
+              category = t.name.slice(1);
+            }
+          });
+          return {
+            title: post.title,
+            url: post.url,
+            image: post.feature_image || '',
+            category: category,
+            catColor: getCategoryColor(category),
+            excerpt: post.custom_excerpt || ''
+          };
+        });
+      } catch (err) {
+        console.warn('Failed to fetch featured posts from Ghost:', err);
+        return [];
+      }
+    }
+
+    function renderFeaturedSection(featured) {
+      if (!featured || featured.length === 0) return '';
+      const cards = featured.slice(0, 3);
+      let html = `<div class="ev-featured-wrap">
+        <span class="ev-featured-label">Featured Bay Area Events, Reviews &amp; Guides</span>
+        <div class="ev-featured-grid">`;
+      cards.forEach(item => {
+        html += `<a href="${esc(item.url)}" class="ev-fcard" target="_blank" rel="noopener">
+          <div class="ev-fimg"><img src="${esc(item.image)}" alt="${esc(item.title)}" onerror="this.style.opacity='0'"></div>
+          <div class="ev-foverlay">`;
+        if (item.category && item.category !== 'Events') {
+          html += `<span class="ev-badge" style="background:${item.catColor}">${esc(item.category)}</span>`;
+        }
+        html += `<h2>${esc(item.title)}</h2>`;
+        if (item.excerpt) html += `<p>${esc(item.excerpt)}</p>`;
+        html += `</div></a>`;
+      });
+      html += `</div></div>`;
+      return html;
+    }
+
+    // ============================================
     // DATE HELPERS
     // ============================================
     const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -788,8 +1000,8 @@
     }
 
     function imgWithFallback(url, cls, alt) {
-      if (!url) return `<div class="${cls}-placeholder">📅</div>`;
-      return `<img src="${esc(url)}" alt="${esc(alt || '')}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'${cls}-placeholder\\'>📅</div>'">`;
+      if (!url) return '';
+      return `<img src="${esc(url)}" alt="${esc(alt || '')}" loading="lazy" onerror="this.style.display='none'">`;
     }
 
     function priceHTML(price, soldOut) {
@@ -842,11 +1054,15 @@
       document.title = "What's Happening in SF — The Bold Italic";
 
       try {
-        const [categoryCounts] = await Promise.all([fetchCategories()]);
+        // Fetch featured posts from Ghost and category counts from Supabase in parallel
+        const [categoryCounts, featured] = await Promise.all([
+          fetchCategories(),
+          fetchFeaturedFromGhost()
+        ]);
         const totalAll = Object.values(categoryCounts).reduce((a,b) => a+b, 0);
 
         const container = document.getElementById('tbi-events');
-        container.innerHTML = buildControls(categoryCounts, totalAll) + `<div id="ev-results"><div class="ev-loading">Loading events...</div></div>`;
+        container.innerHTML = renderFeaturedSection(featured) + buildControls(categoryCounts, totalAll) + `<div id="ev-results"><div class="ev-loading">Loading events...</div></div>`;
 
         attachControlListeners();
         await loadEvents();
@@ -1037,10 +1253,10 @@
           const sponsoredClass = event.sponsored ? ' sponsored' : '';
 
           html += `<a class="ev-row${altClass}${featuredClass}${sponsoredClass}" href="/${esc(event.slug)}/">
-            <div class="ev-thumb">${imgWithFallback(event.image_url, 'ev-thumb', event.title)}</div>
+            ${event.image_url ? `<div class="ev-thumb"><img src="${esc(event.image_url)}" alt="${esc(event.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '<div class="ev-thumb-empty"></div>'}
             <div class="ev-info">
               ${event.sponsored ? '<div class="ev-sponsored-label">SPONSORED</div>' : ''}
-              ${event.category ? `<span class="ev-catpill" style="background:${getCategoryColor(event.category)}">${esc(event.category).toUpperCase()}</span>` : ''}
+              ${event.category && event.category.toLowerCase() !== 'events' ? `<span class="ev-catpill" style="background:${getCategoryColor(event.category)}">${esc(event.category).toUpperCase()}</span>` : ''}
               <h3>${esc(event.title)}</h3>
               <div class="ev-meta">${esc(formatEventMeta(event))}</div>
             </div>
@@ -1080,6 +1296,7 @@
       loadEvents();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    window.goPage = goPage;
 
     // ============================================
     // EVENT DETAIL PAGE
@@ -1135,15 +1352,30 @@
 
         const noImageClass = event.image_url ? '' : ' no-image';
 
+        // Build header pill text — include address when available (matches live Ghost injection)
+        let headerPillText = 'EVENT IN SAN FRANCISCO';
+        if (event.address) {
+          headerPillText = `EVENT IN ${event.address.toUpperCase()}`;
+        } else if (event.neighborhood) {
+          headerPillText = `EVENT IN ${event.neighborhood.toUpperCase()}, SAN FRANCISCO`;
+        }
+
         app.innerHTML = `
         <div class="ev-post">
+          <div class="ev-post-header">
+            <div class="ev-post-header-line">
+              <span class="ev-post-header-pill">${esc(headerPillText)}</span>
+            </div>
+            <div class="ev-post-header-date">${esc(detailDate)}</div>
+            <h1 class="ev-post-header-title">${esc(event.title)}</h1>
+          </div>
           <div class="ev-post-card${noImageClass}">
             <div class="ev-post-topbar">
-              ${event.category ? `<span class="ev-post-cat" style="background:${catColor}">${esc(event.category)}</span>` : ''}
+              ${event.category && event.category.toLowerCase() !== 'events' ? `<span class="ev-post-cat" style="background:${catColor}">${esc(event.category)}</span>` : ''}
               <a href="/">← All Events</a>
             </div>
             <div class="ev-post-hero">
-              <div class="ev-post-image">${imgWithFallback(event.image_url, 'ev-post-image', event.title)}</div>
+              ${event.image_url ? `<div class="ev-post-image"><img src="${esc(event.image_url)}" alt="${esc(event.title)}" onerror="this.parentElement.style.display='none'"></div>` : ''}
               <div class="ev-post-details">
                 <div class="ev-post-detail-row">
                   <div class="ev-post-detail-icon">📅</div>
@@ -1173,6 +1405,13 @@
                     <div class="ev-post-detail-value">${esc(event.address)}</div>
                   </div>
                 </div>` : ''}
+                ${event.neighborhood ? `<div class="ev-post-detail-row">
+                  <div class="ev-post-detail-icon">🏘</div>
+                  <div class="ev-post-detail-text">
+                    <div class="ev-post-detail-label">Neighborhood</div>
+                    <div class="ev-post-detail-value">${esc(event.neighborhood)}</div>
+                  </div>
+                </div>` : ''}
                 <div class="ev-post-detail-row">
                   <div class="ev-post-detail-icon">🎫</div>
                   <div class="ev-post-detail-text">
@@ -1185,17 +1424,19 @@
               </div>
             </div>
 
-            ${event.description ? `
-            <div class="ev-desc-header"><span class="ev-desc-pill">EVENT DESCRIPTION</span></div>
-            <div class="ev-post-body">
-              ${event.description.split('\n').filter(p => p.trim()).map(p => `<p>${esc(p)}</p>`).join('')}
-            </div>` : ''}
-
-            ${event.source_name || event.source_url ? `
-            <div class="ev-post-source">
-              <p>See this event also on ${event.source_url ? `<a href="${esc(event.source_url)}" target="_blank" rel="noopener">${esc(event.source_name || 'the original source')}</a>` : esc(event.source_name)}. Details may change — check the venue for latest info.</p>
-            </div>` : ''}
           </div>
+
+          ${event.description ? `
+          <div class="ev-desc-header"><span class="ev-desc-pill">EVENT DESCRIPTION</span></div>
+          <div class="ev-post-body">
+            ${event.description.split('\n').filter(p => p.trim()).map(p => `<p>${esc(p)}</p>`).join('')}
+          </div>` : ''}
+
+          ${event.source_name || event.source_url ? `
+          <div class="ev-post-source">
+            See this event also on ${event.source_url ? `<a href="${esc(event.source_url)}" target="_blank" rel="noopener">${esc(event.source_name || 'the original source')}</a>` : esc(event.source_name)}.
+            Details may change — check the venue for latest info.
+          </div>` : ''}
 
           <div class="ev-post-back">
             <a href="/">Browse All SF Events</a>
