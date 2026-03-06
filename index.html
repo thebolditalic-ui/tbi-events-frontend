@@ -583,6 +583,7 @@
     if (lower === 'free' || lower === '$0' || lower === '$0.00') {
       return '<div class="ev-price free">Free</div>';
     }
+    if (lower === 'varies') return '<div class="ev-price"></div>';
     return '<div class="ev-price">' + esc(price) + '</div>';
   }
   async function fetchFeaturedFromGhost() {
