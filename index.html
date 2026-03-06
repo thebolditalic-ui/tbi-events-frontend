@@ -195,7 +195,7 @@
       align-items: center;
       justify-content: space-between;
       max-width: 1050px;
-      margin: 10px auto;
+      margin: 16px auto 10px;
       gap: 12px;
       flex-wrap: wrap;
     }
@@ -435,7 +435,7 @@
     .ev-featured-wrap {
       max-width: 1050px;
       box-sizing: border-box;
-      margin: 0 auto 12px;
+      margin: 0 auto 28px;
       background: #ede3d5;
       border: 1px solid #1E1B1B;
       border-radius: 16px;
@@ -1188,25 +1188,8 @@
     function buildControls(categoryCounts, totalAll) {
       const now = new Date();
 
-      // Section head: location tabs + month pills + line
-      let html = `<div class="ev-section-head">
-        <h2 class="ev-loc-tab${state.city !== 'all' ? ' ev-loc-inactive' : ''}" data-loc="all">All Events</h2>
-        <h2 class="ev-loc-tab${state.city !== 'sf' ? ' ev-loc-inactive' : ''}" data-loc="sf">SF Events</h2>
-        <h2 class="ev-loc-tab${state.city !== 'oakland' ? ' ev-loc-inactive' : ''}" data-loc="oakland">Oakland Events</h2>`;
-
-      // Month pills — current month + next 2
-      for (let i = 0; i < 3; i++) {
-        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-        html += `<button class="ev-month-pill${state.filterMonth === val ? ' active' : ''}" data-month="${val}">${esc(label)}</button>`;
-      }
-
-      html += `<div class="ev-line"></div>
-      </div>`;
-
-      // Controls row: category filters + search
-      html += `<div class="ev-controls-row">
+      // Controls row: category filters + search (ABOVE location tabs, matching live site)
+      let html = `<div class="ev-controls-row">
         <div class="ev-filter-row">
           <span class="ev-filter-label">Events by Category</span>
           <button data-cat="all" class="${state.category==='all'?'active':''}" style="background:${CATEGORY_COLORS['Events']}">All ${totalAll}</button>`;
@@ -1231,6 +1214,23 @@
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           </button>
         </div>
+      </div>`;
+
+      // Section head: location tabs + month pills + line (BELOW category pills, matching live site)
+      html += `<div class="ev-section-head">
+        <h2 class="ev-loc-tab${state.city !== 'all' ? ' ev-loc-inactive' : ''}" data-loc="all">All Events</h2>
+        <h2 class="ev-loc-tab${state.city !== 'sf' ? ' ev-loc-inactive' : ''}" data-loc="sf">SF Events</h2>
+        <h2 class="ev-loc-tab${state.city !== 'oakland' ? ' ev-loc-inactive' : ''}" data-loc="oakland">Oakland Events</h2>`;
+
+      // Month pills — current month + next 2
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        html += `<button class="ev-month-pill${state.filterMonth === val ? ' active' : ''}" data-month="${val}">${esc(label)}</button>`;
+      }
+
+      html += `<div class="ev-line"></div>
       </div>`;
 
       // Date picker (filters events, not jump-to-anchor)
