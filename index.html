@@ -190,22 +190,23 @@
     }
 
     /* ---- Filter Row ---- */
-    .ev-controls-row {
-      display: flex;
-      align-items: flex-start;
-      max-width: 1050px;
-      margin: 16px auto 10px;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
     .ev-filter-row {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
+      flex-wrap: nowrap;
+      justify-content: center;
+      max-width: 1050px;
+      margin: 16px auto 10px;
+      box-sizing: border-box;
+    }
+    .ev-cattab-wrap {
+      display: flex;
+      flex: 1 1 0%;
       flex-wrap: wrap;
-      flex: 1;
-      min-width: 0;
+      justify-content: center;
+      gap: 10px;
     }
     .ev-filter-label {
       font-family: var(--epcl-font-family);
@@ -245,12 +246,10 @@
 
     /* ---- Search ---- */
     .ev-search {
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      display: block;
+      position: relative;
+      flex: 0 0 auto;
       max-width: 300px;
-      margin-left: auto;
-      flex-shrink: 0;
     }
     .ev-search input {
       flex: 1;
@@ -863,10 +862,10 @@
       .ev-thumb { width: 60px; height: 60px; }
       .ev-info h3 { font-size: 14px; }
       .ev-meta { font-size: 12px; }
-      .ev-controls-row { flex-direction: column; align-items: stretch; }
-      .ev-filter-label { margin-bottom: 4px; }
-      .ev-filter-row { justify-content: flex-start; }
-      .ev-search { max-width: 100%; margin-left: 0; margin-top: 8px; }
+      .ev-filter-row { flex-wrap: wrap; }
+      .ev-filter-label { margin-bottom: 4px; flex: 0 0 100%; }
+      .ev-cattab-wrap { justify-content: flex-start; }
+      .ev-search { max-width: 100%; flex: 0 0 100%; margin-top: 8px; }
       .ev-section-head { flex-wrap: wrap; gap: 8px 12px; }
       .ev-section-head .ev-loc-tab { font-size: 18px; }
       .ev-section-head .ev-month-pill { font-size: 13px; padding: 5px 12px; }
@@ -1202,9 +1201,9 @@
       const now = new Date();
 
       // Controls row: category filters + search (ABOVE location tabs, matching live site)
-      let html = `<div class="ev-controls-row">
-        <div class="ev-filter-row">
+      let html = `<div class="ev-filter-row">
           <span class="ev-filter-label">Events by Category</span>
+          <div class="ev-cattab-wrap">
           <button data-cat="all" class="${state.category==='all'?'active':''}" style="background:${CATEGORY_COLORS['Events']}">All ${totalAll}</button>`;
 
       const catOrder = ['Art & Culture', 'Comedy', 'Festivals', 'Food & Drink', 'Music'];
