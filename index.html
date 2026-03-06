@@ -817,7 +817,7 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       color: #6b5e50;
-      background: var(--bg-primary);
+      background: #ffffff;
       border: 0.5px solid #333;
       padding: 5px 20px;
       border-radius: 20px;
@@ -916,6 +916,19 @@
     function getCategoryColor(cat) {
       if (!cat) return CATEGORY_COLORS['default'];
       return CATEGORY_COLORS[cat] || CATEGORY_COLORS['default'];
+    }
+
+    // Known source name → URL mapping (scraper stores name but not URL)
+    const SOURCE_URLS = {
+      'SF Funcheap': 'https://sf.funcheap.com',
+      'Eventbrite': 'https://www.eventbrite.com',
+      'SF Station': 'https://www.sfstation.com',
+    };
+
+    function getSourceUrl(event) {
+      if (event.source_url) return event.source_url;
+      if (event.source_name && SOURCE_URLS[event.source_name]) return SOURCE_URLS[event.source_name];
+      return '';
     }
 
     // ============================================
@@ -1395,7 +1408,7 @@
           const sponsoredClass = event.sponsored ? ' sponsored' : '';
 
           html += `<a class="ev-row${altClass}${featuredClass}${sponsoredClass}" href="/${esc(event.slug)}/">
-            ${event.image_url ? `<div class="ev-thumb"><img src="${esc(event.image_url)}" alt="${esc(event.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '<div class="ev-thumb-empty"></div>'}
+            ${event.image_url && !event.image_url.startsWith('data:') ? `<div class="ev-thumb"><img src="${esc(event.image_url)}" alt="${esc(event.title || '')}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>` : '<div class="ev-thumb-empty"></div>'}
             <div class="ev-info">
               ${event.sponsored ? '<div class="ev-sponsored-label">SPONSORED</div>' : ''}
               ${event.category && event.category.toLowerCase() !== 'events' ? `<span class="ev-catpill" style="background:${getCategoryColor(event.category)}">${esc(event.category).toUpperCase()}</span>` : ''}
@@ -1492,14 +1505,15 @@
           </div>`;
         }
 
-        const noImageClass = event.image_url ? '' : ' no-image';
+        const hasRealImage = event.image_url && !event.image_url.startsWith('data:');
+        const noImageClass = hasRealImage ? '' : ' no-image';
 
-        // Build header pill text — include address when available (matches live Ghost injection)
+        // Build header pill text — show city name (matching live site)
         let headerPillText = 'EVENT IN SAN FRANCISCO';
-        if (event.address) {
-          headerPillText = `EVENT IN ${event.address.toUpperCase()}`;
-        } else if (event.neighborhood) {
-          headerPillText = `EVENT IN ${event.neighborhood.toUpperCase()}, SAN FRANCISCO`;
+        if (event.city && event.city.toLowerCase() === 'oakland') {
+          headerPillText = 'EVENT IN OAKLAND';
+        } else if (event.city && event.city.toLowerCase() !== 'sf' && event.city.toLowerCase() !== 'san francisco') {
+          headerPillText = `EVENT IN ${event.city.toUpperCase()}`;
         }
 
         app.innerHTML = `
@@ -1517,7 +1531,7 @@
               <a href="/">← All Events</a>
             </div>
             <div class="ev-post-hero">
-              ${event.image_url ? `<div class="ev-post-image"><img src="${esc(event.image_url)}" alt="${esc(event.title)}" onerror="this.parentElement.style.display='none'"></div>` : ''}
+              ${hasRealImage ? `<div class="ev-post-image"><img src="${esc(event.image_url)}" alt="${esc(event.title)}" onerror="this.parentElement.style.display='none'"></div>` : ''}
               <div class="ev-post-details">
                 <div class="ev-post-detail-row">
                   <div class="ev-post-detail-icon">📅</div>
@@ -1576,7 +1590,7 @@
 
           ${event.source_name || event.source_url ? `
           <div class="ev-post-source">
-            See this event also on ${event.source_url ? `<a href="${esc(event.source_url)}" target="_blank" rel="noopener">${esc(event.source_name || 'the original source')}</a>` : esc(event.source_name)}.
+            See this event also on ${getSourceUrl(event) ? `<a href="${esc(getSourceUrl(event))}" target="_blank" rel="noopener">${esc(event.source_name || 'the original source')}</a>` : esc(event.source_name)}.
             Details may change — check the venue for latest info.
           </div>` : ''}
 
