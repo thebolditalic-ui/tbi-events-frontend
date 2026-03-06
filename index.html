@@ -192,19 +192,18 @@
     /* ---- Filter Row ---- */
     .ev-controls-row {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       max-width: 1050px;
       margin: 16px auto 10px;
       gap: 12px;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
     }
     .ev-filter-row {
       display: flex;
       align-items: center;
       gap: 12px;
       padding: 10px 0;
-      flex-wrap: nowrap;
-      overflow-x: auto;
+      flex-wrap: wrap;
       flex: 1;
       min-width: 0;
     }
@@ -844,7 +843,6 @@
        RESPONSIVE
        ============================================ */
     @media (max-width: 1024px) {
-      .ev-controls-row { flex-wrap: wrap; }
       .ev-filter-row { flex-wrap: wrap; }
       .ev-row { gap: 12px; }
       .ev-post-hero { flex-direction: column; }
@@ -865,8 +863,10 @@
       .ev-thumb { width: 60px; height: 60px; }
       .ev-info h3 { font-size: 14px; }
       .ev-meta { font-size: 12px; }
-      .ev-search { max-width: 100%; margin-left: 0; margin-top: 12px; }
       .ev-controls-row { flex-direction: column; align-items: stretch; }
+      .ev-filter-label { margin-bottom: 4px; }
+      .ev-filter-row { justify-content: flex-start; }
+      .ev-search { max-width: 100%; margin-left: 0; margin-top: 8px; }
       .ev-section-head { flex-wrap: wrap; gap: 8px 12px; }
       .ev-section-head .ev-loc-tab { font-size: 18px; }
       .ev-section-head .ev-month-pill { font-size: 13px; padding: 5px 12px; }
