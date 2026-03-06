@@ -121,30 +121,73 @@
       padding: 0 20px;
     }
 
-    /* ---- Location Tabs ---- */
-    .ev-location-tabs {
+    /* ---- Section Head (location tabs + month pills) ---- */
+    .ev-section-head {
       display: flex;
-      justify-content: center;
-      gap: 24px;
-      margin: 20px auto 10px;
+      align-items: center;
+      gap: 12px;
+      margin: 10px auto 20px;
       max-width: 1050px;
+      box-sizing: border-box;
     }
-    .ev-location-tabs a {
+    .ev-section-head h2 {
       font-family: var(--epcl-title-font-family);
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text-label);
-      padding: 6px 2px;
-      border-bottom: 2px solid transparent;
-      transition: 200ms;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--epcl-titles-color, #1E1B1B);
+      margin: 0;
+      white-space: nowrap;
+    }
+    .ev-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,0.07);
+    }
+    /* ---- Location tabs ---- */
+    .ev-loc-tab {
+      font-family: var(--epcl-title-font-family);
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--epcl-titles-color, #1E1B1B);
+      margin: 0;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color 0.2s, opacity 0.2s;
+    }
+    .ev-loc-inactive {
+      font-weight: 400;
+      font-size: 18px;
+      opacity: 0.45;
+      color: #6b6360;
       cursor: pointer;
     }
-    .ev-location-tabs a.active {
-      color: var(--text-primary);
-      font-weight: 700;
-      border-bottom-color: var(--text-primary);
+    .ev-loc-inactive:hover {
+      opacity: 0.7;
     }
-    .ev-location-tabs a:hover { color: var(--text-primary); }
+    /* ---- Month filter pills ---- */
+    .ev-month-pill {
+      padding: 6px 16px;
+      border-radius: 100px;
+      border: none;
+      background: #ede3d5;
+      font-family: var(--epcl-title-font-family);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #1E1B1B;
+      transition: all 300ms ease;
+      opacity: 0.7;
+    }
+    .ev-month-pill:hover {
+      opacity: 1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      transform: translateY(-1px);
+    }
+    .ev-month-pill.active {
+      opacity: 1;
+      font-weight: 700;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
 
     /* ---- Filter Row ---- */
     .ev-controls-row {
@@ -824,8 +867,12 @@
       .ev-meta { font-size: 12px; }
       .ev-search { max-width: 100%; margin-left: 0; margin-top: 12px; }
       .ev-controls-row { flex-direction: column; align-items: stretch; }
-      .ev-location-tabs { gap: 16px; }
-      .ev-location-tabs a { font-size: 14px; }
+      .ev-section-head { flex-wrap: wrap; gap: 8px 12px; }
+      .ev-section-head .ev-loc-tab { font-size: 18px; }
+      .ev-section-head .ev-month-pill { font-size: 13px; padding: 5px 12px; }
+      .ev-line { display: none; }
+      .ev-section-head .ev-month-pill:first-of-type { margin-left: 0; }
+      .ev-section-head .ev-loc-tab:last-of-type { margin-right: auto; }
     }
     @media (max-width: 480px) {
       #tbi-events { padding: 0 12px; }
@@ -885,19 +932,53 @@
       return resp.json();
     }
 
-    async function fetchEvents({ category, city, search, limit = EVENTS_PER_PAGE, offset = 0 } = {}) {
+    async function fetchEvents({ category, city, search, filterMonth, filterDay, limit = EVENTS_PER_PAGE, offset = 0 } = {}) {
       const now = new Date().toISOString();
       let query = `events?select=*&order=event_date.asc,title.asc&limit=${limit}&offset=${offset}`;
-      query += `&event_date=gte.${now}`;
+      if (filterMonth) {
+        // Filter to specific month (and optionally day)
+        const [y, m] = filterMonth.split('-');
+        if (filterDay) {
+          const dayStr = String(filterDay).padStart(2, '0');
+          const startDate = `${y}-${m}-${dayStr}T00:00:00`;
+          const nextDay = new Date(parseInt(y), parseInt(m) - 1, parseInt(filterDay) + 1);
+          const endDate = `${nextDay.getFullYear()}-${String(nextDay.getMonth()+1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}T00:00:00`;
+          query += `&event_date=gte.${startDate}&event_date=lt.${endDate}`;
+        } else {
+          const startDate = `${y}-${m}-01T00:00:00`;
+          const nextMonth = new Date(parseInt(y), parseInt(m), 1);
+          const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth()+1).padStart(2,'0')}-01T00:00:00`;
+          query += `&event_date=gte.${startDate}&event_date=lt.${endDate}`;
+        }
+      } else {
+        query += `&event_date=gte.${now}`;
+      }
       if (category && category !== 'all') query += `&category=eq.${encodeURIComponent(category)}`;
       if (city && city !== 'all') query += `&city=eq.${city}`;
       if (search) query += `&title=ilike.*${encodeURIComponent(search)}*`;
       return supabaseFetch(query);
     }
 
-    async function fetchEventCount({ category, city, search } = {}) {
+    async function fetchEventCount({ category, city, search, filterMonth, filterDay } = {}) {
       const now = new Date().toISOString();
-      let query = `events?select=id&event_date=gte.${now}`;
+      let query = `events?select=id`;
+      if (filterMonth) {
+        const [y, m] = filterMonth.split('-');
+        if (filterDay) {
+          const dayStr = String(filterDay).padStart(2, '0');
+          const startDate = `${y}-${m}-${dayStr}T00:00:00`;
+          const nextDay = new Date(parseInt(y), parseInt(m) - 1, parseInt(filterDay) + 1);
+          const endDate = `${nextDay.getFullYear()}-${String(nextDay.getMonth()+1).padStart(2,'0')}-${String(nextDay.getDate()).padStart(2,'0')}T00:00:00`;
+          query += `&event_date=gte.${startDate}&event_date=lt.${endDate}`;
+        } else {
+          const startDate = `${y}-${m}-01T00:00:00`;
+          const nextMonth = new Date(parseInt(y), parseInt(m), 1);
+          const endDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth()+1).padStart(2,'0')}-01T00:00:00`;
+          query += `&event_date=gte.${startDate}&event_date=lt.${endDate}`;
+        }
+      } else {
+        query += `&event_date=gte.${now}`;
+      }
       if (category && category !== 'all') query += `&category=eq.${encodeURIComponent(category)}`;
       if (city && city !== 'all') query += `&city=eq.${city}`;
       if (search) query += `&title=ilike.*${encodeURIComponent(search)}*`;
@@ -1061,12 +1142,12 @@
     // ============================================
     let state = {
       category: 'all',
-      city: 'all',
+      city: 'sf',
       search: '',
       page: 1,
       total: 0,
-      jumpMonth: '',
-      jumpDay: '',
+      filterMonth: '',
+      filterDay: '',
     };
 
     // ============================================
@@ -1105,14 +1186,26 @@
     }
 
     function buildControls(categoryCounts, totalAll) {
-      // Location tabs
-      let html = `<div class="ev-location-tabs">
-        <a data-city="all" class="${state.city==='all'?'active':''}">All Events</a>
-        <a data-city="sf" class="${state.city==='sf'?'active':''}">SF Events</a>
-        <a data-city="oakland" class="${state.city==='oakland'?'active':''}">Oakland Events</a>
+      const now = new Date();
+
+      // Section head: location tabs + month pills + line
+      let html = `<div class="ev-section-head">
+        <h2 class="ev-loc-tab${state.city !== 'all' ? ' ev-loc-inactive' : ''}" data-loc="all">All Events</h2>
+        <h2 class="ev-loc-tab${state.city !== 'sf' ? ' ev-loc-inactive' : ''}" data-loc="sf">SF Events</h2>
+        <h2 class="ev-loc-tab${state.city !== 'oakland' ? ' ev-loc-inactive' : ''}" data-loc="oakland">Oakland Events</h2>`;
+
+      // Month pills — current month + next 2
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        html += `<button class="ev-month-pill${state.filterMonth === val ? ' active' : ''}" data-month="${val}">${esc(label)}</button>`;
+      }
+
+      html += `<div class="ev-line"></div>
       </div>`;
 
-      // Controls row: filters + search
+      // Controls row: category filters + search
       html += `<div class="ev-controls-row">
         <div class="ev-filter-row">
           <span class="ev-filter-label">Events by Category</span>
@@ -1125,7 +1218,6 @@
           html += `<button data-cat="${esc(cat)}" class="${state.category===cat?'active':''}" style="background:${getCategoryColor(cat)}">${esc(cat)} ${count}</button>`;
         }
       });
-      // Any extra categories not in the standard list
       Object.keys(categoryCounts).forEach(cat => {
         if (!catOrder.includes(cat) && cat !== 'Events') {
           html += `<button data-cat="${esc(cat)}" class="${state.category===cat?'active':''}" style="background:${getCategoryColor(cat)}">${esc(cat)} ${categoryCounts[cat]}</button>`;
@@ -1141,20 +1233,19 @@
         </div>
       </div>`;
 
-      // Date picker
-      const now = new Date();
+      // Date picker (filters events, not jump-to-anchor)
       html += `<div class="ev-date-picker">
         <span class="ev-datepicker-label">Jump to date:</span>
         <select class="ev-month-picker" id="ev-month-picker"><option value="">Month</option>`;
       for (let i = 0; i < 6; i++) {
         const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
         const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        html += `<option value="${val}" ${state.jumpMonth===val?'selected':''}>${MONTHS[d.getMonth()]} ${d.getFullYear()}</option>`;
+        html += `<option value="${val}" ${state.filterMonth===val?'selected':''}>${MONTHS[d.getMonth()]} ${d.getFullYear()}</option>`;
       }
       html += `</select>
         <select class="ev-day-picker" id="ev-day-picker"><option value="">Day</option>`;
       for (let i = 1; i <= 31; i++) {
-        html += `<option value="${i}" ${state.jumpDay==String(i)?'selected':''}>${i}</option>`;
+        html += `<option value="${i}" ${state.filterDay==String(i)?'selected':''}>${i}</option>`;
       }
       html += `</select>
         <button class="ev-clear-filter" id="ev-clear-date">Clear</button>
@@ -1174,13 +1265,36 @@
         });
       });
 
-      // Location tabs
-      document.querySelectorAll('.ev-location-tabs a').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-          e.preventDefault();
-          state.city = tab.dataset.city;
+      // Location tabs (h2 elements with ev-loc-tab class)
+      document.querySelectorAll('.ev-loc-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.ev-loc-tab').forEach(t => t.classList.add('ev-loc-inactive'));
+          tab.classList.remove('ev-loc-inactive');
+          state.city = tab.dataset.loc;
           state.page = 1;
-          updateActiveStates();
+          loadEvents();
+        });
+      });
+
+      // Month pills
+      document.querySelectorAll('.ev-month-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          const clickedMonth = pill.dataset.month;
+          if (state.filterMonth === clickedMonth) {
+            // Deselect — show all months again
+            pill.classList.remove('active');
+            state.filterMonth = '';
+            state.filterDay = '';
+          } else {
+            document.querySelectorAll('.ev-month-pill').forEach(p => p.classList.remove('active'));
+            pill.classList.add('active');
+            state.filterMonth = clickedMonth;
+            state.filterDay = '';
+          }
+          // Sync the date picker dropdown
+          document.getElementById('ev-month-picker').value = state.filterMonth;
+          document.getElementById('ev-day-picker').value = '';
+          state.page = 1;
           loadEvents();
         });
       });
@@ -1201,20 +1315,33 @@
         loadEvents();
       });
 
-      // Date picker
+      // Date picker — FILTERS events (not jump-to-anchor)
       document.getElementById('ev-month-picker').addEventListener('change', (e) => {
-        state.jumpMonth = e.target.value;
-        scrollToDate();
+        state.filterMonth = e.target.value;
+        state.filterDay = '';
+        document.getElementById('ev-day-picker').value = '';
+        // Sync month pills
+        document.querySelectorAll('.ev-month-pill').forEach(p => p.classList.remove('active'));
+        if (state.filterMonth) {
+          const matchPill = document.querySelector(`.ev-month-pill[data-month="${state.filterMonth}"]`);
+          if (matchPill) matchPill.classList.add('active');
+        }
+        state.page = 1;
+        loadEvents();
       });
       document.getElementById('ev-day-picker').addEventListener('change', (e) => {
-        state.jumpDay = e.target.value;
-        scrollToDate();
+        state.filterDay = e.target.value;
+        state.page = 1;
+        loadEvents();
       });
       document.getElementById('ev-clear-date').addEventListener('click', () => {
-        state.jumpMonth = '';
-        state.jumpDay = '';
+        state.filterMonth = '';
+        state.filterDay = '';
         document.getElementById('ev-month-picker').value = '';
         document.getElementById('ev-day-picker').value = '';
+        document.querySelectorAll('.ev-month-pill').forEach(p => p.classList.remove('active'));
+        state.page = 1;
+        loadEvents();
       });
     }
 
@@ -1222,23 +1349,6 @@
       document.querySelectorAll('.ev-filter-row button').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.cat === state.category);
       });
-      document.querySelectorAll('.ev-location-tabs a').forEach(tab => {
-        tab.classList.toggle('active', tab.dataset.city === state.city);
-      });
-    }
-
-    function scrollToDate() {
-      if (!state.jumpMonth) return;
-      const [y, m] = state.jumpMonth.split('-');
-      const day = state.jumpDay || '1';
-      const target = `${y}-${m.padStart(2,'0')}-${day.padStart(2,'0')}`;
-      const headers = document.querySelectorAll('.ev-date-header');
-      for (const h of headers) {
-        if (h.dataset.date >= target) {
-          h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          return;
-        }
-      }
     }
 
     async function loadEvents() {
@@ -1248,8 +1358,8 @@
       try {
         const offset = (state.page - 1) * EVENTS_PER_PAGE;
         const [events, total] = await Promise.all([
-          fetchEvents({ category: state.category, city: state.city, search: state.search, limit: EVENTS_PER_PAGE, offset }),
-          fetchEventCount({ category: state.category, city: state.city, search: state.search })
+          fetchEvents({ category: state.category, city: state.city, search: state.search, filterMonth: state.filterMonth, filterDay: state.filterDay, limit: EVENTS_PER_PAGE, offset }),
+          fetchEventCount({ category: state.category, city: state.city, search: state.search, filterMonth: state.filterMonth, filterDay: state.filterDay })
         ]);
         state.total = total;
 
