@@ -76,10 +76,30 @@
       margin-bottom: 8px;
     }
     .tbi-header .diamond { margin: 0 6px; opacity: 0.5; }
+    .tbi-header .ev-star { display: inline-block; }
+    .tbi-header .ev-star-lg {
+      font-size: 18px;
+      color: #f4b8a4;
+      -webkit-text-stroke: 0.5px #1E1B1B;
+      vertical-align: super;
+      margin-left: 2px;
+      position: relative;
+      top: -4px;
+    }
+    .tbi-header .ev-star-sm {
+      font-size: 12px;
+      color: #d4c0a8;
+      -webkit-text-stroke: 0.5px #1E1B1B;
+      vertical-align: middle;
+      margin-right: 3px;
+    }
     .tbi-header .subtitle {
       font-size: 15px;
       color: var(--text-secondary);
       margin-top: 4px;
+    }
+    .tbi-header {
+      margin-bottom: 30px;
     }
 
     /* ---- Main Container ---- */
@@ -1044,8 +1064,8 @@
       const app = document.getElementById('app');
       app.innerHTML = `
         <div class="tbi-header">
-          <h1>What's Happening in SF</h1>
-          <div class="subtitle">✦ The Bold Italic's guide to the greatest events in San Francisco and the Bay Area.</div>
+          <h1>What's Happening in SF <span class="ev-star ev-star-lg">✦</span></h1>
+          <div class="subtitle"><span class="ev-star ev-star-sm">✦</span> <em>The Bold Italic</em>'s guide to the greatest events in San Francisco and the Bay Area.</div>
         </div>
         <div id="tbi-events">
           <div class="ev-loading">Loading events...</div>
