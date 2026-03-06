@@ -167,30 +167,262 @@
       #tbi-events .ev-skeleton-fcard { height: 160px; }
     }
 
-    /* Event detail page (SPA only — Ghost handles this natively) */
-    #tbi-events .ev-post { max-width: 800px; margin: 0 auto; padding: 20px; }
-    #tbi-events .ev-post-back { display: inline-flex; align-items: center; gap: 6px; font-family: var(--epcl-font-family); font-size: 14px; color: #6b6360; text-decoration: none; margin-bottom: 20px; cursor: pointer; transition: color 0.2s; }
-    #tbi-events .ev-post-back:hover { color: #1E1B1B; }
-    #tbi-events .ev-post-pill { display: inline-block; padding: 5px 14px; border-radius: 100px; font-family: var(--epcl-font-family); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #1E1B1B; margin-bottom: 16px; }
-    #tbi-events .ev-post h1 { font-family: var(--epcl-title-font-family); font-weight: 800; font-size: 32px; line-height: 1.25; color: var(--epcl-titles-color); margin: 0 0 16px; }
-    #tbi-events .ev-post-hero { display: flex; gap: 24px; margin-bottom: 24px; }
-    #tbi-events .ev-post-image { flex: 0 0 320px; border-radius: 12px; overflow: hidden; }
-    #tbi-events .ev-post-image img { width: 100%; height: auto; display: block; }
-    #tbi-events .ev-post-details { flex: 1; }
-    #tbi-events .ev-post-detail-row { display: flex; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.06); font-family: var(--epcl-font-family); font-size: 14px; }
-    #tbi-events .ev-post-detail-label { font-weight: 600; color: #6b6360; min-width: 100px; flex-shrink: 0; }
-    #tbi-events .ev-post-detail-value { color: #1E1B1B; }
-    #tbi-events .ev-post-detail-value a { color: #0077b6; text-decoration: none; }
-    #tbi-events .ev-post-detail-value a:hover { text-decoration: underline; }
-    #tbi-events .ev-post-description { margin-top: 24px; font-family: Georgia, 'Times New Roman', serif; font-size: 16px; line-height: 1.7; color: var(--epcl-text-color); }
-    #tbi-events .ev-post-cta { display: inline-block; margin-top: 20px; padding: 12px 28px; border-radius: 100px; background: var(--epcl-secondary-color); color: #1E1B1B; font-family: var(--epcl-font-family); font-weight: 700; font-size: 15px; text-decoration: none; transition: all 0.3s; }
-    #tbi-events .ev-post-cta:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-1px); }
-    #tbi-events .ev-post-source { margin-top: 16px; font-family: var(--epcl-font-family); font-size: 13px; color: #999; }
-    #tbi-events .ev-post-source a { color: #0077b6; }
-    @media (max-width: 768px) {
+    /* ============================================
+       EVENT DETAIL PAGE STYLES
+       ============================================ */
+    #tbi-events .ev-post {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 30px 16px;
+      font-family: var(--epcl-font-family);
+    }
+    #tbi-events .ev-post-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgb(221, 213, 203);
+      margin-bottom: 28px;
+    }
+    #tbi-events .ev-post-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    #tbi-events .ev-post-topbar a {
+      font-size: 14px;
+      color: rgb(102,102,102);
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    #tbi-events .ev-post-topbar a:hover { color: #1E1B1B; }
+    #tbi-events .ev-post-hero {
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+    }
+    #tbi-events .ev-post-image {
+      flex: 0 0 45%;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 4/3;
+    }
+    #tbi-events .ev-post-image img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    #tbi-events .ev-post-details {
+      flex: 1 1 0%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    #tbi-events .ev-post-cat {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1E1B1B;
+      letter-spacing: 0.02em;
+      align-self: flex-start;
+    }
+    #tbi-events .ev-post-title {
+      font-family: var(--epcl-title-font-family);
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: var(--epcl-titles-color);
+      margin: 4px 0;
+    }
+    #tbi-events .ev-post-detail-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 4px 0;
+    }
+    #tbi-events .ev-post-detail-icon {
+      font-size: 18px;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 24px;
+      text-align: center;
+    }
+    #tbi-events .ev-post-detail-text { flex: 1; }
+    #tbi-events .ev-post-detail-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgb(122, 114, 105);
+      margin-bottom: 1px;
+    }
+    #tbi-events .ev-post-detail-value {
+      font-size: 15px;
+      font-weight: 500;
+      color: #1E1B1B;
+      line-height: 1.35;
+    }
+    #tbi-events .ev-post-detail-value.free { color: rgb(45, 138, 78); font-weight: 700; }
+    #tbi-events .ev-post-detail-value.soldout { color: rgb(230, 57, 70); font-weight: 700; }
+    #tbi-events .ev-post-cta {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 12px 28px;
+      background: rgb(166, 227, 161);
+      color: #1E1B1B !important;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      transition: 200ms;
+      align-self: flex-start;
+      cursor: pointer;
+      border: none;
+      letter-spacing: 0.02em;
+    }
+    #tbi-events .ev-post-cta:hover {
+      background: rgb(148, 217, 144);
+      transform: translateY(-1px);
+    }
+    #tbi-events .ev-post-cta.soldout {
+      background: rgb(224, 213, 204);
+      color: #888 !important;
+      cursor: default;
+      pointer-events: none;
+    }
+    /* "EVENT DESCRIPTION" pill divider */
+    #tbi-events .ev-desc-header {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-top: 8px;
+      margin-bottom: 20px;
+    }
+    #tbi-events .ev-desc-header::before, #tbi-events .ev-desc-header::after {
+      content: "";
+      flex: 1;
+      height: 0;
+      border-top: 0.5px solid #333;
+    }
+    #tbi-events .ev-desc-pill {
+      font-family: var(--epcl-font-family);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6b5e50;
+      background: #faf8f5;
+      border: 0.5px solid #333;
+      padding: 5px 20px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    /* No-image card variant */
+    #tbi-events .ev-post-card.no-image { max-width: 460px; margin-left: auto; margin-right: auto; }
+    #tbi-events .ev-post-card.no-image .ev-post-hero { flex-direction: column; justify-content: center; align-items: center; }
+    #tbi-events .ev-post-card.no-image .ev-post-image { display: none; }
+    #tbi-events .ev-post-card.no-image .ev-post-details { flex: 1; width: 100%; }
+    #tbi-events .ev-post-body {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    #tbi-events .ev-post-body p {
+      font-family: var(--font-serif);
+      font-size: 17px;
+      line-height: 1.65;
+      color: rgb(34,34,34);
+      margin-bottom: 16px;
+    }
+    #tbi-events .ev-post-source {
+      font-size: 13px;
+      color: rgb(153,153,153);
+      border-top: 1px solid rgb(238,238,238);
+      padding-top: 16px;
+      margin-top: 32px;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #tbi-events .ev-post-source a { color: rgb(102,102,102); text-decoration: underline; transition: 0.2s; }
+    #tbi-events .ev-post-source a:hover { color: #1E1B1B; }
+    #tbi-events .ev-post-back {
+      text-align: center;
+      margin: 32px 0 16px;
+    }
+    #tbi-events .ev-post-back a {
+      display: inline-block;
+      padding: 10px 28px;
+      border: 2px solid #1E1B1B;
+      border-radius: 30px;
+      color: #1E1B1B;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: 0.2s;
+    }
+    #tbi-events .ev-post-back a:hover {
+      background: #1E1B1B;
+      color: white;
+    }
+    /* Event Detail Page Header */
+    #tbi-events .ev-post-header {
+      text-align: center;
+      max-width: 780px;
+      margin: 30px auto 24px;
+      padding: 0 20px;
+    }
+    #tbi-events .ev-post-header-line {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 10px;
+    }
+    #tbi-events .ev-post-header-line::before, #tbi-events .ev-post-header-line::after {
+      content: '';
+      flex: 1;
+      height: 0;
+      border-top: 0.5px solid #333;
+    }
+    #tbi-events .ev-post-header-pill {
+      font-family: var(--epcl-font-family);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6b5e50;
+      background: #ffffff;
+      border: 0.5px solid #333;
+      padding: 5px 20px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    #tbi-events .ev-post-header-date {
+      font-family: var(--epcl-font-family);
+      font-size: 13px;
+      color: #999;
+      text-align: center;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    #tbi-events .ev-post-header-title {
+      font-family: var(--epcl-title-font-family);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--epcl-titles-color);
+      line-height: 1.3;
+      max-width: 700px;
+      margin: 0 auto 8px;
+    }
+    @media (max-width: 1024px) {
       #tbi-events .ev-post-hero { flex-direction: column; }
       #tbi-events .ev-post-image { flex: 1 0 100%; }
-      #tbi-events .ev-post h1 { font-size: 26px; }
+    }
+    @media (max-width: 768px) {
+      #tbi-events .ev-post { padding: 20px 12px; }
+      #tbi-events .ev-post-card { padding: 16px; }
+      #tbi-events .ev-post-hero { gap: 16px; }
     }
   </style>
 </head>
@@ -229,6 +461,36 @@
     'Film & Media': 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&h=600&fit=crop',
     'Events': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop',
   };
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var SOURCE_URLS = {
+    'SF Funcheap': 'https://sf.funcheap.com',
+    'Eventbrite': 'https://www.eventbrite.com',
+    'SF Station': 'https://www.sfstation.com',
+  };
+  function getSourceUrl(event) {
+    if (event.source_url) return event.source_url;
+    if (event.source_name && SOURCE_URLS[event.source_name]) return SOURCE_URLS[event.source_name];
+    return '';
+  }
+  function priceDetailHTML(price, soldOut) {
+    if (soldOut) return '<span class="ev-post-detail-value soldout">Sold Out</span>';
+    if (!price) return '<span class="ev-post-detail-value">—</span>';
+    var lower = price.toLowerCase().trim();
+    if (lower === 'free' || lower === '$0' || lower === '$0.00') {
+      return '<span class="ev-post-detail-value free">Free</span>';
+    }
+    return '<span class="ev-post-detail-value">' + esc(price) + '</span>';
+  }
+  function formatDetailDate(event) {
+    if (event.event_date) {
+      var d = new Date(event.event_date);
+      return DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+    }
+    return event.date || '';
+  }
+  var GHOST_URL = 'https://the-bold-italic.ghost.io';
+  var GHOST_CONTENT_KEY = '53dbcc02d5748f0a74e48cd3cc';
   /* ---------- helpers ---------- */
   function esc(s) {
     if (!s) return '';
@@ -320,6 +582,36 @@
     if (/^\$/.test(p)) return true;
     return false;
   }
+  async function fetchFeaturedFromGhost() {
+    try {
+      var url = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY
+        + '&filter=tag:hash-featuredevent'
+        + '&limit=6&include=tags&formats=html'
+        + '&fields=id,slug,title,url,feature_image,custom_excerpt,html';
+      var resp = await fetch(url);
+      var data = await resp.json();
+      if (!data.posts || data.posts.length === 0) return [];
+      return data.posts.map(function(post) {
+        var category = 'Events';
+        (post.tags || []).forEach(function(t) {
+          if (t.name.charAt(0) === '#' && t.name !== '#featuredevent' && t.name !== '#eventscal' && t.name !== '#events' && t.name !== '#hidden') {
+            category = t.name.slice(1);
+          }
+        });
+        return {
+          title: post.title,
+          url: post.url,
+          image: post.feature_image || '',
+          category: category,
+          catColor: CATEGORY_COLORS[category] || '#cdd6f4',
+          excerpt: post.custom_excerpt || ''
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to fetch featured posts from Ghost:', err);
+      return [];
+    }
+  }
   /* ---------- Supabase fetch (replaces Ghost API) ---------- */
   async function fetchEvents() {
     var today = new Date().toISOString().slice(0, 10);
@@ -377,7 +669,7 @@
     };
   }
   /* ---------- render (exact from Ghost footer injection) ---------- */
-  function renderPage(events) {
+  function renderPage(events, featured) {
     var root = document.getElementById('tbi-events');
     if (!root) return;
     root.innerHTML = '';
@@ -394,17 +686,21 @@
     events.forEach(function(e) { catSet[e.category] = (catSet[e.category] || 0) + 1; });
     var categories = Object.keys(catSet).sort();
     /* Featured section */
-    var taggedFeatured = events.filter(function(e) { return e.isFeatured; });
-    var withRealImages = events.filter(function(e) {
-      return e.image && e.image.startsWith('http') && !e.image.includes('unsplash.com');
-    });
-    var featured = taggedFeatured.length > 0 ? taggedFeatured.slice(0, 3) : withRealImages.slice(0, 3);
+    if (!featured) featured = [];
+    if (featured.length === 0) {
+      var taggedFeatured = events.filter(function(e) { return e.isFeatured; });
+      var withRealImages = events.filter(function(e) {
+        return e.image && e.image.startsWith('http') && !e.image.includes('unsplash.com');
+      });
+      featured = taggedFeatured.length > 0 ? taggedFeatured.slice(0, 3) : withRealImages.slice(0, 3);
+    }
     if (featured.length > 0) {
       var featHtml = '<div class="ev-featured-wrap">';
       featHtml += '<span class="ev-featured-label">Featured Bay Area Events, Reviews &amp; Guides</span>';
       featHtml += '<div class="ev-featured-grid">';
       featured.forEach(function(ev) {
-        featHtml += '<a href="' + esc(ev.url) + '" class="ev-fcard" data-slug="' + esc(ev.slug) + '">';
+        var isExternal = ev.url && ev.url.indexOf('http') === 0;
+        featHtml += '<a href="' + esc(ev.url) + '" class="ev-fcard"' + (isExternal ? ' target="_blank" rel="noopener"' : ' data-slug="' + esc(ev.slug) + '"') + '>';
         var featFallback = CATEGORY_IMAGES[ev.category] || CATEGORY_IMAGES['Events'];
         featHtml += '<div class="ev-fimg"><img src="' + esc(ev.image) + '" alt="' + esc(ev.title) + '" onerror="this.onerror=null;this.src=\'' + esc(featFallback) + '\';"></div>';
         featHtml += '<div class="ev-foverlay">';
@@ -737,6 +1033,9 @@
     document.getElementById('tbi-events').addEventListener('click', function(e) {
       var link = e.target.closest('a[data-slug]');
       if (!link) return;
+      /* Skip external links (e.g. Ghost featured posts) — let browser handle them */
+      var href = link.getAttribute('href') || '';
+      if (href.indexOf('http') === 0) return;
       e.preventDefault();
       var slug = link.getAttribute('data-slug');
       history.pushState({ slug: slug }, '', '/' + slug + '/');
@@ -759,45 +1058,157 @@
   }
   function renderEventPage(event) {
     var root = document.getElementById('tbi-events');
-    var html = '<div class="ev-post">';
-    html += '<a class="ev-post-back" href="/">\u2190 All Events</a>';
-    /* City pill */
-    var cityLower = (event.city || '').toLowerCase();
+    var catColor = CATEGORY_COLORS[event.category] || CATEGORY_COLORS['Events'] || '#cdd6f4';
+    var detailDate = formatDetailDate(event);
+    var detailTime = event.time || '';
+    var hasRealImage = event.image_url && !event.image_url.startsWith('data:');
+    var noImageClass = hasRealImage ? '' : ' no-image';
+
+    /* inferCity helper */
+    function inferCity(ev) {
+      var addrStr = [ev.address, ev.venue].filter(Boolean).join(' ').toLowerCase();
+      var cities = [
+        { match: 'berkeley', label: 'BERKELEY' },
+        { match: 'oakland', label: 'OAKLAND' },
+        { match: 'san jose', label: 'SAN JOSE' },
+        { match: 'san mateo', label: 'SAN MATEO' },
+        { match: 'palo alto', label: 'PALO ALTO' },
+        { match: 'mountain view', label: 'MOUNTAIN VIEW' },
+        { match: 'redwood city', label: 'REDWOOD CITY' },
+        { match: 'santa cruz', label: 'SANTA CRUZ' },
+        { match: 'sausalito', label: 'SAUSALITO' },
+        { match: 'mill valley', label: 'MILL VALLEY' },
+        { match: 'marin', label: 'MARIN' },
+        { match: 'walnut creek', label: 'WALNUT CREEK' },
+        { match: 'emeryville', label: 'EMERYVILLE' },
+        { match: 'alameda', label: 'ALAMEDA' },
+        { match: 'richmond', label: 'RICHMOND' },
+        { match: 'daly city', label: 'DALY CITY' },
+        { match: 'south san francisco', label: 'SOUTH SAN FRANCISCO' },
+      ];
+      for (var i = 0; i < cities.length; i++) {
+        if (addrStr.indexOf(cities[i].match) !== -1) return cities[i].label;
+      }
+      return null;
+    }
+
     var headerPillText = 'EVENT IN SAN FRANCISCO';
-    if (cityLower === 'oakland') { headerPillText = 'EVENT IN OAKLAND'; }
-    else if (cityLower !== 'sf' && cityLower !== 'san francisco' && cityLower !== '') {
+    var cityLower = (event.city || '').toLowerCase();
+    if (cityLower === 'oakland') {
+      headerPillText = 'EVENT IN OAKLAND';
+    } else if (cityLower !== 'sf' && cityLower !== 'san francisco' && cityLower !== '') {
       headerPillText = 'EVENT IN ' + event.city.toUpperCase();
     } else {
       var inferred = inferCity(event);
       if (inferred) headerPillText = 'EVENT IN ' + inferred;
     }
-    html += '<div class="ev-post-pill" style="background:' + event.catColor + ';">' + esc(headerPillText) + '</div>';
-    html += '<h1>' + esc(event.title) + '</h1>';
-    html += '<div class="ev-post-hero">';
-    html += '<div class="ev-post-image"><img src="' + esc(event.image) + '" alt="' + esc(event.title) + '"></div>';
-    html += '<div class="ev-post-details">';
-    if (event.date) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Date</span><span class="ev-post-detail-value">' + esc(event.date) + '</span></div>';
-    if (event.time) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Time</span><span class="ev-post-detail-value">' + esc(event.time) + '</span></div>';
-    if (event.venue) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Venue</span><span class="ev-post-detail-value">' + esc(event.venue) + '</span></div>';
-    if (event.address) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Address</span><span class="ev-post-detail-value">' + esc(event.address) + '</span></div>';
-    if (event.performers) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Performers</span><span class="ev-post-detail-value">' + esc(event.performers) + '</span></div>';
-    if (event.price) html += '<div class="ev-post-detail-row"><span class="ev-post-detail-label">Price</span><span class="ev-post-detail-value">' + esc(event.price) + '</span></div>';
-    html += '</div></div>';
-    if (event.description) html += '<div class="ev-post-description">' + esc(event.description) + '</div>';
-    if (event.ticketUrl) html += '<a class="ev-post-cta" href="' + esc(event.ticketUrl) + '" target="_blank" rel="noopener">Get Tickets</a>';
-    if (event.source_url) html += '<div class="ev-post-source">Source: <a href="' + esc(event.source_url) + '" target="_blank" rel="noopener">' + esc(event.source_url) + '</a></div>';
+
+    var ctaHTML = '';
+    if (event.sold_out) {
+      ctaHTML = '<span class="ev-post-cta soldout">Sold Out</span>';
+    } else if (event.ticket_url) {
+      ctaHTML = '<a class="ev-post-cta" href="' + esc(event.ticket_url) + '" target="_blank" rel="noopener">More Info &amp; Tickets \u2192</a>';
+    } else if (event.source_url) {
+      ctaHTML = '<a class="ev-post-cta" href="' + esc(event.source_url) + '" target="_blank" rel="noopener">More Info \u2192</a>';
+    }
+
+    var performersHTML = '';
+    if (event.performers) {
+      performersHTML = '<div class="ev-post-detail-row">'
+        + '<div class="ev-post-detail-icon"></div>'
+        + '<div class="ev-post-detail-text">'
+        + '<div class="ev-post-detail-label">Performers</div>'
+        + '<div class="ev-post-detail-value">' + esc(event.performers) + '</div>'
+        + '</div></div>';
+    }
+
+    var html = '<div class="ev-post">';
+    /* Header with pill */
+    html += '<div class="ev-post-header">';
+    html += '<div class="ev-post-header-line"><span class="ev-post-header-pill">' + esc(headerPillText) + '</span></div>';
+    html += '<div class="ev-post-header-date">' + esc(detailDate) + '</div>';
+    html += '<h1 class="ev-post-header-title">' + esc(event.title) + '</h1>';
     html += '</div>';
+
+    /* Card */
+    html += '<div class="ev-post-card' + noImageClass + '">';
+    html += '<div class="ev-post-topbar">';
+    if (event.category && event.category.toLowerCase() !== 'events') {
+      html += '<span class="ev-post-cat" style="background:' + catColor + '">' + esc(event.category) + '</span>';
+    }
+    html += '<a href="/">\u2190 All Events</a>';
+    html += '</div>';
+    html += '<div class="ev-post-hero">';
+    if (hasRealImage) {
+      html += '<div class="ev-post-image"><img src="' + esc(event.image_url) + '" alt="' + esc(event.title) + '" onerror="this.parentElement.style.display=\'none\'"></div>';
+    }
+    html += '<div class="ev-post-details">';
+    /* Date */
+    html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Date</div><div class="ev-post-detail-value">' + esc(detailDate) + '</div></div></div>';
+    /* Time */
+    if (detailTime) {
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Time</div><div class="ev-post-detail-value">' + esc(detailTime) + '</div></div></div>';
+    }
+    /* Venue */
+    if (event.venue) {
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Location</div><div class="ev-post-detail-value">' + esc(event.venue) + '</div></div></div>';
+    }
+    /* Address */
+    if (event.address) {
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Address</div><div class="ev-post-detail-value">' + esc(event.address) + '</div></div></div>';
+    }
+    /* Neighborhood */
+    if (event.neighborhood) {
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Neighborhood</div><div class="ev-post-detail-value">' + esc(event.neighborhood) + '</div></div></div>';
+    }
+    /* Price */
+    html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon"></div><div class="ev-post-detail-text"><div class="ev-post-detail-label">Price</div>' + priceDetailHTML(event.price, event.sold_out) + '</div></div>';
+    /* Performers */
+    html += performersHTML;
+    /* CTA */
+    html += ctaHTML;
+    html += '</div></div></div>';
+
+    /* Description */
+    if (event.description) {
+      html += '<div class="ev-desc-header"><span class="ev-desc-pill">EVENT DESCRIPTION</span></div>';
+      html += '<div class="ev-post-body">';
+      var paragraphs = event.description.split('\n');
+      for (var i = 0; i < paragraphs.length; i++) {
+        if (paragraphs[i].trim()) {
+          html += '<p>' + esc(paragraphs[i]) + '</p>';
+        }
+      }
+      html += '</div>';
+    }
+
+    /* Source */
+    if (event.source_name || event.source_url) {
+      var srcUrl = getSourceUrl(event);
+      html += '<div class="ev-post-source">See this event also on ';
+      if (srcUrl) {
+        html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="noopener">' + esc(event.source_name || 'the original source') + '</a>';
+      } else {
+        html += esc(event.source_name);
+      }
+      html += '. Details may change \u2014 check the venue for latest info.</div>';
+    }
+
+    /* Back button */
+    html += '<div class="ev-post-back"><a href="/">Browse All SF Events</a></div>';
+    html += '</div>';
+
     root.innerHTML = html;
-    /* Wire back link */
-    var backLink = root.querySelector('.ev-post-back');
-    if (backLink) {
-      backLink.addEventListener('click', function(e) {
+
+    /* Wire back links */
+    root.querySelectorAll('a[href="/"]').forEach(function(link) {
+      link.addEventListener('click', function(e) {
         e.preventDefault();
         history.pushState({}, '', '/');
         document.title = 'What\u2019s Happening in SF \u2014 The Bold Italic';
         initListPage();
       });
-    }
+    });
   }
   /* ---------- skeleton ---------- */
   function renderSkeleton() {
@@ -835,7 +1246,8 @@
     try {
       renderSkeleton();
       var events = await fetchEvents();
-      renderPage(events);
+      var featured = await fetchFeaturedFromGhost();
+      renderPage(events, featured);
     } catch (err) {
       console.error('TBI Events page error:', err);
       var root = document.getElementById('tbi-events');
