@@ -265,7 +265,8 @@
    */
   function isoToHumanDate(isoDate) {
     if (!isoDate) return '';
-    var parts = isoDate.split('-');
+    var dateOnly = isoDate.substring(0, 10);
+    var parts = dateOnly.split('-');
     if (parts.length !== 3) return isoDate;
     var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -322,7 +323,7 @@
   /* ---------- Supabase fetch (replaces Ghost API) ---------- */
   async function fetchEvents() {
     var today = new Date().toISOString().slice(0, 10);
-    var url = SUPABASE_URL + '/rest/v1/events?select=*&is_sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc';
+    var url = SUPABASE_URL + '/rest/v1/events?select=*&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc';
     var resp = await fetch(url, {
       headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
     });
@@ -330,12 +331,12 @@
     return rows.map(function(r) {
       var humanDate = isoToHumanDate(r.event_date);
       var monthData = parseEventDate(humanDate);
-      var isFree = r.is_free || /^free$/i.test(r.price || '');
-      var isSoldOut = r.is_sold_out || false;
+      var isFree = /^free$/i.test(r.price || '');
+      var isSoldOut = r.sold_out || false;
       var category = r.category || 'Events';
       var ev = {
         title: r.title, slug: r.slug, url: '/' + r.slug + '/',
-        date: humanDate, time: r.event_time || '',
+        date: humanDate, time: r.time || '',
         venue: r.venue || '', neighborhood: r.neighborhood || '',
         address: r.address || '', performers: r.performers || '',
         price: isSoldOut ? 'Sold Out' : (r.price || ''),
@@ -343,7 +344,7 @@
         category: category, catColor: CATEGORY_COLORS[category] || CATEGORY_COLORS['Events'],
         image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
         ticketUrl: r.ticket_url || '',
-        excerpt: r.description || '', isFeatured: r.is_featured || false,
+        excerpt: r.description || '', isFeatured: r.featured || false,
         source_url: r.source_url || '', description: r.description || '',
       };
       ev.city = classifyCity(ev);
@@ -364,14 +365,14 @@
     var category = r.category || 'Events';
     return {
       title: r.title, slug: r.slug, url: '/' + r.slug + '/',
-      date: humanDate, time: r.event_time || '',
+      date: humanDate, time: r.time || '',
       venue: r.venue || '', neighborhood: r.neighborhood || '',
       address: r.address || '', performers: r.performers || '',
-      price: r.price || '', isFree: r.is_free || false, isSoldOut: r.is_sold_out || false,
+      price: r.price || '', isFree: /^free$/i.test(r.price || ''), isSoldOut: r.sold_out || false,
       category: category, catColor: CATEGORY_COLORS[category] || CATEGORY_COLORS['Events'],
       image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
       ticketUrl: r.ticket_url || '', excerpt: r.description || '',
-      isFeatured: r.is_featured || false, city: r.city || 'sf', monthData: monthData,
+      isFeatured: r.featured || false, city: r.city || 'sf', monthData: monthData,
       source_url: r.source_url || '', description: r.description || '',
     };
   }
