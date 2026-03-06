@@ -1508,12 +1508,44 @@
         const hasRealImage = event.image_url && !event.image_url.startsWith('data:');
         const noImageClass = hasRealImage ? '' : ' no-image';
 
-        // Build header pill text — show city name (matching live site)
+        // Build header pill text — infer actual city from address/venue when possible
+        function inferCity(event) {
+          const addrStr = [event.address, event.venue].filter(Boolean).join(' ').toLowerCase();
+          const bayAreaCities = [
+            { match: 'berkeley', label: 'BERKELEY' },
+            { match: 'oakland', label: 'OAKLAND' },
+            { match: 'san jose', label: 'SAN JOSE' },
+            { match: 'san mateo', label: 'SAN MATEO' },
+            { match: 'palo alto', label: 'PALO ALTO' },
+            { match: 'mountain view', label: 'MOUNTAIN VIEW' },
+            { match: 'redwood city', label: 'REDWOOD CITY' },
+            { match: 'santa cruz', label: 'SANTA CRUZ' },
+            { match: 'sausalito', label: 'SAUSALITO' },
+            { match: 'mill valley', label: 'MILL VALLEY' },
+            { match: 'marin', label: 'MARIN' },
+            { match: 'walnut creek', label: 'WALNUT CREEK' },
+            { match: 'emeryville', label: 'EMERYVILLE' },
+            { match: 'alameda', label: 'ALAMEDA' },
+            { match: 'richmond', label: 'RICHMOND' },
+            { match: 'daly city', label: 'DALY CITY' },
+            { match: 'south san francisco', label: 'SOUTH SAN FRANCISCO' },
+          ];
+          for (const c of bayAreaCities) {
+            if (addrStr.includes(c.match)) return c.label;
+          }
+          return null;
+        }
+
         let headerPillText = 'EVENT IN SAN FRANCISCO';
-        if (event.city && event.city.toLowerCase() === 'oakland') {
+        const cityLower = (event.city || '').toLowerCase();
+        if (cityLower === 'oakland') {
           headerPillText = 'EVENT IN OAKLAND';
-        } else if (event.city && event.city.toLowerCase() !== 'sf' && event.city.toLowerCase() !== 'san francisco') {
+        } else if (cityLower !== 'sf' && cityLower !== 'san francisco' && cityLower !== '') {
           headerPillText = `EVENT IN ${event.city.toUpperCase()}`;
+        } else {
+          // city is 'sf' or default — check address/venue for actual Bay Area city
+          const inferred = inferCity(event);
+          if (inferred) headerPillText = `EVENT IN ${inferred}`;
         }
 
         app.innerHTML = `
