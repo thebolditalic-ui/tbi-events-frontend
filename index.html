@@ -576,12 +576,14 @@
     }
     return null;
   }
-  function isDisplayablePrice(price) {
-    if (!price) return false;
-    var p = price.trim();
-    if (/^free$/i.test(p)) return true;
-    if (/^\$/.test(p)) return true;
-    return false;
+  function priceHTML(price, soldOut) {
+    if (soldOut) return '<div class="ev-price soldout">Sold Out</div>';
+    if (!price) return '<div class="ev-price"></div>';
+    var lower = price.toLowerCase().trim();
+    if (lower === 'free' || lower === '$0' || lower === '$0.00') {
+      return '<div class="ev-price free">Free</div>';
+    }
+    return '<div class="ev-price">' + esc(price) + '</div>';
   }
   async function fetchFeaturedFromGhost() {
     try {
@@ -632,7 +634,7 @@
         date: humanDate, time: r.time || '',
         venue: r.venue || '', neighborhood: r.neighborhood || '',
         address: r.address || '', performers: r.performers || '',
-        price: isSoldOut ? 'Sold Out' : (r.price || ''),
+        price: r.price || '',
         isFree: isFree, isSoldOut: isSoldOut,
         category: category, catColor: CATEGORY_COLORS[category] || CATEGORY_COLORS['Events'],
         image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
@@ -829,10 +831,7 @@
     if (ev.venue) html += ' \u00b7 ' + esc(ev.venue);
     html += '</div></div>';
     html += '<div class="ev-right">';
-    if (isDisplayablePrice(ev.price)) {
-      var priceClass = ev.isFree ? ' free' : '';
-      html += '<div class="ev-price' + priceClass + '">' + esc(ev.price) + '</div>';
-    }
+    html += priceHTML(ev.price, ev.isSoldOut);
     html += '</div></a>';
     return html;
   }
