@@ -94,9 +94,21 @@
       margin-right: 3px;
     }
     .tbi-header .subtitle {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 1.05rem;
+      color: var(--epcl-text-color, #3B3A3A);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.55;
+    }
+    .tbi-header .subtitle a.ev-header-link {
+      color: #1E1B1B;
+      text-decoration: underline;
       font-size: 15px;
-      color: var(--text-secondary);
-      margin-top: 4px;
+      font-style: italic;
+    }
+    .tbi-header .subtitle a.ev-header-link:hover {
+      color: #e07b5f;
     }
     .tbi-header {
       margin-bottom: 30px;
@@ -1065,7 +1077,7 @@
       app.innerHTML = `
         <div class="tbi-header">
           <h1>What's Happening in SF <span class="ev-star ev-star-lg">✦</span></h1>
-          <div class="subtitle"><span class="ev-star ev-star-sm">✦</span> <em>The Bold Italic</em>'s guide to the greatest events in San Francisco and the Bay Area.</div>
+          <div class="subtitle"><span class="ev-star ev-star-sm">✦</span> <em>The Bold Italic</em>'s guide to the greatest events in San Francisco and the Bay Area. <a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/" target="_blank" rel="noopener">Read our latest event reviews</a></div>
         </div>
         <div id="tbi-events">
           <div class="ev-loading">Loading events...</div>
