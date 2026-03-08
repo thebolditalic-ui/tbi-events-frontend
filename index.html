@@ -108,6 +108,10 @@
     #tbi-events .ev-footer { text-align: center; padding: 0 20px 40px; font-size: 13px; color: #999; }
     #tbi-events .ev-featured-wrap { max-width: 1050px; box-sizing: border-box; margin: 0 auto 12px; background: #ede3d5; border: 1px solid #1E1B1B; border-radius: 16px; padding: 36px 60px 32px; position: relative; }
     #tbi-events .ev-featured-label { position: absolute; top: -14px; left: 24px; background: #f9e2af; color: #1E1B1B; font-family: var(--epcl-font-family, sans-serif); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 14px; border: 1px solid #1E1B1B; border-radius: 20px; z-index: 2; }
+    #tbi-events .ev-editors-picks { max-width: 1050px; margin: 20px auto 0; padding: 0 20px; }
+    #tbi-events .ev-picks-label { font-family: var(--epcl-title-font-family, 'Playfair Display', serif); font-size: 16px; font-weight: 700; color: var(--epcl-titles-color, #1E1B1B); margin-bottom: 8px; padding-left: 4px; }
+    #tbi-events .ev-pick-row { border-left: 3px solid #FFD682; }
+    #tbi-events .ev-picks-badge { display: inline-block; font-family: var(--epcl-font-family, sans-serif); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 10px; border-radius: 12px; background: #FFD682; color: #1E1B1B; }
     #tbi-events .ev-pagination { max-width: 1050px; margin: 0 auto; padding: 20px 0 10px; text-align: center; }
     #tbi-events .ev-pag-inner { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; }
     #tbi-events .ev-pag-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-family: var(--epcl-font-family, sans-serif); font-size: 14px; font-weight: 600; color: #1E1B1B; transition: all 200ms ease; }
@@ -703,6 +707,46 @@
       return [];
     }
   }
+  /* ---------- Editor's Picks from Ghost ---------- */
+  async function fetchEditorsPicksFromGhost() {
+    try {
+      var url = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY
+        + '&filter=tag:hash-editorspick'
+        + '&limit=10&include=tags&formats=html'
+        + '&fields=id,slug,title,url,feature_image,custom_excerpt,published_at';
+      var resp = await fetch(url);
+      var data = await resp.json();
+      if (!data.posts || data.posts.length === 0) return [];
+      return data.posts.map(function(post) {
+        var category = 'Events';
+        (post.tags || []).forEach(function(t) {
+          if (t.name.charAt(0) === '#' && t.name !== '#editorspick' && t.name !== '#eventscal' && t.name !== '#events' && t.name !== '#hidden' && t.name !== '#featuredevent') {
+            category = t.name.slice(1);
+          }
+        });
+        // Extract date from post or use published date
+        var dateStr = '';
+        if (post.published_at) {
+          var d = new Date(post.published_at);
+          dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        }
+        return {
+          title: post.title,
+          url: post.url,
+          slug: post.slug,
+          image: post.feature_image || '',
+          category: category,
+          catColor: CATEGORY_COLORS[category] || '#cdd6f4',
+          excerpt: post.custom_excerpt || '',
+          date: dateStr,
+          isEditorsPick: true
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to fetch Editor\'s Picks from Ghost:', err);
+      return [];
+    }
+  }
   /* ---------- Supabase fetch (replaces Ghost API) ---------- */
   async function fetchEvents() {
     var today = new Date().toISOString().slice(0, 10);
@@ -762,7 +806,7 @@
     };
   }
   /* ---------- render (exact from Ghost footer injection) ---------- */
-  function renderPage(events, featured) {
+  function renderPage(events, featured, editorsPicks) {
     var root = document.getElementById('tbi-events');
     if (!root) return;
     root.innerHTML = '';
@@ -876,6 +920,32 @@
     datePickerHtml += '<button id="ev-pick-clear" class="ev-pick-clear" style="display:none;">Clear</button>';
     datePickerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', datePickerHtml);
+    /* Editor's Picks section */
+    if (!editorsPicks) editorsPicks = [];
+    if (editorsPicks.length > 0) {
+      var picksHtml = '<div class="ev-editors-picks">';
+      picksHtml += '<div class="ev-picks-label"><span class="ev-star ev-star-sm">\u2726</span> Editor\u2019s Picks</div>';
+      editorsPicks.forEach(function(pick, idx) {
+        var rowClass = 'ev-row ev-pick-row' + (idx % 2 === 1 ? ' ev-row-alt' : '');
+        var fallbackImg = CATEGORY_IMAGES[pick.category] || CATEGORY_IMAGES['Events'];
+        picksHtml += '<a href="' + esc(pick.url) + '" class="' + rowClass + '" target="_top">';
+        picksHtml += '<div class="ev-thumb"><img src="' + esc(pick.image) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackImg) + '\';"></div>';
+        picksHtml += '<div class="ev-info">';
+        if (pick.category !== 'Events') {
+          picksHtml += '<span class="ev-catpill" style="background:' + pick.catColor + '">' + esc(pick.category) + '</span>';
+        }
+        picksHtml += '<h3>' + esc(pick.title) + '</h3>';
+        picksHtml += '<div class="ev-meta">';
+        if (pick.excerpt) picksHtml += esc(pick.excerpt);
+        else if (pick.date) picksHtml += esc(pick.date);
+        picksHtml += '</div>';
+        picksHtml += '</div>';
+        picksHtml += '<div class="ev-right"><span class="ev-picks-badge">Pick</span></div>';
+        picksHtml += '</a>';
+      });
+      picksHtml += '</div>';
+      root.insertAdjacentHTML('beforeend', picksHtml);
+    }
     /* Event list grouped by date */
     var dateGroups = [];
     var dateMap = {};
@@ -1353,7 +1423,8 @@
       renderSkeleton();
       var events = await fetchEvents();
       var featured = await fetchFeaturedFromGhost();
-      renderPage(events, featured);
+      var editorsPicks = await fetchEditorsPicksFromGhost();
+      renderPage(events, featured, editorsPicks);
     } catch (err) {
       console.error('TBI Events page error:', err);
       var root = document.getElementById('tbi-events');
