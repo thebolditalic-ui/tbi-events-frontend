@@ -24,6 +24,7 @@
     }
     *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; background: var(--bg-primary); color: var(--epcl-text-color); font-family: var(--epcl-font-family); }
+    body.embedded { background: transparent; }
     a { color: inherit; }
 
     /* =============================================
@@ -513,6 +514,7 @@
   </style>
 </head>
 <body>
+<script>if (window.self !== window.top) document.body.classList.add('embedded');</script>
   <div id="tbi-events"></div>
 <script>
 /* =============================================
