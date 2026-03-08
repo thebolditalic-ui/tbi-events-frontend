@@ -1382,11 +1382,22 @@
     var h = document.documentElement.scrollHeight;
     window.parent.postMessage({ type: 'tbi-iframe-height', height: h }, '*');
   }
-  // Report on load, route changes, and periodically for dynamic content
+  function reportScrollTop() {
+    window.parent.postMessage({ type: 'tbi-iframe-scroll-top' }, '*');
+  }
+  // Report on load, resize, and periodically for dynamic content
   window.addEventListener('load', reportHeight);
   window.addEventListener('resize', reportHeight);
   new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true });
   setInterval(reportHeight, 1000);
+  // Scroll parent to top on route changes
+  window.addEventListener('popstate', reportScrollTop);
+  var origPushState = history.pushState;
+  history.pushState = function() {
+    origPushState.apply(this, arguments);
+    reportScrollTop();
+    setTimeout(reportHeight, 100);
+  };
 })();
 </script>
 </body>
