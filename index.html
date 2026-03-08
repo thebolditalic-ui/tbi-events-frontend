@@ -1374,6 +1374,20 @@
     route();
   }
 })();
+
+// --- iframe auto-resize: report content height to parent ---
+(function() {
+  if (window.self === window.top) return; // not in iframe, skip
+  function reportHeight() {
+    var h = document.documentElement.scrollHeight;
+    window.parent.postMessage({ type: 'tbi-iframe-height', height: h }, '*');
+  }
+  // Report on load, route changes, and periodically for dynamic content
+  window.addEventListener('load', reportHeight);
+  window.addEventListener('resize', reportHeight);
+  new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true });
+  setInterval(reportHeight, 1000);
+})();
 </script>
 </body>
 </html>
