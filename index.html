@@ -993,8 +993,11 @@
         }
         picksHtml += '<h3>' + esc(pick.title) + '</h3>';
         picksHtml += '<div class="ev-meta">';
-        if (pick.excerpt) picksHtml += esc(pick.excerpt);
-        else if (pick.date) picksHtml += esc(pick.date);
+        if (pick.date) picksHtml += esc(pick.date);
+        if (pick.excerpt) {
+          var shortExcerpt = pick.excerpt.length > 120 ? pick.excerpt.slice(0, 120).replace(/\s+\S*$/, '') + '...' : pick.excerpt;
+          picksHtml += (pick.date ? ' &middot; ' : '') + esc(shortExcerpt);
+        }
         picksHtml += '</div>';
         picksHtml += '</div>';
         picksHtml += '<div class="ev-right"><span class="ev-picks-badge">Pick</span></div>';
