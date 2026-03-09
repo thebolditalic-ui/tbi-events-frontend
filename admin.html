@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBI Events Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #fff6e6;
+  --dark: #1E1B1B;
+  --gold: #FFD682;
+  --blue: #5b7bd5;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --border: #e0d8cc;
+  --bg-alt: #faf5eb;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --title-font: 'Georgia', serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--cream);
+  color: var(--dark);
+  min-height: 100vh;
+}
+
+/* ---- Login Screen ---- */
+#login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+.login-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.login-box h1 {
+  font-family: var(--title-font);
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.login-box p {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.login-box label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  margin-bottom: 4px;
+}
+.login-box input[type="email"],
+.login-box input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  background: var(--bg-alt);
+}
+.login-box input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn-primary {
+  background: var(--dark);
+  color: #fff;
+  width: 100%;
+}
+.btn-gold {
+  background: var(--gold);
+  color: var(--dark);
+}
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--dark);
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.login-error {
+  color: var(--red);
+  font-size: 13px;
+  margin-bottom: 12px;
+  display: none;
+}
+
+/* ---- Admin Shell ---- */
+#admin-app { display: none; }
+
+.admin-header {
+  background: var(--dark);
+  color: #fff;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-header h1 {
+  font-family: var(--title-font);
+  font-size: 18px;
+  font-weight: 400;
+}
+.admin-header .user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.admin-toolbar {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.admin-toolbar .search-box {
+  flex: 1;
+  min-width: 200px;
+  max-width: 400px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+.admin-toolbar .search-box:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---- Events Table ---- */
+.table-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+.ev-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 13px;
+}
+.ev-table th {
+  background: var(--bg-alt);
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.ev-table th:hover { color: var(--dark); }
+.ev-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0ebe0;
+  vertical-align: middle;
+}
+.ev-table tr:last-child td { border-bottom: none; }
+.ev-table tr:hover td { background: var(--bg-alt); }
+
+.ev-table .thumb-cell {
+  width: 50px;
+  padding: 6px;
+}
+.ev-table .thumb-cell img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+.ev-table .title-cell {
+  font-weight: 600;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ev-table .pick-toggle {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--gold);
+}
+.ev-table .actions-cell {
+  white-space: nowrap;
+}
+.ev-table .actions-cell button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+.ev-table .actions-cell .edit-btn:hover { background: #eee; }
+.ev-table .actions-cell .del-btn { color: var(--red); }
+.ev-table .actions-cell .del-btn:hover { background: #fde8e8; }
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  font-size: 13px;
+  color: #888;
+}
+.table-footer button {
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.table-footer button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.source-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #eee;
+  color: #666;
+}
+.source-badge.manual {
+  background: var(--gold);
+  color: var(--dark);
+}
+
+/* ---- Modal / Form ---- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 20px;
+  overflow-y: auto;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  animation: slideUp 0.2s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h2 {
+  font-family: var(--title-font);
+  font-size: 18px;
+}
+.modal-head .close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #888;
+  padding: 4px;
+}
+.modal-body {
+  padding: 24px;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.form-row.full { grid-template-columns: 1fr; }
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #666;
+  margin-bottom: 4px;
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: var(--font);
+  background: var(--bg-alt);
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.form-group textarea { resize: vertical; min-height: 80px; }
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.form-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
+}
+.form-check label {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dark);
+}
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.modal-footer .left-actions { display: flex; gap: 10px; }
+.status-msg {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: none;
+}
+.status-msg.success { display: block; background: #e8f8ef; color: var(--green); }
+.status-msg.error { display: block; background: #fde8e8; color: var(--red); }
+
+/* ---- Confirm Dialog ---- */
+.confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1100;
+  align-items: center;
+  justify-content: center;
+}
+.confirm-overlay.active { display: flex; }
+.confirm-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.confirm-box p { margin-bottom: 20px; font-size: 15px; line-height: 1.5; }
+.confirm-box .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .admin-toolbar { flex-direction: column; align-items: stretch; }
+  .admin-toolbar .search-box { max-width: 100%; }
+  .form-row { grid-template-columns: 1fr; }
+  .ev-table { font-size: 12px; }
+  .ev-table .thumb-cell { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Events Admin</h1>
+    <p>Sign in to manage events on The Bold Italic</p>
+    <div id="login-error" class="login-error"></div>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" placeholder="you@thebolditalic.com" autofocus>
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" placeholder="••••••••">
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app">
+  <header class="admin-header">
+    <h1>TBI Events Admin</h1>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-outline btn-sm" id="logout-btn">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="admin-toolbar">
+    <input type="text" class="search-box" id="search-input" placeholder="Search events...">
+    <div class="toolbar-right">
+      <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="show-past" style="accent-color:var(--gold)"> Show past
+      </label>
+      <button class="btn btn-gold btn-sm" id="add-event-btn">+ Add Event</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="ev-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th data-sort="event_date">Date ▼</th>
+          <th data-sort="title">Title</th>
+          <th data-sort="venue">Venue</th>
+          <th data-sort="category">Category</th>
+          <th>Source</th>
+          <th>Pick</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="events-tbody"></tbody>
+    </table>
+    <div class="table-footer">
+      <span id="table-count"></span>
+      <div style="display:flex;gap:6px;">
+        <button id="prev-page">← Prev</button>
+        <button id="next-page">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EVENT FORM MODAL ============ -->
+<div class="modal-overlay" id="event-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Add Event</h2>
+      <button class="close-btn" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="form-status" class="status-msg"></div>
+      <input type="hidden" id="ev-id">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-title">Title *</label>
+          <input type="text" id="ev-title" required>
+        </div>
+        <div class="form-group">
+          <label for="ev-slug">Slug</label>
+          <input type="text" id="ev-slug" placeholder="auto-generated">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-date">Event Date *</label>
+          <input type="date" id="ev-date" required>
+        </div>
+        <div class="form-group">
+          <label for="ev-time">Time</label>
+          <input type="text" id="ev-time" placeholder="7:00 PM">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-venue">Venue</label>
+          <input type="text" id="ev-venue">
+        </div>
+        <div class="form-group">
+          <label for="ev-address">Address</label>
+          <input type="text" id="ev-address">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-neighborhood">Neighborhood</label>
+          <input type="text" id="ev-neighborhood">
+        </div>
+        <div class="form-group">
+          <label for="ev-city">City</label>
+          <select id="ev-city">
+            <option value="sf">San Francisco</option>
+            <option value="oakland">Oakland</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-category">Category</label>
+          <select id="ev-category">
+            <option value="Events">Events</option>
+            <option value="Music">Music</option>
+            <option value="Food & Drink">Food & Drink</option>
+            <option value="Art">Art</option>
+            <option value="Comedy">Comedy</option>
+            <option value="Film">Film</option>
+            <option value="Sports">Sports</option>
+            <option value="Community">Community</option>
+            <option value="Nightlife">Nightlife</option>
+            <option value="Festival">Festival</option>
+            <option value="Theater">Theater</option>
+            <option value="Outdoor">Outdoor</option>
+            <option value="Family">Family</option>
+            <option value="Free">Free</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ev-price">Price</label>
+          <input type="text" id="ev-price" placeholder="Free, $25, $10-$50">
+        </div>
+      </div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label for="ev-image">Image URL</label>
+          <input type="url" id="ev-image" placeholder="https://...">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ev-ticket-url">Ticket URL</label>
+          <input type="url" id="ev-ticket-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label for="ev-performers">Performers</label>
+          <input type="text" id="ev-performers">
+        </div>
+      </div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label for="ev-description">Description</label>
+          <textarea id="ev-description" rows="4"></textarea>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:20px;flex-wrap:wrap;">
+        <div class="form-check">
+          <input type="checkbox" id="ev-editors-pick">
+          <label for="ev-editors-pick">Editor's Pick</label>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" id="ev-featured">
+          <label for="ev-featured">Featured</label>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" id="ev-sold-out">
+          <label for="ev-sold-out">Sold Out</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="left-actions">
+        <button class="btn btn-danger btn-sm" id="form-delete" style="display:none;">Delete</button>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline btn-sm" id="form-cancel">Cancel</button>
+        <button class="btn btn-gold" id="form-save">Save Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM DIALOG ============ -->
+<div class="confirm-overlay" id="confirm-dialog">
+  <div class="confirm-box">
+    <p id="confirm-msg">Are you sure?</p>
+    <div class="confirm-actions">
+      <button class="btn btn-outline btn-sm" id="confirm-no">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirm-yes">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SCRIPT ============ -->
+<script>
+(function() {
+  'use strict';
+
+  // ---- Config ----
+  var SUPABASE_URL = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  var PAGE_SIZE = 50;
+  var currentPage = 0;
+  var allEvents = [];
+  var filteredEvents = [];
+  var sortCol = 'event_date';
+  var sortAsc = true;
+  var editingId = null;
+
+  // ---- DOM refs ----
+  var $loginScreen = document.getElementById('login-screen');
+  var $adminApp = document.getElementById('admin-app');
+  var $loginEmail = document.getElementById('login-email');
+  var $loginPass = document.getElementById('login-pass');
+  var $loginBtn = document.getElementById('login-btn');
+  var $loginError = document.getElementById('login-error');
+  var $logoutBtn = document.getElementById('logout-btn');
+  var $userEmail = document.getElementById('user-email');
+  var $searchInput = document.getElementById('search-input');
+  var $showPast = document.getElementById('show-past');
+  var $addBtn = document.getElementById('add-event-btn');
+  var $tbody = document.getElementById('events-tbody');
+  var $tableCount = document.getElementById('table-count');
+  var $prevPage = document.getElementById('prev-page');
+  var $nextPage = document.getElementById('next-page');
+  var $modal = document.getElementById('event-modal');
+  var $modalTitle = document.getElementById('modal-title');
+  var $modalClose = document.getElementById('modal-close');
+  var $formStatus = document.getElementById('form-status');
+  var $formSave = document.getElementById('form-save');
+  var $formCancel = document.getElementById('form-cancel');
+  var $formDelete = document.getElementById('form-delete');
+  var $confirmDialog = document.getElementById('confirm-dialog');
+  var $confirmMsg = document.getElementById('confirm-msg');
+  var $confirmYes = document.getElementById('confirm-yes');
+  var $confirmNo = document.getElementById('confirm-no');
+
+  // ---- Auth ----
+  async function checkSession() {
+    var { data } = await sb.auth.getSession();
+    if (data.session) {
+      showAdmin(data.session.user);
+    }
+  }
+
+  $loginBtn.addEventListener('click', async function() {
+    $loginError.style.display = 'none';
+    var email = $loginEmail.value.trim();
+    var pass = $loginPass.value;
+    if (!email || !pass) {
+      $loginError.textContent = 'Enter email and password';
+      $loginError.style.display = 'block';
+      return;
+    }
+    $loginBtn.textContent = 'Signing in...';
+    $loginBtn.disabled = true;
+    var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pass });
+    $loginBtn.textContent = 'Sign In';
+    $loginBtn.disabled = false;
+    if (error) {
+      $loginError.textContent = error.message;
+      $loginError.style.display = 'block';
+      return;
+    }
+    showAdmin(data.user);
+  });
+
+  $loginPass.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') $loginBtn.click();
+  });
+
+  $logoutBtn.addEventListener('click', async function() {
+    await sb.auth.signOut();
+    $adminApp.style.display = 'none';
+    $loginScreen.style.display = 'flex';
+  });
+
+  function showAdmin(user) {
+    $loginScreen.style.display = 'none';
+    $adminApp.style.display = 'block';
+    $userEmail.textContent = user.email;
+    loadEvents();
+  }
+
+  // ---- Load Events ----
+  async function loadEvents() {
+    $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">Loading events...</td></tr>';
+    var query = sb.from('events').select('*').order('event_date', { ascending: true });
+
+    if (!$showPast.checked) {
+      var today = new Date().toISOString().slice(0, 10);
+      query = query.gte('event_date', today);
+    }
+
+    var { data, error } = await query;
+    if (error) {
+      $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#e74c3c;">Error: ' + error.message + '</td></tr>';
+      return;
+    }
+    allEvents = data || [];
+    applyFilters();
+  }
+
+  // ---- Filter & Sort ----
+  function applyFilters() {
+    var q = $searchInput.value.toLowerCase().trim();
+    filteredEvents = allEvents.filter(function(ev) {
+      if (!q) return true;
+      return (ev.title || '').toLowerCase().includes(q)
+        || (ev.venue || '').toLowerCase().includes(q)
+        || (ev.category || '').toLowerCase().includes(q)
+        || (ev.neighborhood || '').toLowerCase().includes(q)
+        || (ev.description || '').toLowerCase().includes(q);
+    });
+
+    filteredEvents.sort(function(a, b) {
+      var va = a[sortCol] || '';
+      var vb = b[sortCol] || '';
+      if (va < vb) return sortAsc ? -1 : 1;
+      if (va > vb) return sortAsc ? 1 : -1;
+      return 0;
+    });
+
+    currentPage = 0;
+    renderTable();
+  }
+
+  $searchInput.addEventListener('input', applyFilters);
+  $showPast.addEventListener('change', loadEvents);
+
+  // ---- Sort headers ----
+  document.querySelectorAll('.ev-table th[data-sort]').forEach(function(th) {
+    th.addEventListener('click', function() {
+      var col = th.getAttribute('data-sort');
+      if (sortCol === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = col;
+        sortAsc = true;
+      }
+      // Update header arrows
+      document.querySelectorAll('.ev-table th[data-sort]').forEach(function(h) {
+        h.textContent = h.textContent.replace(/ [▼▲]/g, '');
+      });
+      th.textContent += sortAsc ? ' ▲' : ' ▼';
+      applyFilters();
+    });
+  });
+
+  // ---- Render Table ----
+  function renderTable() {
+    var start = currentPage * PAGE_SIZE;
+    var page = filteredEvents.slice(start, start + PAGE_SIZE);
+    var total = filteredEvents.length;
+
+    if (page.length === 0) {
+      $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">No events found</td></tr>';
+    } else {
+      $tbody.innerHTML = page.map(function(ev) {
+        var dateStr = ev.event_date ? new Date(ev.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+        var src = ev.source_name || 'Manual';
+        var srcClass = src === 'Manual' ? 'manual' : '';
+        var imgHtml = ev.image_url
+          ? '<img src="' + esc(ev.image_url) + '" alt="" onerror="this.style.display=\'none\'">'
+          : '<div style="width:44px;height:44px;background:#eee;border-radius:4px;"></div>';
+        return '<tr data-id="' + ev.id + '">'
+          + '<td class="thumb-cell">' + imgHtml + '</td>'
+          + '<td>' + esc(dateStr) + '</td>'
+          + '<td class="title-cell">' + esc(ev.title) + '</td>'
+          + '<td>' + esc(ev.venue || '') + '</td>'
+          + '<td>' + esc(ev.category || 'Events') + '</td>'
+          + '<td><span class="source-badge ' + srcClass + '">' + esc(src) + '</span></td>'
+          + '<td><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
+          + '<td class="actions-cell">'
+          + '<button class="edit-btn" title="Edit">✏️</button>'
+          + '<button class="del-btn" title="Delete">🗑️</button>'
+          + '</td></tr>';
+      }).join('');
+    }
+
+    $tableCount.textContent = 'Showing ' + (start + 1) + '–' + Math.min(start + PAGE_SIZE, total) + ' of ' + total + ' events';
+    $prevPage.disabled = currentPage === 0;
+    $nextPage.disabled = start + PAGE_SIZE >= total;
+  }
+
+  $prevPage.addEventListener('click', function() { currentPage--; renderTable(); });
+  $nextPage.addEventListener('click', function() { currentPage++; renderTable(); });
+
+  // ---- Table click handlers ----
+  $tbody.addEventListener('click', function(e) {
+    // Edit button
+    if (e.target.classList.contains('edit-btn')) {
+      var tr = e.target.closest('tr');
+      var id = tr.getAttribute('data-id');
+      var ev = allEvents.find(function(x) { return x.id === id; });
+      if (ev) openForm(ev);
+    }
+    // Delete button
+    if (e.target.classList.contains('del-btn')) {
+      var tr = e.target.closest('tr');
+      var id = tr.getAttribute('data-id');
+      var ev = allEvents.find(function(x) { return x.id === id; });
+      if (ev) confirmDelete(ev);
+    }
+  });
+
+  // ---- Pick toggle (direct in table) ----
+  $tbody.addEventListener('change', function(e) {
+    if (e.target.classList.contains('pick-toggle')) {
+      var id = e.target.getAttribute('data-id');
+      var checked = e.target.checked;
+      sb.from('events').update({ editors_pick: checked, updated_at: new Date().toISOString() }).eq('id', id).then(function(res) {
+        if (res.error) {
+          alert('Failed to update: ' + res.error.message);
+          e.target.checked = !checked;
+        } else {
+          var ev = allEvents.find(function(x) { return x.id === id; });
+          if (ev) ev.editors_pick = checked;
+        }
+      });
+    }
+  });
+
+  // ---- Add Event ----
+  $addBtn.addEventListener('click', function() { openForm(null); });
+
+  // ---- Form ----
+  function openForm(ev) {
+    editingId = ev ? ev.id : null;
+    $modalTitle.textContent = ev ? 'Edit Event' : 'Add Event';
+    $formDelete.style.display = ev ? 'inline-block' : 'none';
+    $formStatus.className = 'status-msg';
+    $formStatus.style.display = 'none';
+
+    document.getElementById('ev-id').value = ev ? ev.id : '';
+    document.getElementById('ev-title').value = ev ? ev.title || '' : '';
+    document.getElementById('ev-slug').value = ev ? ev.slug || '' : '';
+    document.getElementById('ev-date').value = ev ? (ev.event_date || '').slice(0, 10) : '';
+    document.getElementById('ev-time').value = ev ? ev.time || '' : '';
+    document.getElementById('ev-venue').value = ev ? ev.venue || '' : '';
+    document.getElementById('ev-address').value = ev ? ev.address || '' : '';
+    document.getElementById('ev-neighborhood').value = ev ? ev.neighborhood || '' : '';
+    document.getElementById('ev-city').value = ev ? ev.city || 'sf' : 'sf';
+    document.getElementById('ev-category').value = ev ? ev.category || 'Events' : 'Events';
+    document.getElementById('ev-price').value = ev ? ev.price || '' : '';
+    document.getElementById('ev-image').value = ev ? ev.image_url || '' : '';
+    document.getElementById('ev-ticket-url').value = ev ? ev.ticket_url || '' : '';
+    document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
+    document.getElementById('ev-description').value = ev ? ev.description || '' : '';
+    document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
+    document.getElementById('ev-featured').checked = ev ? !!ev.featured : false;
+    document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
+
+    $modal.classList.add('active');
+    document.getElementById('ev-title').focus();
+  }
+
+  function closeForm() {
+    $modal.classList.remove('active');
+    editingId = null;
+  }
+
+  $modalClose.addEventListener('click', closeForm);
+  $formCancel.addEventListener('click', closeForm);
+  $modal.addEventListener('click', function(e) {
+    if (e.target === $modal) closeForm();
+  });
+
+  // ---- Auto-generate slug ----
+  document.getElementById('ev-title').addEventListener('input', function() {
+    if (editingId) return; // Don't auto-change slug when editing
+    var title = this.value;
+    var date = document.getElementById('ev-date').value;
+    document.getElementById('ev-slug').value = makeSlug(title, date);
+  });
+  document.getElementById('ev-date').addEventListener('input', function() {
+    if (editingId) return;
+    var title = document.getElementById('ev-title').value;
+    var date = this.value;
+    document.getElementById('ev-slug').value = makeSlug(title, date);
+  });
+
+  function makeSlug(title, date) {
+    var slug = (title || '').toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (date) slug += '-' + date;
+    return slug;
+  }
+
+  // ---- Save Event ----
+  $formSave.addEventListener('click', async function() {
+    var title = document.getElementById('ev-title').value.trim();
+    var date = document.getElementById('ev-date').value;
+    if (!title) { showFormMsg('error', 'Title is required'); return; }
+    if (!date) { showFormMsg('error', 'Date is required'); return; }
+
+    var slug = document.getElementById('ev-slug').value.trim() || makeSlug(title, date);
+
+    var payload = {
+      title: title,
+      slug: slug,
+      event_date: date + 'T00:00:00',
+      date: date,
+      time: document.getElementById('ev-time').value.trim() || null,
+      venue: document.getElementById('ev-venue').value.trim() || null,
+      address: document.getElementById('ev-address').value.trim() || null,
+      neighborhood: document.getElementById('ev-neighborhood').value.trim() || null,
+      city: document.getElementById('ev-city').value,
+      category: document.getElementById('ev-category').value,
+      price: document.getElementById('ev-price').value.trim() || null,
+      image_url: document.getElementById('ev-image').value.trim() || null,
+      ticket_url: document.getElementById('ev-ticket-url').value.trim() || null,
+      performers: document.getElementById('ev-performers').value.trim() || null,
+      description: document.getElementById('ev-description').value.trim() || null,
+      editors_pick: document.getElementById('ev-editors-pick').checked,
+      featured: document.getElementById('ev-featured').checked,
+      sold_out: document.getElementById('ev-sold-out').checked,
+      source_name: 'Manual',
+      updated_at: new Date().toISOString()
+    };
+
+    $formSave.textContent = 'Saving...';
+    $formSave.disabled = true;
+
+    var result;
+    if (editingId) {
+      result = await sb.from('events').update(payload).eq('id', editingId);
+    } else {
+      result = await sb.from('events').insert(payload);
+    }
+
+    $formSave.textContent = 'Save Event';
+    $formSave.disabled = false;
+
+    if (result.error) {
+      showFormMsg('error', 'Error: ' + result.error.message);
+      return;
+    }
+
+    showFormMsg('success', editingId ? 'Event updated!' : 'Event created!');
+    setTimeout(function() {
+      closeForm();
+      loadEvents();
+    }, 600);
+  });
+
+  // ---- Delete ----
+  var pendingDeleteId = null;
+
+  $formDelete.addEventListener('click', function() {
+    var ev = allEvents.find(function(x) { return x.id === editingId; });
+    if (ev) confirmDelete(ev);
+  });
+
+  function confirmDelete(ev) {
+    pendingDeleteId = ev.id;
+    $confirmMsg.textContent = 'Delete "' + ev.title + '"? This cannot be undone.';
+    $confirmDialog.classList.add('active');
+  }
+
+  $confirmNo.addEventListener('click', function() {
+    pendingDeleteId = null;
+    $confirmDialog.classList.remove('active');
+  });
+
+  $confirmYes.addEventListener('click', async function() {
+    if (!pendingDeleteId) return;
+    $confirmYes.textContent = 'Deleting...';
+    $confirmYes.disabled = true;
+
+    var { error } = await sb.from('events').delete().eq('id', pendingDeleteId);
+
+    $confirmYes.textContent = 'Delete';
+    $confirmYes.disabled = false;
+    $confirmDialog.classList.remove('active');
+
+    if (error) {
+      alert('Delete failed: ' + error.message);
+    } else {
+      pendingDeleteId = null;
+      closeForm();
+      loadEvents();
+    }
+  });
+
+  // ---- Helpers ----
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function showFormMsg(type, msg) {
+    $formStatus.className = 'status-msg ' + type;
+    $formStatus.textContent = msg;
+    $formStatus.style.display = 'block';
+  }
+
+  // ---- Init ----
+  checkSession();
+
+})();
+</script>
+</body>
+</html>
