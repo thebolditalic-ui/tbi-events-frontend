@@ -537,22 +537,10 @@
       width: calc(100% + 200px);
       margin-left: -100px;
       height: auto;
-    }
-    .body-background .hide-on-mobile { display: block; }
-    .body-background .hide-on-tablet,
-    .body-background .hide-on-desktop { display: none; }
-    @media (min-width: 1024px) {
-      .body-background img.fullwidth {
-        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
-        mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
-        -webkit-mask-repeat: no-repeat;
-        mask-repeat: no-repeat;
-      }
-    }
-    @media (max-width: 991px) {
-      .body-background .hide-on-mobile { display: none; }
-      .body-background .hide-on-tablet,
-      .body-background .hide-on-desktop { display: block; }
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
+      mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
     }
 
     /* ---- Header wrapper ---- */
@@ -694,22 +682,54 @@
     }
     .site-header .menu-mobile svg { width: 28px; height: 28px; color: #3B3A3A; }
 
-    /* ---- Mobile (≤991px): slide-out sidebar nav ---- */
+    /* ---- Mobile (≤991px): hamburger left, logo center, search right ---- */
     @media (max-width: 991px) {
-      .site-header .logo { padding-bottom: 10px !important; margin-top: 0 !important; }
+      .site-header .menu-wrapper { padding: 10px 0 0; }
+      .site-header .logo { padding-bottom: 0 !important; margin-top: 0 !important; }
       .site-header .grid-container {
-        display: flex; align-items: center; justify-content: space-between;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        padding: 10px 60px;  /* leave room for hamburger & search */
+        min-height: 56px;
       }
+      /* Hamburger — pinned left */
+      .site-header .menu-mobile {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px; height: 40px;
+        z-index: 10;
+      }
+      /* Search — pinned right */
+      .site-header .epcl-search-button {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 38px; height: 38px;
+        flex-shrink: 0;
+      }
+      /* Logo — centered, smaller scale */
+      .site-header .logo a img {
+        transform: scale(1.25) !important;
+      }
+      /* Nav — hidden, slide-out sidebar */
       .site-header .main-nav {
         display: none;
         position: fixed;
         top: 0; left: 0; bottom: 0;
-        width: 320px;
+        width: 300px;
         margin-top: 0 !important;
         background: var(--bg-primary);
         z-index: 9999;
         text-align: left;
-        padding: 60px 0 40px !important;
+        padding: 24px 0 40px !important;
         box-shadow: 4px 0 20px rgba(0,0,0,0.15);
         overflow-y: auto;
       }
@@ -718,22 +738,36 @@
       .site-header .main-nav ul.menu {
         display: block; padding: 0; gap: 0;
       }
+      .site-header .main-nav ul.menu > li {
+        padding: 0;
+        border-bottom: 1px solid rgba(0,0,0,0.06);
+      }
       .site-header .main-nav ul.menu > li > a {
-        padding: 10px 24px;
-        font-size: 19px;
-        font-weight: 400;
+        display: block;
+        padding: 14px 24px;
+        font-size: 17px;
+        font-weight: 600;
         text-transform: none;
         letter-spacing: normal;
+        color: #1E1B1B !important;
       }
       .site-header .main-nav ul.menu > li > a::after { display: none; }
-      .site-header .menu-mobile { display: block; }
-      .site-header .epcl-search-button { position: static; transform: none; flex-shrink: 0; margin-left: 8px; }
+      .site-header .main-nav ul.menu > li.current > a {
+        font-weight: 800;
+        background: rgba(255,214,130,0.15);
+      }
+      /* Dark overlay behind sidebar */
       .mobile-overlay {
         display: none;
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.4); z-index: 9998;
       }
       .mobile-overlay.open { display: block; }
+      /* Banner adjustments for mobile */
+      .body-background img.fullwidth {
+        width: 100%;
+        margin-left: 0;
+      }
     }
   </style>
 </head>
@@ -742,8 +776,7 @@
 
   <!-- Banner background (absolute, behind header — same as thebolditalic.com) -->
   <div class="body-background">
-    <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="fullwidth hide-on-mobile" width="1920" height="600">
-    <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/size/w1024/2025/11/VibrantSF5.jpg" alt="" class="fullwidth hide-on-tablet hide-on-desktop" width="768" height="300">
+    <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="fullwidth" width="1920" height="600">
   </div>
 
   <!-- Mobile nav overlay backdrop -->
