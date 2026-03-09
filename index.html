@@ -755,6 +755,55 @@
       return [];
     }
   }
+
+  /* ---------- Supabase-based Editor's Picks ---------- */
+  async function fetchEditorsPicksFromSupabase() {
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc&limit=10';
+      var resp = await fetch(url, {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+      });
+      var rows = await resp.json();
+      if (!rows || rows.length === 0) return [];
+      return rows.map(function(r) {
+        var humanDate = isoToHumanDate(r.event_date);
+        var category = r.category || 'Events';
+        return {
+          title: r.title,
+          url: '/' + r.slug + '/',
+          slug: r.slug,
+          image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
+          category: category,
+          catColor: CATEGORY_COLORS[category] || '#cdd6f4',
+          excerpt: r.description || '',
+          date: humanDate,
+          eventDate: (r.event_date || '').slice(0, 10),
+          isEditorsPick: true
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to fetch Editor\'s Picks from Supabase:', err);
+      return [];
+    }
+  }
+
+  /* ---------- Merge Editor's Picks from both sources ---------- */
+  async function fetchEditorsPicks() {
+    var ghostPicks = await fetchEditorsPicksFromGhost();
+    var supabasePicks = await fetchEditorsPicksFromSupabase();
+    // Deduplicate by title (Ghost picks take priority)
+    var seen = {};
+    ghostPicks.forEach(function(p) { seen[p.title.toLowerCase()] = true; });
+    var merged = ghostPicks.concat(supabasePicks.filter(function(p) {
+      return !seen[p.title.toLowerCase()];
+    }));
+    // Sort by event date
+    merged.sort(function(a, b) {
+      return (a.eventDate || '9999') < (b.eventDate || '9999') ? -1 : 1;
+    });
+    return merged;
+  }
   /* ---------- Supabase fetch (replaces Ghost API) ---------- */
   async function fetchEvents() {
     var today = new Date().toISOString().slice(0, 10);
@@ -1431,7 +1480,7 @@
       renderSkeleton();
       var events = await fetchEvents();
       var featured = await fetchFeaturedFromGhost();
-      var editorsPicks = await fetchEditorsPicksFromGhost();
+      var editorsPicks = await fetchEditorsPicks();
       renderPage(events, featured, editorsPicks);
     } catch (err) {
       console.error('TBI Events page error:', err);
