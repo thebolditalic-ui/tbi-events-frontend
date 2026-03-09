@@ -1234,6 +1234,7 @@
         ticketUrl: r.ticket_url || '',
         excerpt: r.description || '', isFeatured: r.featured || false,
         source_url: r.source_url || '', description: r.description || '',
+        isEditorsPick: r.editors_pick || false,
       };
       ev.city = classifyCity(ev);
       ev.monthData = monthData;
@@ -1426,7 +1427,7 @@
     var dateGroups = [];
     var dateMap = {};
     events.forEach(function(ev) {
-      ev.isEditorsPick = !!(edPickSlugs[ev.slug] || edPickSlugs[ev.title.toLowerCase()]);
+      ev.isEditorsPick = !!(ev.isEditorsPick || edPickSlugs[ev.slug] || edPickSlugs[ev.title.toLowerCase()]);
       var d = ev.date || 'Date TBD';
       if (!dateMap[d]) { dateMap[d] = []; dateGroups.push(d); }
       dateMap[d].push(ev);
@@ -1484,6 +1485,7 @@
     var currentPage = 1;
     var activeDate = '';
     var monthPillClicked = false;
+    var locTabClicked = false;
     function toggleEditorsPicks(show) {
       var picks = document.querySelector('.ev-editors-picks');
       if (picks) picks.style.display = show ? '' : 'none';
@@ -1589,6 +1591,8 @@
         document.querySelectorAll('.ev-loc-tab').forEach(function(t) { t.classList.add('ev-loc-inactive'); });
         tab.classList.remove('ev-loc-inactive');
         activeLoc = tab.getAttribute('data-loc');
+        locTabClicked = true;
+        toggleEditorsPicks(false);
         resetPageAndFilter();
       });
     });
@@ -1633,7 +1637,7 @@
           pickDay.disabled = true;
           activeDate = '';
           pickClear.style.display = 'none';
-          if (!monthPillClicked) toggleEditorsPicks(true);
+          if (!monthPillClicked && !locTabClicked) toggleEditorsPicks(true);
           resetPageAndFilter();
           return;
         }
@@ -1669,7 +1673,7 @@
         pickDay.disabled = true;
         activeDate = '';
         pickClear.style.display = 'none';
-        if (!monthPillClicked) toggleEditorsPicks(true);
+        if (!monthPillClicked && !locTabClicked) toggleEditorsPicks(true);
         var fp = document.querySelector('.ev-month-pill');
         if (fp) {
           document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
