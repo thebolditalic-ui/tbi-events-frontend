@@ -1466,6 +1466,10 @@
     var searchTerm = '';
     var currentPage = 1;
     var activeDate = '';
+    function toggleEditorsPicks(show) {
+      var picks = document.querySelector('.ev-editors-picks');
+      if (picks) picks.style.display = show ? '' : 'none';
+    }
     function applyFilters() {
       var rows = document.querySelectorAll('.ev-row:not(.ev-pick-row)');
       var matchingRows = [];
@@ -1608,6 +1612,7 @@
           pickDay.disabled = true;
           activeDate = '';
           pickClear.style.display = 'none';
+          toggleEditorsPicks(true);
           resetPageAndFilter();
           return;
         }
@@ -1621,6 +1626,7 @@
         if (matchPill) matchPill.classList.add('active');
         activeDate = '';
         pickClear.style.display = 'inline-block';
+        toggleEditorsPicks(false);
         resetPageAndFilter();
       });
     }
@@ -1628,9 +1634,10 @@
       pickDay.addEventListener('change', function() {
         var selectedDay = pickDay.value;
         var selectedMonth = pickMonth.value;
-        if (!selectedDay || !selectedMonth) { activeDate = ''; resetPageAndFilter(); return; }
+        if (!selectedDay || !selectedMonth) { activeDate = ''; toggleEditorsPicks(true); resetPageAndFilter(); return; }
         activeDate = selectedMonth + '-' + String(selectedDay).padStart(2, '0');
         pickClear.style.display = 'inline-block';
+        toggleEditorsPicks(false);
         resetPageAndFilter();
       });
     }
@@ -1641,6 +1648,7 @@
         pickDay.disabled = true;
         activeDate = '';
         pickClear.style.display = 'none';
+        toggleEditorsPicks(true);
         var fp = document.querySelector('.ev-month-pill');
         if (fp) {
           document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
@@ -1887,9 +1895,14 @@
   async function initListPage() {
     try {
       renderSkeleton();
-      var events = await fetchEvents();
-      var featured = await fetchFeaturedFromGhost();
-      var editorsPicks = await fetchEditorsPicks();
+      var results = await Promise.all([
+        fetchEvents(),
+        fetchFeaturedFromGhost(),
+        fetchEditorsPicks()
+      ]);
+      var events = results[0];
+      var featured = results[1];
+      var editorsPicks = results[2];
       renderPage(events, featured, editorsPicks);
     } catch (err) {
       console.error('TBI Events page error:', err);
