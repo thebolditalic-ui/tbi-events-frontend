@@ -545,8 +545,8 @@
       width: calc(100% + 200px);
       margin-left: -100px;
       height: auto;
-      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 10%, transparent 30%);
-      mask-image: linear-gradient(to bottom, #000 0%, #000 10%, transparent 30%);
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
+      mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
       -webkit-mask-repeat: no-repeat;
       mask-repeat: no-repeat;
     }
@@ -750,7 +750,11 @@
         background: rgba(0,0,0,0.4); z-index: 9998;
       }
       .mobile-overlay.open { display: block; }
-      /* Banner: no special mobile overrides — let desktop fade rules apply */
+      /* Banner: fade starts lower, much more gradual on mobile */
+      .body-background img.fullwidth {
+        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 95%) !important;
+        mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 95%) !important;
+      }
     }
   </style>
 </head>
