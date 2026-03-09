@@ -750,9 +750,14 @@
         background: rgba(0,0,0,0.4); z-index: 9998;
       }
       .mobile-overlay.open { display: block; }
-      /* Banner adjustments for mobile — taller to show more fade gradient */
+      /* Banner: extend container so ::before cream gradient has room below image */
       .body-background {
-        max-height: 360px;
+        min-height: 240px;
+      }
+      /* Fade image out earlier on mobile so gradient zone is longer */
+      .body-background img.fullwidth {
+        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 20%, transparent 50%);
+        mask-image: linear-gradient(to bottom, #000 0%, #000 20%, transparent 50%);
       }
     }
   </style>
