@@ -519,61 +519,93 @@
     }
 
     /* =============================================
-       Site Header — matches thebolditalic.com
+       Site Header — cloned from thebolditalic.com
        ============================================= */
     body.embedded .site-header { display: none; }
+    body.embedded .body-background { display: none; }
 
+    /* Banner background — sits behind the header */
+    .body-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 220px;
+      overflow: hidden;
+      z-index: -2;
+    }
+    .body-background img {
+      display: block;
+      width: calc(100% + 200px);
+      margin-left: -100px;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Header — overlays the banner */
     .site-header {
-      background: var(--bg-primary);
+      position: relative;
+      padding-top: 5px;
+    }
+    .site-header .menu-wrapper {
+      padding-top: 30px;
+      text-align: center;
     }
     .site-header .grid-container {
       max-width: 1290px;
       margin: 0 auto;
       padding: 0 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      text-align: center;
       position: relative;
     }
+
+    /* Logo — centered on the banner */
     .site-header .logo {
-      flex-shrink: 0;
-      padding: 18px 0;
+      text-align: center;
+      padding: 10px 0 20px;
     }
-    .site-header .logo a { display: block; line-height: 0; }
+    .site-header .logo a { display: inline-block; line-height: 0; }
     .site-header .logo img {
       width: 170px;
       height: auto;
     }
+
+    /* Nav bar — cream background, centered below banner */
     .site-header .main-nav {
-      display: flex;
-      align-items: center;
+      display: inline-block;
+      text-align: center;
+      padding: 2px 0;
+      background: var(--bg-primary);
     }
     .site-header .main-nav ul {
       list-style: none;
       margin: 0;
       padding: 0;
-      display: flex;
-      align-items: center;
-      gap: 0;
+      display: inline-block;
+    }
+    .site-header .main-nav ul li {
+      display: inline-block;
     }
     .site-header .main-nav ul li a {
       font-family: 'Playfair Display', 'Times New Roman', serif;
-      font-size: 15px;
+      font-size: 15.2px;
       font-weight: 800;
       text-transform: uppercase;
-      letter-spacing: 0.9px;
+      letter-spacing: 0.912px;
       color: #111;
       text-decoration: none;
-      padding: 18px 16px;
+      padding: 8px;
       display: block;
       position: relative;
-      transition: background-size 300ms;
-      background-image: linear-gradient(to right, #3B3A3A 0%, #3B3A3A 100%);
+      padding-bottom: 5px;
+      background-image: linear-gradient(to right, var(--epcl-text-color) 0%, var(--epcl-text-color) 100%);
       background-size: 0% 4%;
       background-repeat: no-repeat;
       background-position: 100% 85%;
+      transition: background-size 300ms;
     }
     .site-header .main-nav ul li a:hover {
+      color: var(--epcl-text-color);
       background-size: 100% 4%;
       background-position: 0% 85%;
     }
@@ -581,42 +613,49 @@
       background-size: 100% 4%;
       background-position: 0% 85%;
     }
-    .site-header .nav-signin a {
-      background: #3B3A3A !important;
-      color: #fff !important;
-      border-radius: 50px;
-      padding: 8px 20px !important;
-      font-size: 13px !important;
-      letter-spacing: 0.5px;
+
+    /* Sign In pill button */
+    .site-header .epcl-nav-login a {
+      background: #e5ce9e !important;
+      color: #1E1B1B !important;
+      border-radius: 100px;
+      padding: 7px 25px !important;
+      font-size: 17px !important;
+      font-weight: 600;
       background-image: none !important;
     }
-    .site-header .nav-signin a:hover {
+    .site-header .epcl-nav-login a:hover {
       opacity: 0.85;
     }
-    .site-header .search-btn {
-      background: none;
-      border: 2px solid var(--epcl-secondary-color);
+
+    /* Search button — gold circle, absolute positioned */
+    .site-header .epcl-search-button {
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
+      background: #ffd682;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      margin-left: 10px;
-      flex-shrink: 0;
-      transition: background 200ms;
+      transition: opacity 200ms;
     }
-    .site-header .search-btn:hover {
-      background: var(--epcl-secondary-color);
+    .site-header .epcl-search-button:hover {
+      opacity: 0.85;
     }
-    .site-header .search-btn svg {
-      width: 18px;
-      height: 18px;
+    .site-header .epcl-search-button svg {
+      width: 22px;
+      height: 22px;
       fill: none;
       stroke: #3B3A3A;
       stroke-width: 2;
     }
+
+    /* Hamburger menu — hidden on desktop */
     .site-header .menu-mobile {
       display: none;
       background: none;
@@ -627,14 +666,32 @@
     .site-header .menu-mobile svg {
       width: 28px;
       height: 28px;
-      stroke: #3B3A3A;
+      color: #3B3A3A;
     }
-    .site-header .nav-border {
-      border-bottom: 1px solid rgba(112, 112, 112, 0.15);
+
+    /* Nav full-width cream bar */
+    .site-header .nav-bar {
+      background: var(--bg-primary);
+      border-top: 1px solid rgba(112, 112, 112, 0.15);
+      position: relative;
+    }
+    .site-header .nav-bar .grid-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Mobile menu */
     @media (max-width: 1024px) {
+      .body-background { height: 140px; }
+      .site-header .menu-wrapper { padding-top: 15px; }
+      .site-header .logo { padding: 5px 0 10px; }
+      .site-header .logo img { width: 140px; }
+      .site-header .grid-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
       .site-header .main-nav {
         display: none;
         position: absolute;
@@ -645,13 +702,17 @@
         z-index: 999;
         border-bottom: 1px solid rgba(112, 112, 112, 0.2);
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        text-align: left;
       }
       .site-header .main-nav.open {
         display: block;
       }
       .site-header .main-nav ul {
-        flex-direction: column;
+        display: block;
         padding: 10px 0;
+      }
+      .site-header .main-nav ul li {
+        display: block;
       }
       .site-header .main-nav ul li a {
         padding: 12px 24px;
@@ -662,34 +723,43 @@
         background: rgba(255, 214, 130, 0.15);
         background-image: none;
       }
-      .site-header .nav-signin {
+      .site-header .epcl-nav-login {
         border-top: 1px solid rgba(112, 112, 112, 0.1);
         margin-top: 4px;
-        padding-top: 8px;
+        padding: 8px 24px 12px;
       }
-      .site-header .nav-signin a {
-        margin: 4px 24px 12px;
+      .site-header .epcl-nav-login a {
         display: inline-block;
       }
       .site-header .menu-mobile {
         display: block;
       }
-      .site-header .search-btn {
-        display: none;
+      .site-header .epcl-search-button {
+        position: static;
+        transform: none;
+        flex-shrink: 0;
       }
-      .site-header .logo img {
-        width: 140px;
-      }
+    }
+    @media (max-width: 600px) {
+      .body-background { height: 100px; }
+      .site-header .menu-wrapper { padding-top: 8px; }
+      .site-header .logo img { width: 120px; }
     }
   </style>
 </head>
 <body>
 <script>if (window.self !== window.top) document.body.classList.add('embedded');</script>
 
-  <!-- Site Header -->
-  <header class="site-header">
-    <div class="nav-border">
+  <!-- Banner background — sits behind header like on thebolditalic.com -->
+  <div class="body-background">
+    <img src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="fullwidth" loading="eager">
+  </div>
+
+  <!-- Site Header — cloned structure from thebolditalic.com -->
+  <header id="header" class="site-header classic">
+    <div class="menu-wrapper">
       <div class="grid-container">
+
         <div class="logo">
           <a href="https://www.thebolditalic.com">
             <img src="https://www.thebolditalic.com/content/images/2025/11/TBI-Logo.png" alt="The Bold Italic" width="170" height="60" decoding="async">
@@ -697,27 +767,29 @@
         </div>
 
         <nav class="main-nav" id="main-nav">
-          <ul>
-            <li><a href="https://www.thebolditalic.com/about/">About Us</a></li>
-            <li><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
-            <li class="active"><a href="https://events.thebolditalic.com/">Going Out</a></li>
-            <li><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
-            <li><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
-            <li><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
-            <li><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
-            <li class="nav-signin"><a href="https://www.thebolditalic.com/signin">Sign In</a></li>
+          <ul class="menu underline-effect">
+            <li class="nav-about-us"><a href="https://www.thebolditalic.com/about/">About Us</a></li>
+            <li class="nav-i-sf"><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
+            <li class="nav-going-out active"><a href="https://events.thebolditalic.com/">Going Out</a></li>
+            <li class="nav-food-drink"><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
+            <li class="nav-lgbtq"><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
+            <li class="nav-television"><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
+            <li class="nav-get-our-newsletter"><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
+            <li class="epcl-nav-login"><a href="https://www.thebolditalic.com/signin" class="epcl-button">Sign In</a></li>
           </ul>
         </nav>
 
-        <button class="search-btn" onclick="window.location.href='https://www.thebolditalic.com'" title="Search">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        </button>
+        <span class="epcl-search-button" onclick="window.location.href='https://www.thebolditalic.com'" title="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
 
-        <button class="menu-mobile" id="menu-toggle" aria-label="Menu">
+        <div class="menu-mobile" id="menu-toggle" aria-label="Menu">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-        </button>
+        </div>
+
+        <div class="clear" style="clear:both"></div>
       </div>
     </div>
   </header>
