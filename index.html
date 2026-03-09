@@ -133,6 +133,7 @@
       #tbi-events .ev-fcard .ev-sidebar { display: none; }
       #tbi-events .ev-fcard .ev-border-deco { display: none; }
       #tbi-events .ev-header h1 { font-size: 30px; }
+      #tbi-events .ev-header { padding-top: 55px; }
     }
     @media (max-width: 700px) {
       #tbi-events .ev-filter-row { flex-direction: column; gap: 10px; align-items: center; }
@@ -695,9 +696,10 @@
         left: 16px;
         top: 50%;
         transform: translateY(-50%);
-        width: 40px; height: 40px;
+        width: 48px; height: 48px;
         z-index: 10;
       }
+      .site-header .menu-mobile svg { width: 34px; height: 34px; }
       /* Search — hidden on events page */
       .site-header .epcl-search-button {
         display: none;
@@ -750,10 +752,12 @@
         background: rgba(0,0,0,0.4); z-index: 9998;
       }
       .mobile-overlay.open { display: block; }
-      /* Banner: fade starts lower, much more gradual on mobile */
+      /* Banner: slightly taller image, fade starts lower with more gradient */
       .body-background img.fullwidth {
-        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 95%) !important;
-        mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 95%) !important;
+        width: calc(100% + 280px);
+        margin-left: -140px;
+        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important;
+        mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important;
       }
     }
   </style>
