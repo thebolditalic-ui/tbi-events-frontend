@@ -972,9 +972,13 @@ body {
       editors_pick: document.getElementById('ev-editors-pick').checked,
       featured: document.getElementById('ev-featured').checked,
       sold_out: document.getElementById('ev-sold-out').checked,
-      source_name: 'Manual',
       updated_at: new Date().toISOString()
     };
+
+    // Only set source_name for new events; don't overwrite scraped source on edits
+    if (!editingId) {
+      payload.source_name = 'Manual';
+    }
 
     $formSave.textContent = 'Saving...';
     $formSave.disabled = true;
