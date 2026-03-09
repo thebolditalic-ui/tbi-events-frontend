@@ -33,7 +33,7 @@
        TBI Events — exact CSS from Ghost header injection v6
        ============================================= */
     #tbi-events { max-width: 1290px; margin: 0 auto; padding: 0 20px; }
-    #tbi-events .ev-header { text-align: center; padding: 15px 0 0; margin-bottom: 30px; }
+    #tbi-events .ev-header { text-align: center; padding: 40px 0 0; margin-bottom: 30px; }
     #tbi-events .ev-header h1 { font-family: var(--epcl-title-font-family, 'Playfair Display', serif); font-weight: 800; font-size: 38px; line-height: 1.2; color: var(--epcl-titles-color, #1E1B1B); margin: 0 0 10px; }
     #tbi-events a.ev-header-link { color: #1E1B1B; text-decoration: underline; font-size: 15px; font-style: italic; }
     #tbi-events a.ev-header-link:hover { color: #e07b5f; }
@@ -532,12 +532,19 @@
       overflow: hidden;
       z-index: -2;
     }
+    .body-background::before {
+      content: "";
+      position: absolute;
+      top: 0; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(rgba(255,255,255,0) 0%, rgb(255,246,230) 100%);
+      pointer-events: none;
+      z-index: 1;
+    }
     .body-background img.fullwidth {
       display: block;
       width: calc(100% + 200px);
       margin-left: -100px;
       height: auto;
-      filter: saturate(0.82);
       -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
       mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
       -webkit-mask-repeat: no-repeat;
@@ -552,6 +559,7 @@
     }
     .site-header .menu-wrapper { text-align: center; padding: 70px 0 0; }
     .site-header .grid-container {
+      box-sizing: content-box;
       max-width: 1290px;
       margin: 0 auto;
       padding: 0 20px;
