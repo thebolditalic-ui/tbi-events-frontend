@@ -811,7 +811,7 @@ body {
       $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">No events found</td></tr>';
     } else {
       $tbody.innerHTML = page.map(function(ev) {
-        var dateStr = ev.event_date ? new Date(ev.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+        var dateStr = ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
         var src = ev.source_name || 'Manual';
         var srcClass = src === 'Manual' ? 'manual' : '';
         var imgHtml = ev.image_url
