@@ -519,44 +519,154 @@
     }
 
     /* =============================================
-       Site Header — cloned from thebolditalic.com
+       Site Header — pixel-exact clone from thebolditalic.com
+       All CSS extracted directly from live page source
        ============================================= */
     body.embedded .site-header { display: none; }
-    body.embedded .header-banner { display: none; }
+    body.embedded .body-background { display: none; }
 
-    /* ---- Banner section: cityscape image with centered logo ---- */
-    .header-banner {
-      position: relative;
+    /* ---- Banner background (absolute, behind everything) ---- */
+    .body-background {
+      position: absolute;
+      top: 0; left: 0; right: 0;
       overflow: hidden;
-      text-align: center;
+      z-index: -2;
     }
-    .header-banner .banner-img {
+    .body-background img.fullwidth {
       display: block;
       width: calc(100% + 200px);
       margin-left: -100px;
-      height: 180px;
-      object-fit: cover;
-    }
-    .header-banner .banner-logo {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 2;
-    }
-    .header-banner .banner-logo img {
-      width: 170px;
       height: auto;
     }
-    /* Search icon on the banner, top-right */
-    .header-banner .epcl-search-button {
+    .body-background .hide-on-mobile { display: block; }
+    .body-background .hide-on-tablet { display: none; }
+    @media (min-width: 1024px) {
+      .body-background img.fullwidth {
+        -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
+        mask-image: linear-gradient(to bottom, #000 0%, #000 40%, transparent 65%);
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+      }
+    }
+    @media (max-width: 991px) {
+      .body-background .hide-on-mobile { display: none; }
+      .body-background .hide-on-tablet { display: block; }
+    }
+
+    /* ---- Header wrapper ---- */
+    .site-header {
+      position: relative;
+      padding-top: 5px !important;
+      padding-bottom: 0 !important;
+    }
+    .site-header .menu-wrapper { text-align: center; }
+    .site-header .grid-container {
+      max-width: 1290px;
+      margin: 0 auto;
+      padding: 0 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    /* ---- Logo: centered, scale(2) on desktop ---- */
+    .site-header .logo { text-align: center; }
+    .site-header .logo a {
+      display: inline-block;
+      color: var(--epcl-titles-color);
+      vertical-align: middle;
+    }
+    .site-header .logo a:hover { transform: translateY(-2px); }
+    .site-header .logo a img {
+      display: block;
+      max-width: none !important;
+      height: auto !important;
+      margin: 0 auto;
+      transform-origin: center top;
+    }
+    @media (min-width: 992px) {
+      .site-header .logo a img { transform: scale(2) !important; }
+      .site-header .logo {
+        padding-bottom: 20px !important;
+        margin-top: -20px !important;
+      }
+    }
+    @media (max-width: 991px) {
+      .site-header .logo a img { transform: scale(1.25) !important; }
+    }
+
+    /* ---- Nav bar: white strip with black hairline borders ---- */
+    .site-header .main-nav {
+      margin-top: 70px !important;
+      padding: 2px 0 !important;
+      min-height: auto !important;
+      position: relative;
+      display: inline-block;
+      text-align: center;
+    }
+    /* Full-bleed white bar behind the nav */
+    .site-header .main-nav::before {
+      content: "";
       position: absolute;
-      right: 30px;
+      top: 0; bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      background: #fff;
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      z-index: -1;
+    }
+    .site-header .main-nav ul.menu {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      justify-content: center;
+    }
+    .site-header .main-nav ul.menu > li > a {
+      font-family: 'Playfair Display', 'Times New Roman', serif;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: .06em;
+      font-size: 0.95rem;
+      line-height: 1;
+      color: #111 !important;
+      padding: 8px 8px;
+      position: relative;
+      text-decoration: none !important;
+      display: block;
+      white-space: nowrap;
+    }
+    /* Animated underline via ::after */
+    .site-header .main-nav ul.menu > li > a::after {
+      content: "";
+      position: absolute;
+      left: 8px; right: 8px; bottom: 4px;
+      height: 2px;
+      background: #111;
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform .18s ease-out;
+    }
+    .site-header .main-nav ul.menu > li > a:hover::after,
+    .site-header .main-nav ul.menu > li > a:focus::after {
+      transform: scaleX(1);
+    }
+    .site-header .main-nav ul.menu > li.current > a { color: #000 !important; }
+    .site-header .main-nav ul.menu > li.current > a::after { transform: scaleX(1); }
+
+    /* ---- Sign In: hidden on desktop ---- */
+    .epcl-nav-login { display: none !important; }
+
+    /* ---- Search button: gold circle ---- */
+    .site-header .epcl-search-button {
+      position: absolute;
+      right: 20px;
       top: 50%;
       transform: translateY(-50%);
-      z-index: 3;
-      width: 44px;
-      height: 44px;
+      width: 44px; height: 44px;
       border-radius: 50%;
       background: #ffd682;
       display: flex;
@@ -565,188 +675,110 @@
       cursor: pointer;
       transition: opacity 200ms;
     }
-    .header-banner .epcl-search-button:hover { opacity: 0.85; }
-    .header-banner .epcl-search-button svg {
-      width: 22px;
-      height: 22px;
-      fill: none;
-      stroke: #3B3A3A;
-      stroke-width: 2;
+    .site-header .epcl-search-button:hover { opacity: 0.85; }
+    .site-header .epcl-search-button svg {
+      width: 22px; height: 22px;
+      fill: none; stroke: #3B3A3A; stroke-width: 2;
     }
 
-    /* ---- Nav bar section: full-width cream bar below banner ---- */
-    .site-header {
-      background: var(--bg-primary);
-      border-bottom: 1px solid rgba(112, 112, 112, 0.12);
-      position: relative;
-      z-index: 10;
-    }
-    .site-header .nav-inner {
-      max-width: 1290px;
-      margin: 0 auto;
-      padding: 0 20px;
-      text-align: center;
-      position: relative;
-    }
-    .site-header .main-nav {
-      display: inline-block;
-      text-align: center;
-      padding: 12px 0;
-    }
-    .site-header .main-nav ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: inline-flex;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .site-header .main-nav ul li {
-      display: inline-block;
-    }
-    .site-header .main-nav ul li a {
-      font-family: 'Playfair Display', 'Times New Roman', serif;
-      font-size: 15.2px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.912px;
-      color: #111;
-      text-decoration: none;
-      padding: 8px 10px;
-      display: block;
-      padding-bottom: 5px;
-      background-image: linear-gradient(to right, var(--epcl-text-color) 0%, var(--epcl-text-color) 100%);
-      background-size: 0% 4%;
-      background-repeat: no-repeat;
-      background-position: 100% 85%;
-      transition: background-size 300ms;
-    }
-    .site-header .main-nav ul li a:hover {
-      color: var(--epcl-text-color);
-      background-size: 100% 4%;
-      background-position: 0% 85%;
-    }
-    .site-header .main-nav ul li.active a {
-      background-size: 100% 4%;
-      background-position: 0% 85%;
-    }
-
-    /* Sign In pill button */
-    .site-header .epcl-nav-login a {
-      background: #e5ce9e !important;
-      color: #1E1B1B !important;
-      border-radius: 100px;
-      padding: 7px 25px !important;
-      font-size: 15.2px !important;
-      font-weight: 600;
-      background-image: none !important;
-    }
-    .site-header .epcl-nav-login a:hover { opacity: 0.85; }
-
-    /* Hamburger — hidden on desktop */
+    /* ---- Hamburger: hidden on desktop ---- */
     .site-header .menu-mobile {
       display: none;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
+      background: none; border: none;
+      cursor: pointer; padding: 8px;
     }
-    .site-header .menu-mobile svg {
-      width: 28px;
-      height: 28px;
-      color: #3B3A3A;
-    }
+    .site-header .menu-mobile svg { width: 28px; height: 28px; color: #3B3A3A; }
 
-    /* ---- Responsive ---- */
-    @media (max-width: 1024px) {
-      .header-banner .banner-img { height: 120px; }
-      .header-banner .banner-logo img { width: 140px; }
-      .header-banner .epcl-search-button { right: 16px; width: 38px; height: 38px; }
-      .header-banner .epcl-search-button svg { width: 18px; height: 18px; }
-
-      .site-header .nav-inner {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
+    /* ---- Mobile (≤991px): slide-out sidebar nav ---- */
+    @media (max-width: 991px) {
+      .site-header .logo { padding-bottom: 10px !important; margin-top: 0 !important; }
+      .site-header .grid-container {
+        display: flex; align-items: center; justify-content: space-between;
       }
       .site-header .main-nav {
         display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 320px;
+        margin-top: 0 !important;
         background: var(--bg-primary);
-        z-index: 999;
-        border-bottom: 1px solid rgba(112, 112, 112, 0.2);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        z-index: 9999;
         text-align: left;
-        padding: 0;
+        padding: 60px 0 40px !important;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+        overflow-y: auto;
       }
+      .site-header .main-nav::before { display: none; }
       .site-header .main-nav.open { display: block; }
-      .site-header .main-nav ul {
-        display: block;
-        padding: 10px 0;
+      .site-header .main-nav ul.menu {
+        display: block; padding: 0; gap: 0;
       }
-      .site-header .main-nav ul li { display: block; }
-      .site-header .main-nav ul li a {
-        padding: 12px 24px;
-        font-size: 14px;
-        background-image: none;
+      .site-header .main-nav ul.menu > li > a {
+        padding: 10px 24px;
+        font-size: 19px;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: normal;
       }
-      .site-header .main-nav ul li a:hover {
-        background: rgba(255, 214, 130, 0.15);
-        background-image: none;
-      }
-      .site-header .epcl-nav-login {
-        border-top: 1px solid rgba(112, 112, 112, 0.1);
-        margin-top: 4px;
-        padding: 8px 24px 12px;
-      }
-      .site-header .epcl-nav-login a { display: inline-block; }
+      .site-header .main-nav ul.menu > li > a::after { display: none; }
       .site-header .menu-mobile { display: block; }
-    }
-    @media (max-width: 600px) {
-      .header-banner .banner-img { height: 80px; }
-      .header-banner .banner-logo img { width: 110px; }
+      .site-header .epcl-search-button { position: static; transform: none; flex-shrink: 0; margin-left: 8px; }
+      .mobile-overlay {
+        display: none;
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4); z-index: 9998;
+      }
+      .mobile-overlay.open { display: block; }
     }
   </style>
 </head>
 <body>
 <script>if (window.self !== window.top) document.body.classList.add('embedded');</script>
 
-  <!-- Banner: cityscape + centered logo + search icon (like thebolditalic.com) -->
-  <div class="header-banner">
-    <img src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="banner-img" loading="eager">
-    <a href="https://www.thebolditalic.com" class="banner-logo">
-      <img src="https://www.thebolditalic.com/content/images/2025/11/TBI-Logo.png" alt="The Bold Italic" width="170" height="60" decoding="async">
-    </a>
-    <span class="epcl-search-button" onclick="window.location.href='https://www.thebolditalic.com'" title="Search">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </span>
+  <!-- Banner background (absolute, behind header — same as thebolditalic.com) -->
+  <div class="body-background">
+    <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="fullwidth hide-on-mobile" width="1920" height="600">
+    <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/size/w1024/2025/11/VibrantSF5.jpg" alt="" class="fullwidth hide-on-tablet hide-on-desktop" width="768" height="300">
   </div>
 
-  <!-- Nav bar: cream strip with centered nav links (like thebolditalic.com) -->
-  <header class="site-header">
-    <div class="nav-inner">
-      <nav class="main-nav" id="main-nav">
-        <ul>
-          <li class="nav-about-us"><a href="https://www.thebolditalic.com/about/">About Us</a></li>
-          <li class="nav-i-sf"><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
-          <li class="nav-going-out active"><a href="https://events.thebolditalic.com/">Going Out</a></li>
-          <li class="nav-food-drink"><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
-          <li class="nav-lgbtq"><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
-          <li class="nav-television"><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
-          <li class="nav-get-our-newsletter"><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
-          <li class="epcl-nav-login"><a href="https://www.thebolditalic.com/signin" class="epcl-button">Sign In</a></li>
-        </ul>
-      </nav>
+  <!-- Mobile nav overlay backdrop -->
+  <div class="mobile-overlay" id="mobile-overlay"></div>
 
-      <div class="menu-mobile" id="menu-toggle" aria-label="Menu">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+  <!-- Header: logo over banner + nav bar (exact structure from thebolditalic.com) -->
+  <header id="header" class="site-header classic">
+    <div class="menu-wrapper">
+      <div class="grid-container">
+
+        <div class="logo">
+          <a href="https://www.thebolditalic.com">
+            <img src="https://www.thebolditalic.com/content/images/2025/11/TBI-Logo.png" alt="The Bold Italic" width="170" height="60" decoding="async">
+          </a>
+        </div>
+
+        <nav class="main-nav" id="main-nav">
+          <ul class="menu">
+            <li class="nav-about-us"><a href="https://www.thebolditalic.com/about/">About Us</a></li>
+            <li class="nav-i-sf"><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
+            <li class="nav-going-out current"><a href="https://events.thebolditalic.com/">Going Out</a></li>
+            <li class="nav-food-drink"><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
+            <li class="nav-lgbtq"><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
+            <li class="nav-television"><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
+            <li class="nav-get-our-newsletter"><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
+            <li class="epcl-nav-login"><a href="https://www.thebolditalic.com/signin" class="epcl-login epcl-button">Sign In</a></li>
+          </ul>
+        </nav>
+
+        <span class="epcl-search-button" onclick="window.location.href='https://www.thebolditalic.com'" title="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+
+        <div class="menu-mobile" id="menu-toggle" aria-label="Menu">
+          <svg class="icon ularge" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+
+        <div style="clear:both"></div>
       </div>
     </div>
   </header>
@@ -1740,25 +1772,24 @@
   }
 })();
 
-// --- Mobile menu toggle ---
+// --- Mobile menu toggle (slide-out sidebar like thebolditalic.com) ---
 (function() {
   var toggle = document.getElementById('menu-toggle');
   var nav = document.getElementById('main-nav');
+  var overlay = document.getElementById('mobile-overlay');
+  function openMenu() { nav.classList.add('open'); if (overlay) overlay.classList.add('open'); }
+  function closeMenu() { nav.classList.remove('open'); if (overlay) overlay.classList.remove('open'); }
   if (toggle && nav) {
-    toggle.addEventListener('click', function() {
-      nav.classList.toggle('open');
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (nav.classList.contains('open')) closeMenu(); else openMenu();
     });
-    // Close menu when clicking a link
     nav.querySelectorAll('a').forEach(function(a) {
-      a.addEventListener('click', function() {
-        nav.classList.remove('open');
-      });
+      a.addEventListener('click', closeMenu);
     });
-    // Close menu when clicking outside
-    document.addEventListener('click', function(e) {
-      if (!nav.contains(e.target) && !toggle.contains(e.target)) {
-        nav.classList.remove('open');
-      }
+    if (overlay) overlay.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeMenu();
     });
   }
 })();
