@@ -676,6 +676,116 @@
     .site-header .menu-mobile svg { width: 28px; height: 28px; color: #3B3A3A; }
 
     /* ---- Mobile (≤991px): hamburger left, logo center, search right ---- */
+    /* ---- Mobile slide-out nav (matches live site architecture) ---- */
+    /* The #wrapper pushes right when menu opens; banner stays fixed */
+    #wrapper {
+      transition: all 300ms ease;
+    }
+    nav.mobile-main-nav {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      height: 100%;
+      margin: 0;
+      width: 400px;
+      max-width: 85vw;
+      z-index: 100;
+      background: var(--bg-primary, #FFF6E6);
+      text-align: center;
+      padding: 60px 40px 40px;
+      box-sizing: border-box;
+      transform: translateX(-400px);
+      box-shadow: 0 3px 12px -1px rgba(7,10,25,.1), 0 22px 27px -20px rgba(7,10,25,.1);
+      transition: all 300ms ease;
+      opacity: 0;
+      visibility: hidden;
+      overflow: auto;
+    }
+    nav.mobile-main-nav .logo {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    nav.mobile-main-nav .logo img {
+      max-width: 170px;
+      height: auto;
+    }
+    nav.mobile-main-nav ul.menu {
+      list-style: none;
+      float: none;
+      padding: 50px 0;
+      margin: 0;
+      text-align: left;
+    }
+    nav.mobile-main-nav ul.menu > li {
+      display: block;
+      padding: 10px 0;
+    }
+    nav.mobile-main-nav ul.menu > li > a {
+      font-family: 'Playfair Display', 'Times New Roman', serif;
+      font-size: 19px;
+      line-height: 1.25;
+      font-weight: 400;
+      color: #1E1B1B;
+      text-decoration: none;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    nav.mobile-main-nav ul.menu > li > a:hover {
+      color: #000;
+    }
+    nav.mobile-main-nav li.epcl-nav-login { display: none; }
+    nav.mobile-main-nav .nav-login {
+      text-align: center;
+      margin-top: 20px;
+    }
+    nav.mobile-main-nav .nav-login a {
+      margin: 0 10px;
+      font-size: 16px;
+      text-decoration: none;
+      color: #1E1B1B;
+    }
+    nav.mobile-main-nav .nav-login .link-button {
+      display: none; /* Sign In hidden — same as live site */
+    }
+    nav.mobile-main-nav .nav-login .epcl-button {
+      display: inline-block;
+      padding: 12px 32px;
+      background: #e8d5a3;
+      color: #1E1B1B;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 16px;
+      border: 1px solid #d4c28e;
+      text-decoration: none;
+    }
+
+    /* Open state — triggered by epcl-menu-open on <html> */
+    .epcl-menu-open nav.mobile-main-nav {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(0);
+    }
+    .epcl-menu-open #wrapper {
+      transform: translateX(400px);
+    }
+    .epcl-menu-open body {
+      overflow: hidden;
+    }
+    /* Dark overlay */
+    div.menu-overlay {
+      position: fixed;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      z-index: 90;
+      background: #000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 300ms ease;
+    }
+    .epcl-menu-open div.menu-overlay {
+      opacity: 0.15;
+      visibility: visible;
+    }
+
     @media (max-width: 991px) {
       .site-header .menu-wrapper { padding: 11px 0 0; }
       .site-header .logo { padding-bottom: 0 !important; margin-top: 0 !important; margin-left: 20px; }
@@ -684,10 +794,10 @@
         align-items: center;
         justify-content: center;
         position: relative;
-        padding: 14px 60px;  /* leave room for hamburger */
+        padding: 14px 60px;
         min-height: 56px;
       }
-      /* Hamburger — pinned left, nudged down */
+      /* Hamburger — pinned left */
       .site-header .menu-mobile {
         display: flex;
         align-items: center;
@@ -698,78 +808,65 @@
         transform: translateY(-50%);
         width: 48px; height: 48px;
         z-index: 10;
+        cursor: pointer;
       }
       .site-header .menu-mobile svg { width: 34px; height: 34px; }
       /* Search — hidden on events page */
-      .site-header .epcl-search-button {
-        display: none;
-      }
+      .site-header .epcl-search-button { display: none; }
+      /* Desktop nav hidden on mobile */
+      .site-header .main-nav { display: none !important; }
       /* Logo — centered, smaller scale */
       .site-header .logo a img {
         transform: scale(1.25) !important;
       }
-      /* Nav — hidden, slide-out sidebar */
-      .site-header .main-nav {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; bottom: 0;
-        width: 300px;
-        margin-top: 0 !important;
-        background: var(--bg-primary);
-        z-index: 9999;
-        text-align: left;
-        padding: 24px 0 40px !important;
-        box-shadow: 4px 0 20px rgba(0,0,0,0.15);
-        overflow-y: auto;
-      }
-      .site-header .main-nav::before { display: none; }
-      .site-header .main-nav.open { display: block; }
-      .site-header .main-nav ul.menu {
-        display: block; padding: 0; gap: 0;
-      }
-      .site-header .main-nav ul.menu > li {
-        padding: 0;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-      }
-      .site-header .main-nav ul.menu > li > a {
-        display: block;
-        padding: 14px 24px;
-        font-size: 17px;
-        font-weight: 600;
-        text-transform: none;
-        letter-spacing: normal;
-        color: #1E1B1B !important;
-      }
-      .site-header .main-nav ul.menu > li > a::after { display: none; }
-      .site-header .main-nav ul.menu > li.current > a {
-        font-weight: 800;
-        background: rgba(255,214,130,0.15);
-      }
-      /* Dark overlay behind sidebar */
-      .mobile-overlay {
-        display: none;
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.4); z-index: 9998;
-      }
-      .mobile-overlay.open { display: block; }
-      /* Banner: keep same zoom as desktop, fade starts lower with more gradient */
+      /* Banner: fade starts lower with more gradient on mobile */
       .body-background img.fullwidth {
         -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 65%, transparent 145%) !important;
         mask-image: linear-gradient(to bottom, #000 0%, #000 65%, transparent 145%) !important;
       }
+    }
+    /* Hide mobile nav panel and hamburger on desktop */
+    @media (min-width: 992px) {
+      nav.mobile-main-nav { display: none; }
+      .site-header .menu-mobile { display: none; }
     }
   </style>
 </head>
 <body>
 <script>if (window.self !== window.top) document.body.classList.add('embedded');</script>
 
-  <!-- Banner background (absolute, behind header — same as thebolditalic.com) -->
+  <!-- Mobile slide-out nav (separate element, same as live site — outside #wrapper) -->
+  <nav class="mobile-main-nav" id="mobile-nav">
+    <div class="logo">
+      <a href="https://www.thebolditalic.com">
+        <img src="https://www.thebolditalic.com/content/images/2025/11/TBI-Logo.png" alt="The Bold Italic" width="170" height="60" decoding="async">
+      </a>
+    </div>
+    <ul class="menu">
+      <li class="nav-about-us"><a href="https://www.thebolditalic.com/about/">About Us</a></li>
+      <li class="nav-i-sf"><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
+      <li class="nav-going-out current"><a href="https://events.thebolditalic.com/">Going Out</a></li>
+      <li class="nav-food-drink"><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
+      <li class="nav-lgbtq"><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
+      <li class="nav-television"><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
+      <li class="nav-get-our-newsletter"><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
+      <li class="epcl-nav-login"><a href="https://www.thebolditalic.com/signin">Sign In</a></li>
+    </ul>
+    <div class="nav-login">
+      <a href="https://www.thebolditalic.com/signin" class="link-button">Sign In</a>
+      <a href="https://www.thebolditalic.com/subscribe" class="epcl-button">Subscribe</a>
+    </div>
+  </nav>
+  <!-- Dark overlay behind mobile nav -->
+  <div class="menu-overlay" id="menu-overlay"></div>
+
+  <!-- Banner background (absolute, behind everything — outside wrapper so it stays fixed) -->
   <div class="body-background">
     <img loading="eager" fetchpriority="high" decoding="async" src="https://www.thebolditalic.com/content/images/2025/11/VibrantSF5.jpg" alt="" class="fullwidth" width="1920" height="600">
   </div>
 
-  <!-- Mobile nav overlay backdrop -->
-  <div class="mobile-overlay" id="mobile-overlay"></div>
+  <!-- start: #wrapper (pushes right when mobile menu opens) -->
+  <div id="wrapper">
 
   <!-- Header: logo over banner + nav bar (exact structure from thebolditalic.com) -->
   <header id="header" class="site-header classic">
@@ -1799,26 +1896,29 @@
   }
 })();
 
-// --- Mobile menu toggle (slide-out sidebar like thebolditalic.com) ---
+// --- Mobile menu toggle (matches live site: epcl-menu-open on <html>) ---
 (function() {
   var toggle = document.getElementById('menu-toggle');
-  var nav = document.getElementById('main-nav');
-  var overlay = document.getElementById('mobile-overlay');
-  function openMenu() { nav.classList.add('open'); if (overlay) overlay.classList.add('open'); }
-  function closeMenu() { nav.classList.remove('open'); if (overlay) overlay.classList.remove('open'); }
-  if (toggle && nav) {
+  var overlay = document.getElementById('menu-overlay');
+  var mobileNav = document.getElementById('mobile-nav');
+  function openMenu() { document.documentElement.classList.add('epcl-menu-open'); }
+  function closeMenu() { document.documentElement.classList.remove('epcl-menu-open'); }
+  function isOpen() { return document.documentElement.classList.contains('epcl-menu-open'); }
+  if (toggle) {
     toggle.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (nav.classList.contains('open')) closeMenu(); else openMenu();
-    });
-    nav.querySelectorAll('a').forEach(function(a) {
-      a.addEventListener('click', closeMenu);
-    });
-    if (overlay) overlay.addEventListener('click', closeMenu);
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') closeMenu();
+      if (isOpen()) closeMenu(); else openMenu();
     });
   }
+  if (overlay) overlay.addEventListener('click', closeMenu);
+  if (mobileNav) {
+    mobileNav.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', closeMenu);
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMenu();
+  });
 })();
 
 // --- iframe auto-resize: report content height to parent ---
@@ -1846,5 +1946,6 @@
   };
 })();
 </script>
+  </div><!-- end: #wrapper -->
 </body>
 </html>
