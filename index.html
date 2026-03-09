@@ -1003,7 +1003,7 @@
     var currentPage = 1;
     var activeDate = '';
     function applyFilters() {
-      var rows = document.querySelectorAll('.ev-row');
+      var rows = document.querySelectorAll('.ev-row:not(.ev-pick-row)');
       var matchingRows = [];
       var matchingDates = {};
       rows.forEach(function(row) {
