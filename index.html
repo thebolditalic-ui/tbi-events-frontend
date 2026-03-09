@@ -1666,7 +1666,9 @@
     }
 
     /* Source */
-    if (event.source_name || event.source_url) {
+    if (event.source_name && event.source_name.toLowerCase() === 'manual') {
+      html += '<div class="ev-post-source">Details may change \u2014 check the venue for latest info.</div>';
+    } else if (event.source_name || event.source_url) {
       var srcUrl = getSourceUrl(event);
       html += '<div class="ev-post-source">See this event also on ';
       if (srcUrl && event.source_name) {
