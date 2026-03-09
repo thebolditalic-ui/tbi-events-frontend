@@ -6,8 +6,10 @@
   <title>What's Happening in SF — The Bold Italic</title>
   <meta name="description" content="The Bold Italic's guide to the greatest events in San Francisco and the Bay Area.">
   <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
   <link rel="preconnect" href="https://fonts.bunny.net">
   <link href="https://fonts.bunny.net/css?family=playfair-display:400,600,700,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.bunny.net/css?family=merriweather:300,700" rel="stylesheet">
   <style>
     :root {
       --epcl-title-font-family: 'Playfair Display', 'Times New Roman', serif;
@@ -515,10 +517,211 @@
       #tbi-events .ev-post-card { padding: 16px; }
       #tbi-events .ev-post-hero { gap: 16px; }
     }
+
+    /* =============================================
+       Site Header — matches thebolditalic.com
+       ============================================= */
+    body.embedded .site-header { display: none; }
+
+    .site-header {
+      background: var(--bg-primary);
+    }
+    .site-header .grid-container {
+      max-width: 1290px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+    }
+    .site-header .logo {
+      flex-shrink: 0;
+      padding: 18px 0;
+    }
+    .site-header .logo a { display: block; line-height: 0; }
+    .site-header .logo img {
+      width: 170px;
+      height: auto;
+    }
+    .site-header .main-nav {
+      display: flex;
+      align-items: center;
+    }
+    .site-header .main-nav ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .site-header .main-nav ul li a {
+      font-family: 'Playfair Display', 'Times New Roman', serif;
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #111;
+      text-decoration: none;
+      padding: 18px 16px;
+      display: block;
+      position: relative;
+      transition: background-size 300ms;
+      background-image: linear-gradient(to right, #3B3A3A 0%, #3B3A3A 100%);
+      background-size: 0% 4%;
+      background-repeat: no-repeat;
+      background-position: 100% 85%;
+    }
+    .site-header .main-nav ul li a:hover {
+      background-size: 100% 4%;
+      background-position: 0% 85%;
+    }
+    .site-header .main-nav ul li.active a {
+      background-size: 100% 4%;
+      background-position: 0% 85%;
+    }
+    .site-header .nav-signin a {
+      background: #3B3A3A !important;
+      color: #fff !important;
+      border-radius: 50px;
+      padding: 8px 20px !important;
+      font-size: 13px !important;
+      letter-spacing: 0.5px;
+      background-image: none !important;
+    }
+    .site-header .nav-signin a:hover {
+      opacity: 0.85;
+    }
+    .site-header .search-btn {
+      background: none;
+      border: 2px solid var(--epcl-secondary-color);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-left: 10px;
+      flex-shrink: 0;
+      transition: background 200ms;
+    }
+    .site-header .search-btn:hover {
+      background: var(--epcl-secondary-color);
+    }
+    .site-header .search-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: #3B3A3A;
+      stroke-width: 2;
+    }
+    .site-header .menu-mobile {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+    .site-header .menu-mobile svg {
+      width: 28px;
+      height: 28px;
+      stroke: #3B3A3A;
+    }
+    .site-header .nav-border {
+      border-bottom: 1px solid rgba(112, 112, 112, 0.15);
+    }
+
+    /* Mobile menu */
+    @media (max-width: 1024px) {
+      .site-header .main-nav {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-primary);
+        z-index: 999;
+        border-bottom: 1px solid rgba(112, 112, 112, 0.2);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+      .site-header .main-nav.open {
+        display: block;
+      }
+      .site-header .main-nav ul {
+        flex-direction: column;
+        padding: 10px 0;
+      }
+      .site-header .main-nav ul li a {
+        padding: 12px 24px;
+        font-size: 14px;
+        background-image: none;
+      }
+      .site-header .main-nav ul li a:hover {
+        background: rgba(255, 214, 130, 0.15);
+        background-image: none;
+      }
+      .site-header .nav-signin {
+        border-top: 1px solid rgba(112, 112, 112, 0.1);
+        margin-top: 4px;
+        padding-top: 8px;
+      }
+      .site-header .nav-signin a {
+        margin: 4px 24px 12px;
+        display: inline-block;
+      }
+      .site-header .menu-mobile {
+        display: block;
+      }
+      .site-header .search-btn {
+        display: none;
+      }
+      .site-header .logo img {
+        width: 140px;
+      }
+    }
   </style>
 </head>
 <body>
 <script>if (window.self !== window.top) document.body.classList.add('embedded');</script>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="nav-border">
+      <div class="grid-container">
+        <div class="logo">
+          <a href="https://www.thebolditalic.com">
+            <img src="https://www.thebolditalic.com/content/images/2025/11/TBI-Logo.png" alt="The Bold Italic" width="170" height="60" decoding="async">
+          </a>
+        </div>
+
+        <nav class="main-nav" id="main-nav">
+          <ul>
+            <li><a href="https://www.thebolditalic.com/about/">About Us</a></li>
+            <li><a href="https://www.thebolditalic.com/tag/i-love-san-francisco/">I ❤️ SF</a></li>
+            <li class="active"><a href="https://events.thebolditalic.com/">Going Out</a></li>
+            <li><a href="https://www.thebolditalic.com/tag/food-and-drink/">Food &amp; Drink</a></li>
+            <li><a href="https://www.thebolditalic.com/tag/lgbtq/">LGBTQ+</a></li>
+            <li><a href="https://www.thebolditalic.com/tag/television/">Television</a></li>
+            <li><a href="https://www.thebolditalic.com/subscribe/">Get Our Newsletter</a></li>
+            <li class="nav-signin"><a href="https://www.thebolditalic.com/signin">Sign In</a></li>
+          </ul>
+        </nav>
+
+        <button class="search-btn" onclick="window.location.href='https://www.thebolditalic.com'" title="Search">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        </button>
+
+        <button class="menu-mobile" id="menu-toggle" aria-label="Menu">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
   <div id="tbi-events"></div>
 <script>
 /* =============================================
@@ -1505,6 +1708,29 @@
     document.addEventListener('DOMContentLoaded', route);
   } else {
     route();
+  }
+})();
+
+// --- Mobile menu toggle ---
+(function() {
+  var toggle = document.getElementById('menu-toggle');
+  var nav = document.getElementById('main-nav');
+  if (toggle && nav) {
+    toggle.addEventListener('click', function() {
+      nav.classList.toggle('open');
+    });
+    // Close menu when clicking a link
+    nav.querySelectorAll('a').forEach(function(a) {
+      a.addEventListener('click', function() {
+        nav.classList.remove('open');
+      });
+    });
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+        nav.classList.remove('open');
+      }
+    });
   }
 })();
 
