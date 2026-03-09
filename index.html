@@ -717,6 +717,7 @@
       var resp = await fetch(url);
       var data = await resp.json();
       if (!data.posts || data.posts.length === 0) return [];
+      var today = new Date().toISOString().slice(0, 10);
       return data.posts.map(function(post) {
         var category = 'Events';
         (post.tags || []).forEach(function(t) {
@@ -724,10 +725,12 @@
             category = t.name.slice(1);
           }
         });
-        // Extract date from post or use published date
+        // Extract event date from slug (format: title-YYYY-MM-DD)
+        var slugDateMatch = post.slug.match(/(\d{4}-\d{2}-\d{2})$/);
+        var eventDate = slugDateMatch ? slugDateMatch[1] : null;
         var dateStr = '';
-        if (post.published_at) {
-          var d = new Date(post.published_at);
+        if (eventDate) {
+          var d = new Date(eventDate + 'T12:00:00');
           dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         }
         return {
@@ -739,8 +742,13 @@
           catColor: CATEGORY_COLORS[category] || '#cdd6f4',
           excerpt: post.custom_excerpt || '',
           date: dateStr,
+          eventDate: eventDate,
           isEditorsPick: true
         };
+      }).filter(function(pick) {
+        // Filter out past events; keep picks with no parseable date (manual posts)
+        if (!pick.eventDate) return true;
+        return pick.eventDate >= today;
       });
     } catch (err) {
       console.warn('Failed to fetch Editor\'s Picks from Ghost:', err);
