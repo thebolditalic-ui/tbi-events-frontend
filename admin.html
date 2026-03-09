@@ -472,13 +472,13 @@ body {
     <table class="ev-table">
       <thead>
         <tr>
-          <th></th>
+          <th data-sort="image_url">Img</th>
           <th data-sort="event_date">Date ▼</th>
           <th data-sort="title">Title</th>
           <th data-sort="venue">Venue</th>
           <th data-sort="category">Category</th>
-          <th>Source</th>
-          <th>Pick</th>
+          <th data-sort="source_name">Source</th>
+          <th data-sort="editors_pick">Pick</th>
           <th></th>
         </tr>
       </thead>
@@ -768,8 +768,16 @@ body {
     });
 
     filteredEvents.sort(function(a, b) {
-      var va = a[sortCol] || '';
-      var vb = b[sortCol] || '';
+      var va = a[sortCol];
+      var vb = b[sortCol];
+      // Booleans: true first when descending
+      if (typeof va === 'boolean' || typeof vb === 'boolean') {
+        va = va ? 1 : 0;
+        vb = vb ? 1 : 0;
+      }
+      // Nulls/undefined to bottom
+      if (va == null) va = '';
+      if (vb == null) vb = '';
       if (va < vb) return sortAsc ? -1 : 1;
       if (va > vb) return sortAsc ? 1 : -1;
       return 0;
