@@ -1322,6 +1322,10 @@
       var pillColor = CATEGORY_COLORS[cat] || '#cdd6f4';
       filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + catSet[cat] + '</span></button>';
     });
+    var edPickCount = events.filter(function(e) { return e.isEditorsPick; }).length;
+    if (edPickCount > 0) {
+      filterRowHtml += '<button class="ev-cattab" data-cat="editors-pick" style="background:#f9e2af;">\u2726 Editor\u2019s Pick <span class="ev-date-count">' + edPickCount + '</span></button>';
+    }
     filterRowHtml += '</div>';
     filterRowHtml += '<div class="ev-search">';
     filterRowHtml += '<svg class="ev-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
@@ -1404,16 +1408,25 @@
         }
         picksHtml += '</div>';
         picksHtml += '</div>';
-        picksHtml += '<div class="ev-right"><span class="ev-picks-badge">Pick</span></div>';
+        picksHtml += '<div class="ev-right"><span class="ev-picks-badge">Editor\u2019s Pick</span></div>';
         picksHtml += '</a>';
       });
       picksHtml += '</div>';
       root.insertAdjacentHTML('beforeend', picksHtml);
     }
+    /* Build editor's pick lookup for marking rows in main list */
+    var edPickSlugs = {};
+    if (editorsPicks && editorsPicks.length > 0) {
+      editorsPicks.forEach(function(p) {
+        if (p.slug) edPickSlugs[p.slug] = true;
+        edPickSlugs[p.title.toLowerCase()] = true;
+      });
+    }
     /* Event list grouped by date */
     var dateGroups = [];
     var dateMap = {};
     events.forEach(function(ev) {
+      ev.isEditorsPick = !!(edPickSlugs[ev.slug] || edPickSlugs[ev.title.toLowerCase()]);
       var d = ev.date || 'Date TBD';
       if (!dateMap[d]) { dateMap[d] = []; dateGroups.push(d); }
       dateMap[d].push(ev);
@@ -1441,12 +1454,16 @@
     var monthKey = ev.monthData ? ev.monthData.key : 'unknown';
     var sortKey = ev.monthData ? ev.monthData.sortKey : 'unknown';
     var rowClass = 'ev-row' + (idx % 2 === 1 ? ' ev-row-alt' : '');
-    var html = '<a href="' + esc(ev.url) + '" class="' + rowClass + '" data-slug="' + esc(ev.slug) + '" data-cat="' + esc(ev.category) + '" data-city="' + esc(ev.city) + '" data-date="' + esc(ev.date || 'Date TBD') + '" data-month="' + esc(monthKey) + '" data-sortkey="' + esc(sortKey) + '">';
+    var edPickAttr = ev.isEditorsPick ? ' data-edpick="true"' : '';
+    var html = '<a href="' + esc(ev.url) + '" class="' + rowClass + '" data-slug="' + esc(ev.slug) + '" data-cat="' + esc(ev.category) + '" data-city="' + esc(ev.city) + '" data-date="' + esc(ev.date || 'Date TBD') + '" data-month="' + esc(monthKey) + '" data-sortkey="' + esc(sortKey) + '"' + edPickAttr + '>';
     var fallbackImg = CATEGORY_IMAGES[ev.category] || CATEGORY_IMAGES['Events'];
     html += '<div class="ev-thumb"><img src="' + esc(ev.image) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackImg) + '\';"></div>';
     html += '<div class="ev-info">';
     if (ev.category !== 'Events') {
       html += '<span class="ev-catpill" style="background:' + ev.catColor + '">' + esc(ev.category) + '</span>';
+    }
+    if (ev.isEditorsPick) {
+      html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
     html += '<div class="ev-meta">' + esc(ev.date) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
@@ -1466,6 +1483,7 @@
     var searchTerm = '';
     var currentPage = 1;
     var activeDate = '';
+    var monthPillClicked = false;
     function toggleEditorsPicks(show) {
       var picks = document.querySelector('.ev-editors-picks');
       if (picks) picks.style.display = show ? '' : 'none';
@@ -1481,7 +1499,8 @@
         var month = row.getAttribute('data-month');
         var sortkey = row.getAttribute('data-sortkey');
         var text = row.textContent.toLowerCase();
-        var catMatch = activeCat === 'all' || cat === activeCat;
+        var edpick = row.getAttribute('data-edpick');
+        var catMatch = activeCat === 'all' || (activeCat === 'editors-pick' ? edpick === 'true' : cat === activeCat);
         var locMatch = activeLoc === 'all' || city === activeLoc;
         var searchMatch = !searchTerm || text.indexOf(searchTerm.toLowerCase()) !== -1;
         var monthMatch = activeMonth === 'all' || month === activeMonth;
@@ -1584,6 +1603,8 @@
           pill.classList.add('active');
           activeMonth = clickedMonth;
         }
+        monthPillClicked = true;
+        toggleEditorsPicks(false);
         activeDate = '';
         var pickMonth = document.getElementById('ev-pick-month');
         var pickDay = document.getElementById('ev-pick-day');
@@ -1612,7 +1633,7 @@
           pickDay.disabled = true;
           activeDate = '';
           pickClear.style.display = 'none';
-          toggleEditorsPicks(true);
+          if (!monthPillClicked) toggleEditorsPicks(true);
           resetPageAndFilter();
           return;
         }
@@ -1648,7 +1669,7 @@
         pickDay.disabled = true;
         activeDate = '';
         pickClear.style.display = 'none';
-        toggleEditorsPicks(true);
+        if (!monthPillClicked) toggleEditorsPicks(true);
         var fp = document.querySelector('.ev-month-pill');
         if (fp) {
           document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
