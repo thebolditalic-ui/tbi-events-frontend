@@ -1237,15 +1237,78 @@
     });
     return merged;
   }
-  /* ---------- Supabase fetch (replaces Ghost API) ---------- */
-  async function fetchEvents() {
+  /* ---------- Supabase fetch with server-side pagination + filtering ---------- */
+  async function buildFilterQuery(filters) {
+    var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    var url = SUPABASE_URL + '/rest/v1/events?select=*&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc';
+    query += '&event_date=gte.' + today;
+
+    if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
+      query += '&category=eq.' + encodeURIComponent(filters.category);
+    }
+    if (filters.editorsPick) {
+      query += '&editors_pick=eq.true';
+    }
+    if (filters.city && filters.city !== 'all') {
+      query += '&city=eq.' + filters.city;
+    }
+    if (filters.date && filters.date !== 'all') {
+      /* Specific date overrides month filter */
+      var dateStart = filters.date;
+      var dateParts = filters.date.split('-');
+      if (dateParts.length === 3) {
+        var dateNext = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]) + 1);
+        var dateEnd = dateNext.getFullYear() + '-' + String(dateNext.getMonth() + 1).padStart(2, '0') + '-' + String(dateNext.getDate()).padStart(2, '0');
+        query += '&event_date=gte.' + dateStart + '&event_date=lt.' + dateEnd;
+      }
+    } else if (filters.month && filters.month !== 'all') {
+      /* Month filter — only applies when no specific date is set */
+      var parts = filters.month.split('-');
+      if (parts.length === 2) {
+        var monthStart = filters.month + '-01';
+        var nextMonth = parseInt(parts[1]) + 1;
+        var nextYear = parseInt(parts[0]);
+        if (nextMonth > 12) { nextMonth = 1; nextYear++; }
+        var monthEnd = nextYear + '-' + String(nextMonth).padStart(2, '0') + '-01';
+        query += '&event_date=gte.' + monthStart + '&event_date=lt.' + monthEnd;
+      }
+    }
+    if (filters.search && filters.search.trim()) {
+      var term = encodeURIComponent(filters.search.trim());
+      query += '&or=(title.ilike.*' + term + '*,venue.ilike.*' + term + '*,description.ilike.*' + term + '*)';
+    }
+    return query;
+  }
+
+  async function fetchEvents(filters, page) {
+    if (!filters) filters = {};
+    if (!page) page = 1;
+
+    var query = await buildFilterQuery(filters);
+    var offset = (page - 1) * EVENTS_PER_PAGE;
+    query += '&order=event_date.asc&limit=' + EVENTS_PER_PAGE + '&offset=' + offset;
+
+    var url = SUPABASE_URL + '/rest/v1/events' + query;
     var resp = await fetch(url, {
-      headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': 'Bearer ' + SUPABASE_ANON,
+        'Prefer': 'count=exact'
+      }
     });
+
     var rows = await resp.json();
-    return rows.map(function(r) {
+    var totalCount = 0;
+    var contentRange = resp.headers.get('content-range');
+    if (contentRange) {
+      var parts = contentRange.split('/');
+      if (parts.length === 2) {
+        totalCount = parseInt(parts[1], 10);
+      }
+    }
+    var totalPages = Math.ceil(totalCount / EVENTS_PER_PAGE);
+
+    var events = rows.map(function(r) {
       var humanDate = isoToHumanDate(r.event_date);
       var monthData = parseEventDate(humanDate);
       var isFree = /^free$/i.test(r.price || '');
@@ -1269,6 +1332,76 @@
       ev.monthData = monthData;
       return ev;
     });
+
+    return { events: events, totalCount: totalCount, totalPages: totalPages };
+  }
+
+  async function fetchCategoryCounts() {
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var url = SUPABASE_URL + '/rest/v1/events?select=category&sold_out=eq.false&event_date=gte.' + today;
+      var resp = await fetch(url, {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+      });
+      var rows = await resp.json();
+      var counts = {};
+      rows.forEach(function(r) {
+        var cat = r.category || 'Events';
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+      return counts;
+    } catch (err) {
+      console.warn('Failed to fetch category counts:', err);
+      return {};
+    }
+  }
+
+  async function fetchAvailableMonths() {
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var url = SUPABASE_URL + '/rest/v1/events?select=event_date&sold_out=eq.false&event_date=gte.' + today;
+      var resp = await fetch(url, {
+        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+      });
+      var rows = await resp.json();
+
+      var now = new Date();
+      var currentMonthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      var monthSet = {};
+      var monthOrder = [];
+      var availableDates = {};
+
+      rows.forEach(function(r) {
+        if (!r.event_date) return;
+        var isoDate = r.event_date.substring(0, 10);
+        var d = new Date(isoDate + 'T00:00:00Z');
+        var monthKey = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+        var day = d.getUTCDate();
+
+        if (monthKey >= currentMonthKey) {
+          if (!monthSet[monthKey]) {
+            monthSet[monthKey] = {
+              monthName: MONTHS_FULL[d.getUTCMonth()],
+              year: d.getUTCFullYear(),
+              key: monthKey
+            };
+            monthOrder.push(monthKey);
+          }
+          if (!availableDates[monthKey]) availableDates[monthKey] = {};
+          availableDates[monthKey][day] = true;
+        }
+      });
+
+      monthOrder.sort(function(a, b) { return a.localeCompare(b); });
+      Object.keys(availableDates).forEach(function(mk) {
+        availableDates[mk] = Object.keys(availableDates[mk]).map(Number).sort(function(a, b) { return a - b; });
+      });
+
+      return { monthOrder: monthOrder, monthSet: monthSet, availableDates: availableDates };
+    } catch (err) {
+      console.warn('Failed to fetch available months:', err);
+      return { monthOrder: [], monthSet: {}, availableDates: {} };
+    }
   }
   async function fetchEventBySlug(slug) {
     var url = SUPABASE_URL + '/rest/v1/events?select=*&slug=eq.' + encodeURIComponent(slug) + '&limit=1';
@@ -1296,32 +1429,20 @@
       description: r.description || '', event_date: r.event_date || '', sold_out: r.sold_out || false,
     };
   }
-  /* ---------- render (exact from Ghost footer injection) ---------- */
-  function renderPage(events, featured, editorsPicks) {
+  /* ---------- render (split into structure + data update) ---------- */
+  function renderPageStructure(featured, editorsPicks, categoryCounts, monthData) {
     var root = document.getElementById('tbi-events');
     if (!root) return;
     root.innerHTML = '';
+
     var headerHtml = '<div class="ev-header">';
     headerHtml += '<h1>What\u2019s Happening in SF <span class="ev-star ev-star-lg">\u2726</span></h1>';
     headerHtml += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area. <a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a></p>';
     headerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', headerHtml);
-    if (events.length === 0) {
-      root.innerHTML += '<div class="ev-empty"><p>No events found. Check back soon!</p></div>';
-      return;
-    }
-    var catSet = {};
-    events.forEach(function(e) { catSet[e.category] = (catSet[e.category] || 0) + 1; });
-    var categories = Object.keys(catSet).sort();
+
     /* Featured section */
     if (!featured) featured = [];
-    if (featured.length === 0) {
-      var taggedFeatured = events.filter(function(e) { return e.isFeatured; });
-      var withRealImages = events.filter(function(e) {
-        return e.image && e.image.startsWith('http') && !e.image.includes('unsplash.com');
-      });
-      featured = taggedFeatured.length > 0 ? taggedFeatured.slice(0, 3) : withRealImages.slice(0, 3);
-    }
     if (featured.length > 0) {
       var featHtml = '<div class="ev-featured-wrap">';
       featHtml += '<span class="ev-featured-label">Featured Bay Area Events, Reviews &amp; Guides</span>';
@@ -1342,20 +1463,20 @@
       featHtml += '</div></div>';
       root.insertAdjacentHTML('beforeend', featHtml);
     }
+
     /* Category pills + search */
     var filterRowHtml = '<div class="ev-filter-row">';
     filterRowHtml += '<span class="ev-filter-label">Events by category</span>';
     filterRowHtml += '<div class="ev-cattab-wrap">';
-    filterRowHtml += '<button class="ev-cattab active" data-cat="all" style="background:#cdd6f4;">All <span class="ev-date-count">' + events.length + '</span></button>';
-    categories.forEach(function(cat) {
+    var allCount = Object.values(categoryCounts).reduce(function(sum, val) { return sum + val; }, 0);
+    filterRowHtml += '<button class="ev-cattab active" data-cat="all" style="background:#cdd6f4;">All <span class="ev-date-count">' + allCount + '</span></button>';
+    var catOrder = Object.keys(categoryCounts).sort();
+    catOrder.forEach(function(cat) {
       if (cat === 'Events') return;
       var pillColor = CATEGORY_COLORS[cat] || '#cdd6f4';
-      filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + catSet[cat] + '</span></button>';
+      filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + categoryCounts[cat] + '</span></button>';
     });
-    var edPickCount = events.filter(function(e) { return e.isEditorsPick; }).length;
-    if (edPickCount > 0) {
-      filterRowHtml += '<button class="ev-cattab" data-cat="editors-pick" style="background:#FFD682;">\u2726 Editor\u2019s Pick <span class="ev-date-count">' + edPickCount + '</span></button>';
-    }
+    filterRowHtml += '<button class="ev-cattab" data-cat="editors-pick" style="background:#FFD682;">\u2726 Editor\u2019s Pick <span class="ev-date-count">—</span></button>';
     filterRowHtml += '</div>';
     filterRowHtml += '<div class="ev-search">';
     filterRowHtml += '<svg class="ev-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
@@ -1363,45 +1484,25 @@
     filterRowHtml += '</div>';
     filterRowHtml += '</div>';
     root.insertAdjacentHTML('beforeend', filterRowHtml);
-    /* Month pills */
-    var now = new Date();
-    var currentMonthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-    var monthSet = {};
-    var monthOrder = [];
-    events.forEach(function(ev) {
-      if (ev.monthData && ev.monthData.key && !monthSet[ev.monthData.key]) {
-        if (ev.monthData.key >= currentMonthKey) {
-          monthSet[ev.monthData.key] = ev.monthData;
-          monthOrder.push(ev.monthData.key);
-        }
-      }
-    });
-    monthOrder.sort(function(a, b) { return a.localeCompare(b); });
-    var availableDates = {};
-    events.forEach(function(ev) {
-      if (ev.monthData && ev.monthData.key >= currentMonthKey) {
-        if (!availableDates[ev.monthData.key]) availableDates[ev.monthData.key] = {};
-        availableDates[ev.monthData.key][ev.monthData.day] = true;
-      }
-    });
-    Object.keys(availableDates).forEach(function(mk) {
-      availableDates[mk] = Object.keys(availableDates[mk]).map(Number).sort(function(a,b){ return a - b; });
-    });
+
     /* Section head: location tabs + month pills */
+    var monthOrder = monthData.monthOrder || [];
+    var monthSet = monthData.monthSet || {};
     var secHtml = '<div class="ev-section-head">';
     secHtml += '<h2 class="ev-loc-tab ev-loc-inactive" data-loc="all">All Events</h2>';
     secHtml += '<h2 class="ev-loc-tab" data-loc="sf">SF Events</h2>';
     secHtml += '<h2 class="ev-loc-tab ev-loc-inactive" data-loc="oakland">Oakland Events</h2>';
     if (monthOrder.length > 0) {
       monthOrder.forEach(function(monthKey, idx) {
-        var monthData = monthSet[monthKey];
-        var label = getMonthLabel(monthData);
+        var md = monthSet[monthKey];
+        var label = getMonthLabel(md);
         secHtml += '<button class="ev-month-pill' + (idx === 0 ? ' active' : '') + '" data-month="' + esc(monthKey) + '">' + esc(label) + '</button>';
       });
     }
     secHtml += '<div class="ev-line"></div>';
     secHtml += '</div>';
     root.insertAdjacentHTML('beforeend', secHtml);
+
     /* Date picker */
     var datePickerHtml = '<div class="ev-date-picker">';
     datePickerHtml += '<span class="ev-datepicker-label">Jump to date:</span>';
@@ -1415,6 +1516,7 @@
     datePickerHtml += '<button id="ev-pick-clear" class="ev-pick-clear" style="display:none;">Clear</button>';
     datePickerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', datePickerHtml);
+
     /* Editor's Picks section */
     if (!editorsPicks) editorsPicks = [];
     if (editorsPicks.length > 0) {
@@ -1444,7 +1546,34 @@
       picksHtml += '</div>';
       root.insertAdjacentHTML('beforeend', picksHtml);
     }
-    /* Build editor's pick lookup for marking rows in main list */
+
+    /* Empty event list container and pagination */
+    root.insertAdjacentHTML('beforeend', '<div class="ev-list" id="ev-list"></div>');
+    root.insertAdjacentHTML('beforeend', '<div class="ev-pagination" id="ev-pagination"></div>');
+    root.insertAdjacentHTML('beforeend', '<div class="ev-footer"><p>Events are updated daily. Details may change\u2014check the venue for latest info.</p></div>');
+
+    wireFilters(monthData.availableDates || {});
+    wireSPALinks();
+  }
+
+  function updateEventList(events, editorsPicks) {
+    var listEl = document.getElementById('ev-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+
+    if (events.length === 0) {
+      var emptyEl = document.getElementById('ev-list').parentNode.querySelector('.ev-empty');
+      if (!emptyEl) {
+        document.getElementById('ev-list').insertAdjacentHTML('afterend', '<div class="ev-empty"><p>No events match your filters.</p></div>');
+      }
+      return;
+    }
+
+    /* Remove empty message if it exists */
+    var emptyMsg = document.getElementById('ev-list').parentNode.querySelector('.ev-empty');
+    if (emptyMsg) emptyMsg.remove();
+
+    /* Build editor's pick lookup */
     var edPickSlugs = {};
     if (editorsPicks && editorsPicks.length > 0) {
       editorsPicks.forEach(function(p) {
@@ -1452,7 +1581,8 @@
         edPickSlugs[p.title.toLowerCase()] = true;
       });
     }
-    /* Event list grouped by date */
+
+    /* Group events by date */
     var dateGroups = [];
     var dateMap = {};
     events.forEach(function(ev) {
@@ -1461,7 +1591,8 @@
       if (!dateMap[d]) { dateMap[d] = []; dateGroups.push(d); }
       dateMap[d].push(ev);
     });
-    var listHtml = '<div class="ev-list" id="ev-list">';
+
+    var listHtml = '';
     var globalIdx = 0;
     dateGroups.forEach(function(dateStr) {
       var firstEvent = dateMap[dateStr][0];
@@ -1473,12 +1604,8 @@
         globalIdx++;
       });
     });
-    listHtml += '</div>';
-    root.insertAdjacentHTML('beforeend', listHtml);
-    root.insertAdjacentHTML('beforeend', '<div class="ev-pagination" id="ev-pagination"></div>');
-    root.insertAdjacentHTML('beforeend', '<div class="ev-footer"><p>Events are updated daily. Details may change\u2014check the venue for latest info.</p></div>');
-    wireFilters(events, availableDates);
-    wireSPALinks();
+
+    listEl.innerHTML = listHtml;
   }
   function renderEventRow(ev, idx) {
     var monthKey = ev.monthData ? ev.monthData.key : 'unknown';
@@ -1504,8 +1631,8 @@
     html += '</div></a>';
     return html;
   }
-  /* ---------- filters, search, pagination & date picker (exact from Ghost) ---------- */
-  function wireFilters(events, availableDates) {
+  /* ---------- filters, search, pagination & date picker (refactored for server-side) ---------- */
+  function wireFilters(availableDates) {
     var activeCat = 'all';
     var activeLoc = 'sf';
     var firstMonthPill = document.querySelector('.ev-month-pill');
@@ -1515,68 +1642,53 @@
     var activeDate = '';
     var monthPillClicked = false;
     var locTabClicked = false;
+    var searchTimeout = null;
+    var editorsPicks = null;
+
+    /* Store editor's picks for updateEventList */
+    async function cacheEditorsPicks() {
+      if (!editorsPicks) {
+        editorsPicks = await fetchEditorsPicks();
+      }
+    }
+    cacheEditorsPicks();
+
     function toggleEditorsPicks(show) {
       var picks = document.querySelector('.ev-editors-picks');
       if (picks) picks.style.display = show ? '' : 'none';
     }
-    function applyFilters() {
-      var rows = document.querySelectorAll('.ev-row:not(.ev-pick-row)');
-      var matchingRows = [];
-      var matchingDates = {};
-      rows.forEach(function(row) {
-        var cat = row.getAttribute('data-cat');
-        var city = row.getAttribute('data-city');
-        var dateStr = row.getAttribute('data-date');
-        var month = row.getAttribute('data-month');
-        var sortkey = row.getAttribute('data-sortkey');
-        var text = row.textContent.toLowerCase();
-        var edpick = row.getAttribute('data-edpick');
-        var catMatch = activeCat === 'all' || (activeCat === 'editors-pick' ? edpick === 'true' : cat === activeCat);
-        var locMatch = activeLoc === 'all' || city === activeLoc;
-        var searchMatch = !searchTerm || text.indexOf(searchTerm.toLowerCase()) !== -1;
-        var monthMatch = activeMonth === 'all' || month === activeMonth;
-        var dateMatch = !activeDate || sortkey === activeDate;
-        if (catMatch && locMatch && searchMatch && monthMatch && dateMatch) {
-          matchingRows.push({ row: row, dateStr: dateStr });
-          matchingDates[dateStr] = true;
-        } else {
-          row.style.display = 'none';
-        }
-      });
-      var totalMatching = matchingRows.length;
-      var totalPages = Math.ceil(totalMatching / EVENTS_PER_PAGE);
-      if (currentPage > totalPages) currentPage = totalPages || 1;
-      var startIdx = (currentPage - 1) * EVENTS_PER_PAGE;
-      var endIdx = startIdx + EVENTS_PER_PAGE;
-      var pageVisibleDates = {};
-      var visIdx = 0;
-      matchingRows.forEach(function(item, idx) {
-        if (idx >= startIdx && idx < endIdx) {
-          item.row.style.display = '';
-          item.row.classList.toggle('ev-row-alt', visIdx % 2 === 1);
-          pageVisibleDates[item.dateStr] = true;
-          visIdx++;
-        } else {
-          item.row.style.display = 'none';
-        }
-      });
-      document.querySelectorAll('.ev-date-header').forEach(function(hdr) {
-        var d = hdr.getAttribute('data-date');
-        hdr.style.display = pageVisibleDates[d] ? '' : 'none';
-      });
-      var emptyEl = document.querySelector('.ev-empty');
-      if (totalMatching === 0 && !emptyEl) {
-        var list = document.getElementById('ev-list');
-        if (list) list.insertAdjacentHTML('afterend', '<div class="ev-empty"><p>No events match your filters.</p></div>');
-      } else if (totalMatching > 0 && emptyEl) {
-        emptyEl.remove();
+
+    async function applyFilters() {
+      /* Show loading indicator */
+      var listEl = document.getElementById('ev-list');
+      if (listEl) {
+        listEl.innerHTML = '<div class="ev-skeleton-row"><div class="ev-skeleton-block ev-skeleton-thumb"></div><div class="ev-skeleton-text"><div class="ev-skeleton-block ev-skeleton-line w70"></div><div class="ev-skeleton-block ev-skeleton-line w50"></div></div></div>';
       }
-      renderPagination(currentPage, totalPages, totalMatching);
+
+      var filters = {
+        category: activeCat === 'editors-pick' ? null : activeCat,
+        editorsPick: activeCat === 'editors-pick',
+        city: activeLoc,
+        month: activeMonth,
+        date: activeDate,
+        search: searchTerm
+      };
+
+      try {
+        var result = await fetchEvents(filters, currentPage);
+        updateEventList(result.events, editorsPicks);
+        renderPagination(currentPage, result.totalPages, result.totalCount);
+      } catch (err) {
+        console.error('Error applying filters:', err);
+        if (listEl) listEl.innerHTML = '<div class="ev-empty"><p>Error loading events. Please try again.</p></div>';
+      }
     }
+
     function renderPagination(page, totalPages, totalItems) {
       var pagEl = document.getElementById('ev-pagination');
       if (!pagEl) return;
       if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
+
       var html = '<div class="ev-pag-inner">';
       html += '<button class="ev-pag-btn' + (page <= 1 ? ' disabled' : '') + '" data-page="' + (page - 1) + '">\u00ab Prev</button>';
       for (var p = 1; p <= totalPages; p++) {
@@ -1594,6 +1706,7 @@
       html += '</div>';
       html += '<div class="ev-pag-info">Showing ' + (((page-1)*EVENTS_PER_PAGE)+1) + '\u2013' + Math.min(page*EVENTS_PER_PAGE, totalItems) + ' of ' + totalItems + ' events</div>';
       pagEl.innerHTML = html;
+
       pagEl.querySelectorAll('.ev-pag-btn:not(.disabled)').forEach(function(btn) {
         btn.addEventListener('click', function() {
           var newPage = parseInt(btn.getAttribute('data-page'));
@@ -1606,7 +1719,10 @@
         });
       });
     }
+
     function resetPageAndFilter() { currentPage = 1; applyFilters(); }
+
+    /* Category pills */
     document.querySelectorAll('.ev-cattab').forEach(function(btn) {
       btn.addEventListener('click', function() {
         document.querySelectorAll('.ev-cattab').forEach(function(b) { b.classList.remove('active'); });
@@ -1615,6 +1731,8 @@
         resetPageAndFilter();
       });
     });
+
+    /* Location tabs */
     document.querySelectorAll('.ev-loc-tab').forEach(function(tab) {
       tab.addEventListener('click', function() {
         document.querySelectorAll('.ev-loc-tab').forEach(function(t) { t.classList.add('ev-loc-inactive'); });
@@ -1625,6 +1743,8 @@
         resetPageAndFilter();
       });
     });
+
+    /* Month pills */
     document.querySelectorAll('.ev-month-pill').forEach(function(pill) {
       pill.addEventListener('click', function() {
         var clickedMonth = pill.getAttribute('data-month');
@@ -1648,16 +1768,25 @@
         resetPageAndFilter();
       });
     });
+
+    /* Search with 300ms debounce */
     var searchInput = document.getElementById('ev-search-input');
     if (searchInput) {
       searchInput.addEventListener('input', function() {
         searchTerm = searchInput.value;
-        resetPageAndFilter();
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+          currentPage = 1;
+          applyFilters();
+        }, 300);
       });
     }
+
+    /* Date picker month select */
     var pickMonth = document.getElementById('ev-pick-month');
     var pickDay = document.getElementById('ev-pick-day');
     var pickClear = document.getElementById('ev-pick-clear');
+
     if (pickMonth) {
       pickMonth.addEventListener('change', function() {
         var selectedMonth = pickMonth.value;
@@ -1670,6 +1799,7 @@
           resetPageAndFilter();
           return;
         }
+
         var days = availableDates[selectedMonth] || [];
         pickDay.innerHTML = '<option value="">Day</option>';
         days.forEach(function(d) { pickDay.innerHTML += '<option value="' + d + '">' + d + '</option>'; });
@@ -1684,17 +1814,26 @@
         resetPageAndFilter();
       });
     }
+
+    /* Date picker day select */
     if (pickDay) {
       pickDay.addEventListener('change', function() {
         var selectedDay = pickDay.value;
         var selectedMonth = pickMonth.value;
-        if (!selectedDay || !selectedMonth) { activeDate = ''; toggleEditorsPicks(true); resetPageAndFilter(); return; }
+        if (!selectedDay || !selectedMonth) {
+          activeDate = '';
+          toggleEditorsPicks(true);
+          resetPageAndFilter();
+          return;
+        }
         activeDate = selectedMonth + '-' + String(selectedDay).padStart(2, '0');
         pickClear.style.display = 'inline-block';
         toggleEditorsPicks(false);
         resetPageAndFilter();
       });
     }
+
+    /* Clear date picker */
     if (pickClear) {
       pickClear.addEventListener('click', function() {
         pickMonth.value = '';
@@ -1708,10 +1847,14 @@
           document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
           fp.classList.add('active');
           activeMonth = fp.getAttribute('data-month');
-        } else { activeMonth = 'all'; }
+        } else {
+          activeMonth = 'all';
+        }
         resetPageAndFilter();
       });
     }
+
+    /* Initial filter/fetch — loads the first page of events */
     applyFilters();
   }
   /* ---------- SPA routing ---------- */
@@ -1950,31 +2093,37 @@
     try {
       renderSkeleton();
       var results = await Promise.all([
-        fetchEvents(),
         fetchFeaturedSlots(),
         fetchFeaturedFromGhost(),
-        fetchEditorsPicks()
+        fetchEditorsPicks(),
+        fetchCategoryCounts(),
+        fetchAvailableMonths()
       ]);
-      var events = results[0];
-      var slotsFeatured = results[1];
-      var ghostFeatured = results[2];
-      var editorsPicks = results[3];
+      var slotsFeatured = results[0];
+      var ghostFeatured = results[1];
+      var editorsPicks = results[2];
+      var categoryCounts = results[3];
+      var monthData = results[4];
+
       // Use featured_slots table as primary source; Ghost #featuredevent as fallback
       var featured;
       if (slotsFeatured.length > 0) {
-        // Slots are pre-ordered (1, 2, 3) — use as-is
         featured = slotsFeatured;
       } else {
-        // Fallback to Ghost tagged posts
         featured = ghostFeatured;
       }
-      renderPage(events, featured, editorsPicks);
+
+      // Render page structure (featured, pills, month tabs, etc.)
+      // wireFilters() is called inside renderPageStructure and immediately
+      // triggers applyFilters() which fetches the first page of events
+      renderPageStructure(featured, editorsPicks, categoryCounts, monthData);
     } catch (err) {
       console.error('TBI Events page error:', err);
       var root = document.getElementById('tbi-events');
       if (root) root.innerHTML += '<div class="ev-empty"><p>Unable to load events. Please try again later.</p></div>';
     }
   }
+
   function route() {
     var path = location.pathname.replace(/^\/+|\/+$/g, '');
     if (!path || path === 'index.html') {
