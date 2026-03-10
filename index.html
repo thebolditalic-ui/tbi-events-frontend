@@ -345,6 +345,101 @@
       color: rgb(34,34,34);
       margin-bottom: 16px;
     }
+    #tbi-events .ev-related-header {
+      max-width: 700px;
+      margin: 32px auto 16px;
+      padding: 0 20px;
+    }
+    #tbi-events .ev-related-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #888;
+      text-transform: uppercase;
+    }
+    #tbi-events .ev-related-cards {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    #tbi-events .ev-bookmark-card {
+      display: flex;
+      border: 1px solid #e0d8cc;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 0.15s;
+    }
+    #tbi-events .ev-bookmark-card:hover {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    #tbi-events .ev-bookmark-content {
+      flex: 1;
+      padding: 16px;
+      min-width: 0;
+    }
+    #tbi-events .ev-bookmark-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 6px;
+      color: #1E1B1B;
+    }
+    #tbi-events .ev-bookmark-desc {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.4;
+      margin-bottom: 10px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #tbi-events .ev-bookmark-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #888;
+    }
+    #tbi-events .ev-bookmark-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+    }
+    #tbi-events .ev-bookmark-pub {
+      font-weight: 600;
+      color: #555;
+    }
+    #tbi-events .ev-bookmark-author::before {
+      content: '·';
+      margin-right: 6px;
+    }
+    #tbi-events .ev-bookmark-thumb {
+      width: 160px;
+      min-height: 100%;
+      flex-shrink: 0;
+    }
+    #tbi-events .ev-bookmark-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    @media (max-width: 600px) {
+      #tbi-events .ev-bookmark-card {
+        flex-direction: column-reverse;
+      }
+      #tbi-events .ev-bookmark-thumb {
+        width: 100%;
+        height: 160px;
+      }
+    }
     #tbi-events .ev-post-source {
       font-size: 13px;
       color: rgb(153,153,153);
@@ -993,6 +1088,49 @@
     if (!s) return '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function sanitizeHTML(html) {
+    if (!html) return '';
+    var allowedTags = /^(p|br|a|strong|em|b|i)$/i;
+    var temp = document.createElement('div');
+    temp.innerHTML = html;
+    var output = '';
+    function traverse(node) {
+      if (node.nodeType === 3) {
+        output += node.nodeValue;
+      } else if (node.nodeType === 1) {
+        var tag = node.tagName.toLowerCase();
+        if (allowedTags.test(tag)) {
+          output += '<' + tag;
+          if (tag === 'a') {
+            var href = node.getAttribute('href');
+            var target = node.getAttribute('target');
+            if (href) output += ' href="' + esc(href) + '"';
+            if (target) output += ' target="' + esc(target) + '"';
+          }
+          output += '>';
+          for (var i = 0; i < node.childNodes.length; i++) {
+            traverse(node.childNodes[i]);
+          }
+          output += '</' + tag + '>';
+        } else {
+          for (var i = 0; i < node.childNodes.length; i++) {
+            traverse(node.childNodes[i]);
+          }
+        }
+      }
+    }
+    traverse(temp);
+    if (output && output.indexOf('<') === -1 && output.indexOf('\n') !== -1) {
+      var lines = output.split('\n');
+      output = '';
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].trim()) {
+          output += '<p>' + lines[i] + '</p>';
+        }
+      }
+    }
+    return output;
+  }
   function parseEventDate(dateStr) {
     if (!dateStr) return null;
     var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1427,6 +1565,7 @@
       isFeatured: r.featured || false, city: r.city || 'sf', monthData: monthData,
       source_url: r.source_url || '', source_name: r.source_name || '',
       description: r.description || '', event_date: r.event_date || '', sold_out: r.sold_out || false,
+      related_articles: r.related_articles || null,
     };
   }
   /* ---------- render (split into structure + data update) ---------- */
@@ -1975,12 +2114,33 @@
     /* Description */
     if (event.description) {
       html += '<div class="ev-desc-header"><span class="ev-desc-pill">EVENT DESCRIPTION</span></div>';
-      html += '<div class="ev-post-body">';
-      var paragraphs = event.description.split('\n');
-      for (var i = 0; i < paragraphs.length; i++) {
-        if (paragraphs[i].trim()) {
-          html += '<p>' + esc(paragraphs[i]) + '</p>';
+      html += '<div class="ev-post-body">' + sanitizeHTML(event.description) + '</div>';
+    }
+
+    /* Related Articles — Ghost bookmark-style embed cards */
+    if (event.related_articles && event.related_articles.length > 0) {
+      html += '<div class="ev-related-header"><span class="ev-related-pill">RELATED ARTICLES</span></div>';
+      html += '<div class="ev-related-cards">';
+      for (var ra = 0; ra < event.related_articles.length; ra++) {
+        var article = event.related_articles[ra];
+        html += '<a class="ev-bookmark-card" href="' + esc(article.url) + '" target="_blank" rel="noopener">';
+        html += '<div class="ev-bookmark-content">';
+        html += '<div class="ev-bookmark-title">' + esc(article.title) + '</div>';
+        if (article.excerpt) {
+          var shortExcerpt = article.excerpt.length > 150 ? article.excerpt.slice(0, 150).replace(/\s+\S*$/, '') + '...' : article.excerpt;
+          html += '<div class="ev-bookmark-desc">' + esc(shortExcerpt) + '</div>';
         }
+        html += '<div class="ev-bookmark-meta">';
+        html += '<img class="ev-bookmark-icon" src="https://www.thebolditalic.com/favicon.ico" alt="">';
+        html += '<span class="ev-bookmark-pub">The Bold Italic</span>';
+        if (article.author) {
+          html += '<span class="ev-bookmark-author">' + esc(article.author) + '</span>';
+        }
+        html += '</div></div>';
+        if (article.image) {
+          html += '<div class="ev-bookmark-thumb"><img src="' + esc(article.image) + '" alt=""></div>';
+        }
+        html += '</a>';
       }
       html += '</div>';
     }
