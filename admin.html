@@ -803,6 +803,10 @@ body {
           <label for="ev-editors-pick">Editor's Pick</label>
         </div>
         <div class="form-check">
+          <input type="checkbox" id="ev-featured-candidate">
+          <label for="ev-featured-candidate" style="color:var(--gold);font-weight:600;">Feature Candidate</label>
+        </div>
+        <div class="form-check">
           <input type="checkbox" id="ev-sold-out">
           <label for="ev-sold-out">Sold Out</label>
         </div>
@@ -1101,6 +1105,7 @@ body {
     document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
     document.getElementById('ev-description').value = ev ? ev.description || '' : '';
     document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
+    document.getElementById('ev-featured-candidate').checked = ev ? !!ev.featured : false;
     document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
 
     $modal.classList.add('active');
@@ -1168,6 +1173,7 @@ body {
       performers: document.getElementById('ev-performers').value.trim() || null,
       description: document.getElementById('ev-description').value.trim() || null,
       editors_pick: document.getElementById('ev-editors-pick').checked,
+      featured: document.getElementById('ev-featured-candidate').checked,
       sold_out: document.getElementById('ev-sold-out').checked,
       updated_at: new Date().toISOString()
     };
@@ -1342,8 +1348,8 @@ body {
     var results = await Promise.all([fetchGhostFeaturedPosts(), loadFeaturedSlots()]);
     ghostFeaturedPosts = results[0];
     currentSlots = results[1];
-    // Also get Supabase events with featured_order set
-    var { data: featEvents } = await sb.from('events').select('*').not('featured_order', 'is', null);
+    // Get Supabase events marked as feature candidates
+    var { data: featEvents } = await sb.from('events').select('*').eq('featured', true);
     var supabaseCandidates = (featEvents || []).map(function(ev) {
       return {
         id: ev.id,
