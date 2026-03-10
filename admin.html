@@ -1424,7 +1424,7 @@ body {
         excerpt: ev.excerpt,
         source: 'supabase',
         sourceLabel: 'Supabase',
-        assignedSlot: slottedIds['supabase:' + ev.id] || null
+        assignedSlot: slottedIds['supabase:' + ev.slug] || null
       });
     });
 
@@ -1441,7 +1441,7 @@ body {
         + '<div class="feat-cand-info"><h4>' + esc(c.title) + '</h4>'
         + '<span class="feat-cand-meta">' + esc(c.sourceLabel) + ' &middot; ' + esc(c.category) + slotNote + '</span></div>'
         + '<div class="feat-cand-actions">'
-        + '<select class="feat-assign-select" data-source="' + c.source + '" data-id="' + esc(c.source === 'ghost' ? c.slug : c.id) + '" data-title="' + esc(c.title) + '" data-image="' + esc(c.image) + '" data-url="' + esc(c.url) + '" data-category="' + esc(c.category) + '" data-excerpt="' + esc(c.excerpt) + '">'
+        + '<select class="feat-assign-select" data-source="' + c.source + '" data-id="' + esc(c.slug) + '" data-title="' + esc(c.title) + '" data-image="' + esc(c.image) + '" data-url="' + esc(c.url) + '" data-category="' + esc(c.category) + '" data-excerpt="' + esc(c.excerpt) + '">'
         + '<option value="">Assign...</option>'
         + '<option value="1"' + (c.assignedSlot === 1 ? ' selected' : '') + '>Slot 1</option>'
         + '<option value="2"' + (c.assignedSlot === 2 ? ' selected' : '') + '>Slot 2</option>'
