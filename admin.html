@@ -479,6 +479,7 @@ body {
           <th data-sort="category">Category</th>
           <th data-sort="source_name">Source</th>
           <th data-sort="editors_pick">Pick</th>
+          <th data-sort="featured_order">Feat</th>
           <th></th>
         </tr>
       </thead>
@@ -609,9 +610,14 @@ body {
           <input type="checkbox" id="ev-editors-pick">
           <label for="ev-editors-pick">Editor's Pick</label>
         </div>
-        <div class="form-check">
-          <input type="checkbox" id="ev-featured">
-          <label for="ev-featured">Featured</label>
+        <div class="form-check" style="display:flex;align-items:center;gap:8px;">
+          <label for="ev-featured-slot" style="margin:0;font-weight:600;">Featured Slot:</label>
+          <select id="ev-featured-slot" style="padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;">
+            <option value="">None</option>
+            <option value="1">Slot 1 (left)</option>
+            <option value="2">Slot 2 (center)</option>
+            <option value="3">Slot 3 (right)</option>
+          </select>
         </div>
         <div class="form-check">
           <input type="checkbox" id="ev-sold-out">
@@ -738,7 +744,7 @@ body {
 
   // ---- Load Events ----
   async function loadEvents() {
-    $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">Loading events...</td></tr>';
+    $tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#888;">Loading events...</td></tr>';
     var query = sb.from('events').select('*').order('event_date', { ascending: true });
 
     if (!$showPast.checked) {
@@ -748,7 +754,7 @@ body {
 
     var { data, error } = await query;
     if (error) {
-      $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#e74c3c;">Error: ' + error.message + '</td></tr>';
+      $tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#e74c3c;">Error: ' + error.message + '</td></tr>';
       return;
     }
     allEvents = data || [];
@@ -816,7 +822,7 @@ body {
     var total = filteredEvents.length;
 
     if (page.length === 0) {
-      $tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#888;">No events found</td></tr>';
+      $tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#888;">No events found</td></tr>';
     } else {
       $tbody.innerHTML = page.map(function(ev) {
         var dateStr = ev.event_date ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -833,6 +839,7 @@ body {
           + '<td>' + esc(ev.category || 'Events') + '</td>'
           + '<td><span class="source-badge ' + srcClass + '">' + esc(src) + '</span></td>'
           + '<td><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
+          + '<td>' + (ev.featured_order ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">' + ev.featured_order + '</span>' : '') + '</td>'
           + '<td class="actions-cell">'
           + '<button class="edit-btn" title="Edit">✏️</button>'
           + '<button class="del-btn" title="Delete">🗑️</button>'
@@ -910,7 +917,7 @@ body {
     document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
     document.getElementById('ev-description').value = ev ? ev.description || '' : '';
     document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
-    document.getElementById('ev-featured').checked = ev ? !!ev.featured : false;
+    document.getElementById('ev-featured-slot').value = ev && ev.featured_order ? String(ev.featured_order) : '';
     document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
 
     $modal.classList.add('active');
@@ -978,7 +985,8 @@ body {
       performers: document.getElementById('ev-performers').value.trim() || null,
       description: document.getElementById('ev-description').value.trim() || null,
       editors_pick: document.getElementById('ev-editors-pick').checked,
-      featured: document.getElementById('ev-featured').checked,
+      featured: !!document.getElementById('ev-featured-slot').value,
+      featured_order: document.getElementById('ev-featured-slot').value ? parseInt(document.getElementById('ev-featured-slot').value) : null,
       sold_out: document.getElementById('ev-sold-out').checked,
       updated_at: new Date().toISOString()
     };
@@ -990,6 +998,17 @@ body {
 
     $formSave.textContent = 'Saving...';
     $formSave.disabled = true;
+
+    // If assigning a featured slot, clear that slot from any other event first
+    if (payload.featured_order) {
+      var clearResult = await sb.from('events')
+        .update({ featured: false, featured_order: null, updated_at: new Date().toISOString() })
+        .eq('featured_order', payload.featured_order)
+        .neq('id', editingId || '00000000-0000-0000-0000-000000000000');
+      if (clearResult.error) {
+        console.warn('Could not clear existing slot:', clearResult.error.message);
+      }
+    }
 
     var result;
     if (editingId) {
