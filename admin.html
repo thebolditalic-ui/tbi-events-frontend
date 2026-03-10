@@ -422,6 +422,181 @@ body {
 .confirm-box p { margin-bottom: 20px; font-size: 15px; line-height: 1.5; }
 .confirm-box .confirm-actions { display: flex; gap: 10px; justify-content: center; }
 
+/* ---- Featured Manager ---- */
+.feat-manager {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+.feat-manager h2 {
+  font-family: var(--title-font);
+  font-size: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.feat-manager h2 .feat-star { color: var(--gold); }
+.feat-slots {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.feat-slot {
+  background: #fff;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  min-height: 120px;
+  position: relative;
+  transition: border-color 0.15s;
+}
+.feat-slot.filled {
+  border-style: solid;
+  border-color: var(--gold);
+}
+.feat-slot-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #999;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.feat-slot-content {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.feat-slot-img {
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.feat-slot-info h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+.feat-slot-info .feat-slot-source {
+  font-size: 11px;
+  color: #888;
+}
+.feat-slot-clear {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #ccc;
+  line-height: 1;
+}
+.feat-slot-clear:hover { color: var(--red); }
+.feat-slot-empty {
+  color: #bbb;
+  font-size: 13px;
+  font-style: italic;
+  padding-top: 16px;
+  text-align: center;
+}
+.feat-candidates {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.feat-candidates-head {
+  padding: 10px 14px;
+  background: var(--bg-alt);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.feat-candidates-head button {
+  font-size: 11px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  color: #666;
+}
+.feat-candidates-head button:hover { background: #eee; }
+.feat-cand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0ebe0;
+  font-size: 13px;
+}
+.feat-cand-row:last-child { border-bottom: none; }
+.feat-cand-row:hover { background: var(--bg-alt); }
+.feat-cand-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.feat-cand-info {
+  flex: 1;
+  min-width: 0;
+}
+.feat-cand-info h4 {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feat-cand-info .feat-cand-meta {
+  font-size: 11px;
+  color: #888;
+}
+.feat-cand-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.feat-cand-actions select {
+  font-size: 11px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+.feat-cand-actions button {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  color: var(--red);
+  white-space: nowrap;
+}
+.feat-cand-actions button:hover { background: #fde8e8; }
+.feat-loading {
+  padding: 24px;
+  text-align: center;
+  color: #999;
+  font-size: 13px;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .admin-toolbar { flex-direction: column; align-items: stretch; }
@@ -465,6 +640,23 @@ body {
         <input type="checkbox" id="show-past" style="accent-color:var(--gold)"> Show past
       </label>
       <button class="btn btn-gold btn-sm" id="add-event-btn">+ Add Event</button>
+    </div>
+  </div>
+
+  <!-- ---- Featured Cards Manager ---- -->
+  <div class="feat-manager" id="featured-manager">
+    <h2><span class="feat-star">&#10022;</span> Featured Cards</h2>
+    <div class="feat-slots" id="feat-slots">
+      <div class="feat-slot" data-slot="1"><div class="feat-slot-label">Slot 1 (Left)</div><div class="feat-slot-empty">Empty</div></div>
+      <div class="feat-slot" data-slot="2"><div class="feat-slot-label">Slot 2 (Center)</div><div class="feat-slot-empty">Empty</div></div>
+      <div class="feat-slot" data-slot="3"><div class="feat-slot-label">Slot 3 (Right)</div><div class="feat-slot-empty">Empty</div></div>
+    </div>
+    <div class="feat-candidates" id="feat-candidates">
+      <div class="feat-candidates-head">
+        <span>Available posts &amp; events</span>
+        <button id="feat-refresh">Refresh</button>
+      </div>
+      <div id="feat-cand-list"><div class="feat-loading">Loading...</div></div>
     </div>
   </div>
 
@@ -740,6 +932,7 @@ body {
     $adminApp.style.display = 'block';
     $userEmail.textContent = user.email;
     loadEvents();
+    loadFeaturedManager();
   }
 
   // ---- Load Events ----
@@ -1084,6 +1277,293 @@ body {
     $formStatus.textContent = msg;
     $formStatus.style.display = 'block';
   }
+
+  // ---- Ghost API Config ----
+  var GHOST_URL = 'https://the-bold-italic.ghost.io';
+  var GHOST_CONTENT_KEY = '6e6898c6a63b5488d346a68511';
+  var GHOST_ADMIN_KEY_ID = '699a5655870daf000120af35';
+  var GHOST_ADMIN_SECRET = 'a04911d717b074970d6b4b17c8b0502f57c9a88e02f62510eb0509fcb7954348';
+
+  // ---- Ghost Admin JWT (Web Crypto) ----
+  function hexToBytes(hex) {
+    var bytes = new Uint8Array(hex.length / 2);
+    for (var i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return bytes;
+  }
+
+  function base64url(buf) {
+    var str = '';
+    var bytes = new Uint8Array(buf);
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  async function createGhostAdminJWT() {
+    var now = Math.floor(Date.now() / 1000);
+    var header = { alg: 'HS256', typ: 'JWT', kid: GHOST_ADMIN_KEY_ID };
+    var payload = { iat: now, exp: now + 300, aud: '/admin/' };
+    var enc = new TextEncoder();
+    var headerB64 = base64url(enc.encode(JSON.stringify(header)));
+    var payloadB64 = base64url(enc.encode(JSON.stringify(payload)));
+    var sigInput = headerB64 + '.' + payloadB64;
+    var keyData = hexToBytes(GHOST_ADMIN_SECRET);
+    var key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    var sig = await crypto.subtle.sign('HMAC', key, enc.encode(sigInput));
+    return sigInput + '.' + base64url(sig);
+  }
+
+  // ---- Featured Slots Manager ----
+  var ghostFeaturedPosts = [];
+  var currentSlots = {};
+
+  async function fetchGhostFeaturedPosts() {
+    try {
+      var url = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY
+        + '&filter=tag:hash-featuredevent&limit=10&include=tags&formats=html'
+        + '&fields=id,slug,title,url,feature_image,custom_excerpt';
+      var resp = await fetch(url);
+      var data = await resp.json();
+      if (!data.posts) return [];
+      return data.posts.map(function(p) {
+        var category = 'Events';
+        (p.tags || []).forEach(function(t) {
+          if (t.name.charAt(0) === '#' && t.name !== '#featuredevent' && t.name !== '#eventscal' && t.name !== '#events' && t.name !== '#hidden') {
+            category = t.name.slice(1);
+          }
+        });
+        return {
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          image: p.feature_image || '',
+          url: p.url,
+          category: category,
+          excerpt: p.custom_excerpt || '',
+          source: 'ghost',
+          tags: p.tags || []
+        };
+      });
+    } catch (err) {
+      console.warn('Ghost fetch failed:', err);
+      return [];
+    }
+  }
+
+  async function loadFeaturedSlots() {
+    var { data, error } = await sb.from('featured_slots').select('*').order('slot', { ascending: true });
+    if (error) { console.warn('Failed to load slots:', error.message); return {}; }
+    var slots = {};
+    (data || []).forEach(function(row) { slots[row.slot] = row; });
+    return slots;
+  }
+
+  async function loadFeaturedManager() {
+    var $mgr = document.getElementById('featured-manager');
+    if (!$mgr) return;
+    var results = await Promise.all([fetchGhostFeaturedPosts(), loadFeaturedSlots()]);
+    ghostFeaturedPosts = results[0];
+    currentSlots = results[1];
+    // Also get Supabase events with featured_order set
+    var { data: featEvents } = await sb.from('events').select('*').not('featured_order', 'is', null);
+    var supabaseCandidates = (featEvents || []).map(function(ev) {
+      return {
+        id: ev.id,
+        slug: ev.slug,
+        title: ev.title,
+        image: ev.image_url || '',
+        url: '/' + ev.slug + '/',
+        category: ev.category || 'Events',
+        excerpt: ev.description || '',
+        source: 'supabase'
+      };
+    });
+    renderFeaturedManager(ghostFeaturedPosts, supabaseCandidates, currentSlots);
+  }
+
+  function renderFeaturedManager(ghostPosts, supabaseEvents, slots) {
+    // Render slots
+    for (var s = 1; s <= 3; s++) {
+      var slotEl = document.querySelector('.feat-slot[data-slot="' + s + '"]');
+      if (!slotEl) continue;
+      var data = slots[s];
+      if (data) {
+        slotEl.classList.add('filled');
+        var srcLabel = data.source_type === 'ghost' ? 'Ghost post' : 'Supabase event';
+        slotEl.innerHTML = '<div class="feat-slot-label">Slot ' + s + ' (' + ['Left', 'Center', 'Right'][s - 1] + ')</div>'
+          + '<button class="feat-slot-clear" data-slot="' + s + '" title="Clear slot">&times;</button>'
+          + '<div class="feat-slot-content">'
+          + (data.image_url ? '<img class="feat-slot-img" src="' + esc(data.image_url) + '" onerror="this.style.display=\'none\'">' : '')
+          + '<div class="feat-slot-info"><h4>' + esc(data.title) + '</h4>'
+          + '<span class="feat-slot-source">' + srcLabel + '</span></div></div>';
+      } else {
+        slotEl.classList.remove('filled');
+        slotEl.innerHTML = '<div class="feat-slot-label">Slot ' + s + ' (' + ['Left', 'Center', 'Right'][s - 1] + ')</div>'
+          + '<div class="feat-slot-empty">Empty &mdash; assign from below</div>';
+      }
+    }
+
+    // Build candidate list
+    var $list = document.getElementById('feat-cand-list');
+    // Combine Ghost + Supabase candidates, mark which are already slotted
+    var slottedIds = {};
+    Object.values(slots).forEach(function(s) { slottedIds[s.source_type + ':' + s.source_id] = s.slot; });
+
+    var candidates = [];
+    ghostPosts.forEach(function(p) {
+      candidates.push({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        image: p.image,
+        url: p.url,
+        category: p.category,
+        excerpt: p.excerpt,
+        source: 'ghost',
+        sourceLabel: 'Ghost',
+        assignedSlot: slottedIds['ghost:' + p.slug] || null,
+        ghostId: p.id,
+        tags: p.tags
+      });
+    });
+    supabaseEvents.forEach(function(ev) {
+      // Skip if already in Ghost list (by title match)
+      var isDupe = ghostPosts.some(function(gp) { return gp.title.toLowerCase() === ev.title.toLowerCase(); });
+      if (isDupe) return;
+      candidates.push({
+        id: ev.id,
+        slug: ev.slug,
+        title: ev.title,
+        image: ev.image,
+        url: ev.url,
+        category: ev.category,
+        excerpt: ev.excerpt,
+        source: 'supabase',
+        sourceLabel: 'Supabase',
+        assignedSlot: slottedIds['supabase:' + ev.id] || null
+      });
+    });
+
+    if (candidates.length === 0) {
+      $list.innerHTML = '<div class="feat-loading">No #featuredevent posts found in Ghost and no featured Supabase events.</div>';
+      return;
+    }
+
+    $list.innerHTML = candidates.map(function(c) {
+      var slotNote = c.assignedSlot ? ' <span style="color:var(--gold);font-weight:700;">Slot ' + c.assignedSlot + '</span>' : '';
+      var imgHtml = c.image ? '<img class="feat-cand-img" src="' + esc(c.image) + '" onerror="this.style.display=\'none\'">' : '<div class="feat-cand-img" style="background:#eee;"></div>';
+      var html = '<div class="feat-cand-row">'
+        + imgHtml
+        + '<div class="feat-cand-info"><h4>' + esc(c.title) + '</h4>'
+        + '<span class="feat-cand-meta">' + esc(c.sourceLabel) + ' &middot; ' + esc(c.category) + slotNote + '</span></div>'
+        + '<div class="feat-cand-actions">'
+        + '<select class="feat-assign-select" data-source="' + c.source + '" data-id="' + esc(c.source === 'ghost' ? c.slug : c.id) + '" data-title="' + esc(c.title) + '" data-image="' + esc(c.image) + '" data-url="' + esc(c.url) + '" data-category="' + esc(c.category) + '" data-excerpt="' + esc(c.excerpt) + '">'
+        + '<option value="">Assign...</option>'
+        + '<option value="1"' + (c.assignedSlot === 1 ? ' selected' : '') + '>Slot 1</option>'
+        + '<option value="2"' + (c.assignedSlot === 2 ? ' selected' : '') + '>Slot 2</option>'
+        + '<option value="3"' + (c.assignedSlot === 3 ? ' selected' : '') + '>Slot 3</option>'
+        + '</select>';
+      if (c.source === 'ghost') {
+        html += '<button class="feat-remove-tag" data-ghost-id="' + esc(c.ghostId) + '" data-title="' + esc(c.title) + '" title="Remove #featuredevent tag from Ghost">Untag</button>';
+      }
+      html += '</div></div>';
+      return html;
+    }).join('');
+  }
+
+  // ---- Assign to slot (upsert into featured_slots) ----
+  async function assignSlot(slot, sourceType, sourceId, title, imageUrl, url, category, excerpt) {
+    var { error } = await sb.from('featured_slots').upsert({
+      slot: parseInt(slot),
+      source_type: sourceType,
+      source_id: sourceId,
+      title: title,
+      image_url: imageUrl,
+      url: url,
+      category: category,
+      excerpt: excerpt,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'slot' });
+    if (error) {
+      alert('Failed to assign slot: ' + error.message);
+      return;
+    }
+    loadFeaturedManager();
+  }
+
+  // ---- Clear slot ----
+  async function clearSlot(slot) {
+    var { error } = await sb.from('featured_slots').delete().eq('slot', parseInt(slot));
+    if (error) {
+      alert('Failed to clear slot: ' + error.message);
+      return;
+    }
+    loadFeaturedManager();
+  }
+
+  // ---- Remove #featuredevent tag from Ghost post via Admin API ----
+  async function removeGhostTag(ghostPostId, postTitle) {
+    if (!confirm('Remove #featuredevent tag from "' + postTitle + '" in Ghost?')) return;
+    try {
+      var jwt = await createGhostAdminJWT();
+      // First fetch the post to get current tags and updated_at
+      var getResp = await fetch(GHOST_URL + '/ghost/api/admin/posts/' + ghostPostId + '/?formats=mobiledoc', {
+        headers: { 'Authorization': 'Ghost ' + jwt }
+      });
+      var getData = await getResp.json();
+      if (!getData.posts || !getData.posts[0]) { alert('Could not find post in Ghost'); return; }
+      var post = getData.posts[0];
+      var newTags = (post.tags || []).filter(function(t) { return t.name !== '#featuredevent'; });
+      // Update the post
+      var updateResp = await fetch(GHOST_URL + '/ghost/api/admin/posts/' + ghostPostId + '/', {
+        method: 'PUT',
+        headers: {
+          'Authorization': 'Ghost ' + jwt,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          posts: [{
+            tags: newTags,
+            updated_at: post.updated_at
+          }]
+        })
+      });
+      var updateData = await updateResp.json();
+      if (updateData.errors) {
+        alert('Ghost API error: ' + (updateData.errors[0] || {}).message);
+        return;
+      }
+      alert('Tag removed from "' + postTitle + '"');
+      loadFeaturedManager();
+    } catch (err) {
+      alert('Failed to update Ghost post: ' + err.message);
+    }
+  }
+
+  // ---- Featured manager event delegation ----
+  document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('feat-assign-select')) {
+      var val = e.target.value;
+      if (!val) return;
+      var el = e.target;
+      assignSlot(val, el.dataset.source, el.dataset.id, el.dataset.title, el.dataset.image, el.dataset.url, el.dataset.category, el.dataset.excerpt);
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('feat-slot-clear')) {
+      var slot = e.target.dataset.slot;
+      clearSlot(slot);
+    }
+    if (e.target.classList.contains('feat-remove-tag')) {
+      removeGhostTag(e.target.dataset.ghostId, e.target.dataset.title);
+    }
+    if (e.target.id === 'feat-refresh') {
+      document.getElementById('feat-cand-list').innerHTML = '<div class="feat-loading">Loading...</div>';
+      loadFeaturedManager();
+    }
+  });
 
   // ---- Init ----
   checkSession();
