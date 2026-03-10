@@ -1082,11 +1082,10 @@
     if (lower === 'varies') return '<div class="ev-price"></div>';
     return '<div class="ev-price">' + esc(price) + '</div>';
   }
-  /* ---------- Supabase-based Featured Slots (featured_order 1/2/3) ---------- */
-  async function fetchFeaturedFromSupabase() {
+  /* ---------- Featured Slots from Supabase featured_slots table ---------- */
+  async function fetchFeaturedSlots() {
     try {
-      var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&featured_order=not.is.null&event_date=gte.' + today + '&order=featured_order.asc&limit=3';
+      var url = SUPABASE_URL + '/rest/v1/featured_slots?select=*&order=slot.asc';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1096,19 +1095,17 @@
         var category = r.category || 'Events';
         return {
           title: r.title,
-          slug: r.slug,
-          url: '/' + r.slug + '/',
+          slug: r.source_id,
+          url: r.url || ('/' + r.source_id + '/'),
           image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
           category: category,
           catColor: CATEGORY_COLORS[category] || '#cdd6f4',
-          excerpt: r.description || '',
-          date: isoToHumanDate(r.event_date),
-          venue: r.venue || '',
-          featured_order: r.featured_order
+          excerpt: r.excerpt || '',
+          featured_order: r.slot
         };
       });
     } catch (err) {
-      console.warn('Failed to fetch featured slots from Supabase:', err);
+      console.warn('Failed to fetch featured slots:', err);
       return [];
     }
   }
@@ -1954,30 +1951,23 @@
       renderSkeleton();
       var results = await Promise.all([
         fetchEvents(),
+        fetchFeaturedSlots(),
         fetchFeaturedFromGhost(),
-        fetchFeaturedFromSupabase(),
         fetchEditorsPicks()
       ]);
       var events = results[0];
-      var ghostFeatured = results[1];
-      var supabaseFeatured = results[2];
+      var slotsFeatured = results[1];
+      var ghostFeatured = results[2];
       var editorsPicks = results[3];
-      // Merge featured: Supabase slots (1/2/3) take priority, Ghost fills remaining
-      var featured = [null, null, null];
-      supabaseFeatured.forEach(function(ev) {
-        if (ev.featured_order >= 1 && ev.featured_order <= 3) {
-          featured[ev.featured_order - 1] = ev;
-        }
-      });
-      // Fill empty slots with Ghost featured posts
-      var ghostIdx = 0;
-      for (var fi = 0; fi < 3; fi++) {
-        if (!featured[fi] && ghostIdx < ghostFeatured.length) {
-          featured[fi] = ghostFeatured[ghostIdx++];
-        }
+      // Use featured_slots table as primary source; Ghost #featuredevent as fallback
+      var featured;
+      if (slotsFeatured.length > 0) {
+        // Slots are pre-ordered (1, 2, 3) — use as-is
+        featured = slotsFeatured;
+      } else {
+        // Fallback to Ghost tagged posts
+        featured = ghostFeatured;
       }
-      // Remove nulls (unfilled slots)
-      featured = featured.filter(function(f) { return f !== null; });
       renderPage(events, featured, editorsPicks);
     } catch (err) {
       console.error('TBI Events page error:', err);
