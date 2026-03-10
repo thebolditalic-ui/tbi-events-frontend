@@ -1477,16 +1477,19 @@
   async function fetchCategoryCounts() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=category&sold_out=eq.false&event_date=gte.' + today;
+      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&event_date=gte.' + today;
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
       var rows = await resp.json();
       var counts = {};
+      var edPickCount = 0;
       rows.forEach(function(r) {
         var cat = r.category || 'Events';
         counts[cat] = (counts[cat] || 0) + 1;
+        if (r.editors_pick) edPickCount++;
       });
+      counts['__editorsPick'] = edPickCount;
       return counts;
     } catch (err) {
       console.warn('Failed to fetch category counts:', err);
@@ -1615,7 +1618,8 @@
       var pillColor = CATEGORY_COLORS[cat] || '#cdd6f4';
       filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + categoryCounts[cat] + '</span></button>';
     });
-    filterRowHtml += '<button class="ev-cattab" data-cat="editors-pick" style="background:#FFD682;">\u2726 Editor\u2019s Pick <span class="ev-date-count">—</span></button>';
+    var edPickCount = categoryCounts['__editorsPick'] || 0;
+    filterRowHtml += '<button class="ev-cattab" data-cat="editors-pick" style="background:#FFD682;">\u2726 Editor\u2019s Pick' + (edPickCount > 0 ? ' <span class="ev-date-count">' + edPickCount + '</span>' : '') + '</button>';
     filterRowHtml += '</div>';
     filterRowHtml += '<div class="ev-search">';
     filterRowHtml += '<svg class="ev-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
