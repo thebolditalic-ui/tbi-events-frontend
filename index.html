@@ -98,7 +98,7 @@
     #tbi-events .ev-row .ev-thumb { flex-shrink: 0; width: 70px; height: 70px; border-radius: 8px; overflow: hidden; }
     #tbi-events .ev-row .ev-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     #tbi-events .ev-row .ev-info { flex: 1; min-width: 0; }
-    #tbi-events .ev-row .ev-catpill { display: inline-block; font-family: var(--epcl-font-family, sans-serif); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 10px; border-radius: 12px; color: #1E1B1B; margin-bottom: 2px; }
+    #tbi-events .ev-row .ev-catpill { display: inline-block; font-family: var(--epcl-font-family, sans-serif); font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 10px; border-radius: 12px; color: #1E1B1B; margin-bottom: 2px; margin-right: 4px; }
     #tbi-events .ev-row .ev-info h3 { font-family: var(--epcl-title-font-family, 'Playfair Display', serif); font-weight: 800; font-size: 16px; line-height: 1.3; color: var(--epcl-titles-color, #1E1B1B); margin: 2px 0; }
     #tbi-events .ev-row .ev-meta { font-family: var(--epcl-font-family, sans-serif); font-size: 13px; color: #888; margin-top: 2px; }
     #tbi-events .ev-row .ev-right { flex-shrink: 0; text-align: right; min-width: 80px; }
@@ -1465,6 +1465,7 @@
         excerpt: r.description || '', isFeatured: r.featured || false,
         source_url: r.source_url || '', description: r.description || '',
         isEditorsPick: r.editors_pick || false,
+        categories: r.categories || null,
       };
       ev.city = classifyCity(ev);
       ev.monthData = monthData;
@@ -1569,6 +1570,7 @@
       source_url: r.source_url || '', source_name: r.source_name || '',
       description: r.description || '', event_date: r.event_date || '', sold_out: r.sold_out || false,
       related_articles: r.related_articles || null,
+      categories: r.categories || null,
     };
   }
   /* ---------- render (split into structure + data update) ---------- */
@@ -1759,10 +1761,16 @@
     var fallbackImg = CATEGORY_IMAGES[ev.category] || CATEGORY_IMAGES['Events'];
     html += '<div class="ev-thumb"><img src="' + esc(ev.image) + '" alt="" onerror="this.onerror=null;this.src=\'' + esc(fallbackImg) + '\';"></div>';
     html += '<div class="ev-info">';
-    if (ev.category !== 'Events') {
-      html += '<span class="ev-catpill" style="background:' + ev.catColor + '">' + esc(ev.category) + '</span>';
+    /* Show up to 2 category badges from categories array, fall back to single category */
+    var displayCats = ev.categories && ev.categories.length > 0 ? ev.categories : (ev.category !== 'Events' ? [ev.category] : []);
+    var badgeCount = 0;
+    for (var ci = 0; ci < displayCats.length && badgeCount < 2; ci++) {
+      if (displayCats[ci] === 'Events') continue;
+      var catCol = CATEGORY_COLORS[displayCats[ci]] || CATEGORY_COLORS['Events'] || '#cdd6f4';
+      html += '<span class="ev-catpill" style="background:' + catCol + '">' + esc(displayCats[ci]) + '</span>';
+      badgeCount++;
     }
-    if (ev.isEditorsPick) {
+    if (ev.isEditorsPick && badgeCount < 2) {
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
@@ -2070,8 +2078,13 @@
     /* Card */
     html += '<div class="ev-post-card' + noImageClass + '">';
     html += '<div class="ev-post-topbar">';
-    if (event.category && event.category.toLowerCase() !== 'events') {
-      html += '<span class="ev-post-cat" style="background: ' + catColor + '">' + esc(event.category) + '</span>';
+    var detailCats = event.categories && event.categories.length > 0 ? event.categories : (event.category && event.category.toLowerCase() !== 'events' ? [event.category] : []);
+    var detailBadges = 0;
+    for (var dci = 0; dci < detailCats.length && detailBadges < 2; dci++) {
+      if (detailCats[dci] === 'Events') continue;
+      var dcColor = CATEGORY_COLORS[detailCats[dci]] || CATEGORY_COLORS['Events'] || '#cdd6f4';
+      html += '<span class="ev-post-cat" style="background: ' + dcColor + '; margin-right: 6px;">' + esc(detailCats[dci]) + '</span>';
+      detailBadges++;
     }
     html += '<a href="/">\u2190 All Events</a>';
     html += '</div>';
