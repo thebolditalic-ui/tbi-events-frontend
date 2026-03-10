@@ -336,6 +336,9 @@ body {
   margin-bottom: 16px;
 }
 .form-row.full { grid-template-columns: 1fr; }
+.form-group {
+  position: relative;
+}
 .form-group label {
   display: block;
   font-size: 12px;
@@ -597,6 +600,162 @@ body {
   font-size: 13px;
 }
 
+/* ---- Rich Text Editor ---- */
+.rte-toolbar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 6px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+.rte-btn {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--dark);
+  transition: all 0.15s;
+}
+.rte-btn:hover {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+.rte-btn:active {
+  opacity: 0.8;
+}
+.rte-editor {
+  width: 100%;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  background: #fff;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--dark);
+  line-height: 1.5;
+  outline: none;
+  overflow-y: auto;
+}
+.rte-editor:focus {
+  border-color: var(--blue);
+  box-shadow: inset 0 0 0 2px rgba(91, 123, 213, 0.1);
+}
+
+/* ---- Related Articles ---- */
+.related-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.related-result-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0ebe0;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.related-result-item:hover {
+  background: var(--bg-alt);
+}
+.related-result-item:last-child {
+  border-bottom: none;
+}
+.related-result-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--dark);
+  margin-bottom: 2px;
+}
+.related-result-excerpt {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.related-articles-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.related-article-card {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 100%;
+  flex: 0 1 calc(50% - 4px);
+}
+.related-article-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.related-article-info {
+  flex: 1;
+  min-width: 0;
+}
+.related-article-title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--dark);
+  margin-bottom: 2px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.related-article-excerpt {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.related-article-remove {
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.related-article-remove:hover {
+  opacity: 0.7;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
   .admin-toolbar { flex-direction: column; align-items: stretch; }
@@ -793,7 +952,22 @@ body {
       <div class="form-row full">
         <div class="form-group">
           <label for="ev-description">Description</label>
-          <textarea id="ev-description" rows="4"></textarea>
+          <div class="rte-toolbar">
+            <button type="button" class="rte-btn" data-cmd="bold" title="Bold">B</button>
+            <button type="button" class="rte-btn" data-cmd="italic" title="Italic">I</button>
+            <button type="button" class="rte-btn" data-cmd="link" title="Link">🔗</button>
+            <button type="button" class="rte-btn" data-cmd="unlink" title="Unlink">Unlink</button>
+          </div>
+          <div id="ev-description" class="rte-editor" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <div class="form-row full">
+        <div class="form-group">
+          <label for="related-articles-search">Related Articles</label>
+          <input type="text" id="related-articles-search" placeholder="Search Bold Italic articles..." autocomplete="off">
+          <div id="related-articles-dropdown" class="related-dropdown" style="display:none;"></div>
+          <div id="related-articles-container" class="related-articles-container"></div>
         </div>
       </div>
 
@@ -1103,10 +1277,16 @@ body {
     document.getElementById('ev-image').value = ev ? ev.image_url || '' : '';
     document.getElementById('ev-ticket-url').value = ev ? ev.ticket_url || '' : '';
     document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
-    document.getElementById('ev-description').value = ev ? ev.description || '' : '';
+    document.getElementById('ev-description').innerHTML = ev ? ev.description || '' : '';
     document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
     document.getElementById('ev-featured-candidate').checked = ev ? !!ev.featured : false;
     document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
+
+    clearRelatedArticles();
+    if (ev && ev.related_articles) {
+      var articles = typeof ev.related_articles === 'string' ? JSON.parse(ev.related_articles) : ev.related_articles;
+      renderRelatedArticleCards(articles);
+    }
 
     $modal.classList.add('active');
     document.getElementById('ev-title').focus();
@@ -1171,7 +1351,8 @@ body {
       image_url: document.getElementById('ev-image').value.trim() || null,
       ticket_url: document.getElementById('ev-ticket-url').value.trim() || null,
       performers: document.getElementById('ev-performers').value.trim() || null,
-      description: document.getElementById('ev-description').value.trim() || null,
+      description: document.getElementById('ev-description').innerHTML.trim() || null,
+      related_articles: getRelatedArticles().length > 0 ? getRelatedArticles() : null,
       editors_pick: document.getElementById('ev-editors-pick').checked,
       featured: document.getElementById('ev-featured-candidate').checked,
       sold_out: document.getElementById('ev-sold-out').checked,
@@ -1567,6 +1748,189 @@ body {
       loadFeaturedManager();
     }
   });
+
+  // ---- Rich Text Editor (RTE) ----
+  var rteEditor = document.getElementById('ev-description');
+  var rteToolbar = document.querySelector('.rte-toolbar');
+
+  rteToolbar.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('rte-btn')) return;
+    e.preventDefault();
+    var cmd = e.target.dataset.cmd;
+
+    if (cmd === 'bold') {
+      document.execCommand('bold', false, null);
+    } else if (cmd === 'italic') {
+      document.execCommand('italic', false, null);
+    } else if (cmd === 'link') {
+      var url = prompt('Enter URL:', 'https://');
+      if (url) {
+        document.execCommand('createLink', false, url);
+      }
+    } else if (cmd === 'unlink') {
+      document.execCommand('unlink', false, null);
+    }
+    rteEditor.focus();
+  });
+
+  // ---- Related Articles (Ghost CMS Search) ----
+  // Reuse GHOST_URL from above; this key is the main site content key (vs GHOST_CONTENT_KEY for TBI Content Engine)
+  var GHOST_MAIN_CONTENT_KEY = '53dbcc02d5748f0a74e48cd3cc';
+  var relatedArticlesData = [];
+  var searchDebounceTimer = null;
+
+  var $relatedSearchInput = document.getElementById('related-articles-search');
+  var $relatedDropdown = document.getElementById('related-articles-dropdown');
+  var $relatedContainer = document.getElementById('related-articles-container');
+
+  $relatedSearchInput.addEventListener('input', function() {
+    clearTimeout(searchDebounceTimer);
+    var term = this.value.trim();
+
+    if (!term) {
+      $relatedDropdown.style.display = 'none';
+      return;
+    }
+
+    searchDebounceTimer = setTimeout(function() {
+      searchGhostArticles(term);
+    }, 300);
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#related-articles-search') && !e.target.closest('#related-articles-dropdown')) {
+      $relatedDropdown.style.display = 'none';
+    }
+  });
+
+  async function searchGhostArticles(term) {
+    try {
+      var url = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_MAIN_CONTENT_KEY
+        + '&filter=title:~\'' + encodeURIComponent(term) + '\''
+        + '&fields=id,slug,title,custom_excerpt,feature_image,url'
+        + '&include=authors&limit=5';
+
+      var resp = await fetch(url);
+      var data = await resp.json();
+      var posts = data.posts || [];
+
+      if (posts.length === 0) {
+        $relatedDropdown.innerHTML = '<div style="padding:10px 12px;color:#999;font-size:12px;">No articles found</div>';
+        $relatedDropdown.style.display = 'block';
+        return;
+      }
+
+      var html = posts.map(function(p) {
+        var author = p.primary_author ? p.primary_author.name : '';
+        return '<div class="related-result-item" data-ghost-id="' + p.id + '" data-slug="' + p.slug + '" data-title="' + esc(p.title) + '" data-excerpt="' + esc(p.custom_excerpt || '') + '" data-image="' + esc(p.feature_image || '') + '" data-url="' + esc(p.url) + '" data-author="' + esc(author) + '">'
+          + '<div class="related-result-title">' + esc(p.title) + '</div>'
+          + '<div class="related-result-excerpt">' + esc(p.custom_excerpt || '') + '</div>'
+          + '</div>';
+      }).join('');
+
+      $relatedDropdown.innerHTML = html;
+      $relatedDropdown.style.display = 'block';
+    } catch (err) {
+      console.error('Ghost search failed:', err);
+      $relatedDropdown.innerHTML = '<div style="padding:10px 12px;color:#e74c3c;font-size:12px;">Search failed</div>';
+      $relatedDropdown.style.display = 'block';
+    }
+  }
+
+  $relatedDropdown.addEventListener('click', function(e) {
+    var item = e.target.closest('.related-result-item');
+    if (!item) return;
+
+    var article = {
+      ghost_id: item.dataset.ghostId,
+      slug: item.dataset.slug,
+      title: item.dataset.title,
+      excerpt: item.dataset.excerpt,
+      image: item.dataset.image,
+      url: item.dataset.url,
+      author: item.dataset.author
+    };
+
+    addRelatedArticle(article);
+    $relatedSearchInput.value = '';
+    $relatedDropdown.style.display = 'none';
+  });
+
+  function addRelatedArticle(article) {
+    if (relatedArticlesData.length >= 3) {
+      alert('Maximum 3 related articles allowed');
+      return;
+    }
+
+    // Check if already added
+    if (relatedArticlesData.some(function(a) { return a.slug === article.slug; })) {
+      alert('This article is already added');
+      return;
+    }
+
+    relatedArticlesData.push(article);
+    renderRelatedArticleCards(relatedArticlesData);
+  }
+
+  function removeRelatedArticle(index) {
+    relatedArticlesData.splice(index, 1);
+    renderRelatedArticleCards(relatedArticlesData);
+  }
+
+  function renderRelatedArticleCards(articles) {
+    relatedArticlesData = articles;
+
+    if (articles.length === 0) {
+      $relatedContainer.innerHTML = '';
+      return;
+    }
+
+    var html = articles.map(function(a, idx) {
+      var imgHtml = a.image
+        ? '<img class="related-article-image" src="' + esc(a.image) + '" alt="' + esc(a.title) + '" onerror="this.style.display=\'none\'">'
+        : '<div class="related-article-image" style="background:#eee;"></div>';
+
+      return '<div class="related-article-card">'
+        + imgHtml
+        + '<div class="related-article-info">'
+        + '<div class="related-article-title">' + esc(a.title) + '</div>'
+        + '<div class="related-article-excerpt">' + esc(a.excerpt) + '</div>'
+        + '</div>'
+        + '<button type="button" class="related-article-remove" data-index="' + idx + '">✕</button>'
+        + '</div>';
+    }).join('');
+
+    $relatedContainer.innerHTML = html;
+  }
+
+  $relatedContainer.addEventListener('click', function(e) {
+    var btn = e.target.closest('.related-article-remove');
+    if (!btn) return;
+    var idx = parseInt(btn.dataset.index);
+    removeRelatedArticle(idx);
+  });
+
+  function getRelatedArticles() {
+    return relatedArticlesData.map(function(a) {
+      return {
+        ghost_id: a.ghost_id,
+        slug: a.slug,
+        title: a.title,
+        excerpt: a.excerpt,
+        image: a.image,
+        url: a.url,
+        author: a.author
+      };
+    });
+  }
+
+  function clearRelatedArticles() {
+    relatedArticlesData = [];
+    $relatedContainer.innerHTML = '';
+    $relatedSearchInput.value = '';
+    $relatedDropdown.style.display = 'none';
+  }
 
   // ---- Init ----
   checkSession();
