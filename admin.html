@@ -1484,38 +1484,8 @@ body {
   // ---- Ghost API Config ----
   var GHOST_URL = 'https://the-bold-italic.ghost.io';
   var GHOST_CONTENT_KEY = '6e6898c6a63b5488d346a68511';
-  var GHOST_ADMIN_KEY_ID = '699a5655870daf000120af35';
-  var GHOST_ADMIN_SECRET = 'a04911d717b074970d6b4b17c8b0502f57c9a88e02f62510eb0509fcb7954348';
-
-  // ---- Ghost Admin JWT (Web Crypto) ----
-  function hexToBytes(hex) {
-    var bytes = new Uint8Array(hex.length / 2);
-    for (var i = 0; i < hex.length; i += 2) {
-      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-    }
-    return bytes;
-  }
-
-  function base64url(buf) {
-    var str = '';
-    var bytes = new Uint8Array(buf);
-    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
-
-  async function createGhostAdminJWT() {
-    var now = Math.floor(Date.now() / 1000);
-    var header = { alg: 'HS256', typ: 'JWT', kid: GHOST_ADMIN_KEY_ID };
-    var payload = { iat: now, exp: now + 300, aud: '/admin/' };
-    var enc = new TextEncoder();
-    var headerB64 = base64url(enc.encode(JSON.stringify(header)));
-    var payloadB64 = base64url(enc.encode(JSON.stringify(payload)));
-    var sigInput = headerB64 + '.' + payloadB64;
-    var keyData = hexToBytes(GHOST_ADMIN_SECRET);
-    var key = await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-    var sig = await crypto.subtle.sign('HMAC', key, enc.encode(sigInput));
-    return sigInput + '.' + base64url(sig);
-  }
+  // Ghost Admin API calls go through /api/ghost-admin serverless function
+  // (credentials stored in Vercel environment variables, never exposed to browser)
 
   // ---- Featured Slots Manager ----
   var ghostFeaturedPosts = [];
@@ -1707,39 +1677,21 @@ body {
     loadFeaturedManager();
   }
 
-  // ---- Remove #featuredevent tag from Ghost post via Admin API ----
+  // ---- Remove #featuredevent tag from Ghost post via serverless proxy ----
   async function removeGhostTag(ghostPostId, postTitle) {
     if (!confirm('Remove #featuredevent tag from "' + postTitle + '" in Ghost?')) return;
     try {
-      var jwt = await createGhostAdminJWT();
-      // First fetch the post to get current tags and updated_at
-      var getResp = await fetch(GHOST_URL + '/ghost/api/admin/posts/' + ghostPostId + '/?formats=mobiledoc', {
-        headers: { 'Authorization': 'Ghost ' + jwt }
+      var resp = await fetch('/api/ghost-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove-featured-tag', postId: ghostPostId })
       });
-      var getData = await getResp.json();
-      if (!getData.posts || !getData.posts[0]) { alert('Could not find post in Ghost'); return; }
-      var post = getData.posts[0];
-      var newTags = (post.tags || []).filter(function(t) { return t.name !== '#featuredevent'; });
-      // Update the post
-      var updateResp = await fetch(GHOST_URL + '/ghost/api/admin/posts/' + ghostPostId + '/', {
-        method: 'PUT',
-        headers: {
-          'Authorization': 'Ghost ' + jwt,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          posts: [{
-            tags: newTags,
-            updated_at: post.updated_at
-          }]
-        })
-      });
-      var updateData = await updateResp.json();
-      if (updateData.errors) {
-        alert('Ghost API error: ' + (updateData.errors[0] || {}).message);
+      var data = await resp.json();
+      if (!resp.ok || data.error) {
+        alert('Error: ' + (data.error || 'Unknown error'));
         return;
       }
-      alert('Tag removed from "' + postTitle + '"');
+      alert('Tag removed from "' + (data.title || postTitle) + '"');
       loadFeaturedManager();
     } catch (err) {
       alert('Failed to update Ghost post: ' + err.message);
