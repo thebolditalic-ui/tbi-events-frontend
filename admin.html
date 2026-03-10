@@ -802,15 +802,6 @@ body {
           <input type="checkbox" id="ev-editors-pick">
           <label for="ev-editors-pick">Editor's Pick</label>
         </div>
-        <div class="form-check" style="display:flex;align-items:center;gap:8px;">
-          <label for="ev-featured-slot" style="margin:0;font-weight:600;">Featured Slot:</label>
-          <select id="ev-featured-slot" style="padding:4px 8px;border-radius:4px;border:1px solid #d1d5db;">
-            <option value="">None</option>
-            <option value="1">Slot 1 (left)</option>
-            <option value="2">Slot 2 (center)</option>
-            <option value="3">Slot 3 (right)</option>
-          </select>
-        </div>
         <div class="form-check">
           <input type="checkbox" id="ev-sold-out">
           <label for="ev-sold-out">Sold Out</label>
@@ -1110,7 +1101,6 @@ body {
     document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
     document.getElementById('ev-description').value = ev ? ev.description || '' : '';
     document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
-    document.getElementById('ev-featured-slot').value = ev && ev.featured_order ? String(ev.featured_order) : '';
     document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
 
     $modal.classList.add('active');
@@ -1178,8 +1168,6 @@ body {
       performers: document.getElementById('ev-performers').value.trim() || null,
       description: document.getElementById('ev-description').value.trim() || null,
       editors_pick: document.getElementById('ev-editors-pick').checked,
-      featured: !!document.getElementById('ev-featured-slot').value,
-      featured_order: document.getElementById('ev-featured-slot').value ? parseInt(document.getElementById('ev-featured-slot').value) : null,
       sold_out: document.getElementById('ev-sold-out').checked,
       updated_at: new Date().toISOString()
     };
@@ -1191,17 +1179,6 @@ body {
 
     $formSave.textContent = 'Saving...';
     $formSave.disabled = true;
-
-    // If assigning a featured slot, clear that slot from any other event first
-    if (payload.featured_order) {
-      var clearResult = await sb.from('events')
-        .update({ featured: false, featured_order: null, updated_at: new Date().toISOString() })
-        .eq('featured_order', payload.featured_order)
-        .neq('id', editingId || '00000000-0000-0000-0000-000000000000');
-      if (clearResult.error) {
-        console.warn('Could not clear existing slot:', clearResult.error.message);
-      }
-    }
 
     var result;
     if (editingId) {
