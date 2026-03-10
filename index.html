@@ -1614,7 +1614,7 @@
     filterRowHtml += '<button class="ev-cattab active" data-cat="all" style="background:#cdd6f4;">All <span class="ev-date-count">' + allCount + '</span></button>';
     var catOrder = Object.keys(categoryCounts).sort();
     catOrder.forEach(function(cat) {
-      if (cat === 'Events') return;
+      if (cat === 'Events' || cat === '__editorsPick') return;
       var pillColor = CATEGORY_COLORS[cat] || '#cdd6f4';
       filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + categoryCounts[cat] + '</span></button>';
     });
