@@ -671,7 +671,7 @@ body {
           <th data-sort="category">Category</th>
           <th data-sort="source_name">Source</th>
           <th data-sort="editors_pick">Pick</th>
-          <th data-sort="featured_order">Feat</th>
+          <th data-sort="featured">Feat</th>
           <th></th>
         </tr>
       </thead>
@@ -1027,7 +1027,7 @@ body {
           + '<td>' + esc(ev.category || 'Events') + '</td>'
           + '<td><span class="source-badge ' + srcClass + '">' + esc(src) + '</span></td>'
           + '<td><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
-          + '<td>' + (ev.featured_order ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">' + ev.featured_order + '</span>' : '') + '</td>'
+          + '<td>' + (ev.featured ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9733;</span>' : '') + '</td>'
           + '<td class="actions-cell">'
           + '<button class="edit-btn" title="Edit">✏️</button>'
           + '<button class="del-btn" title="Delete">🗑️</button>'
@@ -1449,6 +1449,8 @@ body {
         + '</select>';
       if (c.source === 'ghost') {
         html += '<button class="feat-remove-tag" data-ghost-id="' + esc(c.ghostId) + '" data-title="' + esc(c.title) + '" title="Remove #featuredevent tag from Ghost">Untag</button>';
+      } else if (c.source === 'supabase') {
+        html += '<button class="feat-remove-candidate" data-id="' + esc(c.id) + '" data-title="' + esc(c.title) + '" title="Remove from feature candidates">Remove</button>';
       }
       html += '</div></div>';
       return html;
@@ -1524,6 +1526,21 @@ body {
     }
   }
 
+  // ---- Remove Supabase event from feature candidates ----
+  async function removeFeatureCandidate(eventId, title) {
+    if (!confirm('Remove "' + title + '" from feature candidates?')) return;
+    // Uncheck featured on the event
+    var { error } = await sb.from('events').update({ featured: false, updated_at: new Date().toISOString() }).eq('id', eventId);
+    if (error) { alert('Failed to update event: ' + error.message); return; }
+    // Also clear any slot that references this event's slug
+    var ev = (await sb.from('events').select('slug').eq('id', eventId).single()).data;
+    if (ev && ev.slug) {
+      await sb.from('featured_slots').delete().eq('source_type', 'supabase').eq('source_id', ev.slug);
+    }
+    loadFeaturedManager();
+    loadEvents(); // refresh the table too
+  }
+
   // ---- Featured manager event delegation ----
   document.addEventListener('change', function(e) {
     if (e.target.classList.contains('feat-assign-select')) {
@@ -1541,6 +1558,9 @@ body {
     }
     if (e.target.classList.contains('feat-remove-tag')) {
       removeGhostTag(e.target.dataset.ghostId, e.target.dataset.title);
+    }
+    if (e.target.classList.contains('feat-remove-candidate')) {
+      removeFeatureCandidate(e.target.dataset.id, e.target.dataset.title);
     }
     if (e.target.id === 'feat-refresh') {
       document.getElementById('feat-cand-list').innerHTML = '<div class="feat-loading">Loading...</div>';
