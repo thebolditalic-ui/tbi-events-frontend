@@ -367,6 +367,48 @@ body {
   border-color: var(--blue);
 }
 .form-group textarea { resize: vertical; min-height: 80px; }
+.cat-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.cat-grid label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--dark);
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-alt);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+.cat-grid label:hover { border-color: var(--blue); }
+.cat-grid label.checked { background: var(--gold); border-color: #e6c06e; font-weight: 600; }
+.cat-grid input[type="checkbox"] { width: 14px; height: 14px; margin: 0; accent-color: var(--dark); }
+.cat-add-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.cat-add-input {
+  flex: 1;
+  max-width: 200px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-alt);
+}
+.cat-add-input:focus { outline: none; border-color: var(--blue); }
 .form-check {
   display: flex;
   align-items: center;
@@ -909,30 +951,22 @@ body {
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row full">
         <div class="form-group">
-          <label for="ev-category">Category</label>
-          <select id="ev-category">
-            <option value="Events">Events</option>
-            <option value="Music">Music</option>
-            <option value="Art & Culture">Art & Culture</option>
-            <option value="Comedy">Comedy</option>
-            <option value="Community">Community</option>
-            <option value="Festivals">Festivals</option>
-            <option value="Film & Media">Film & Media</option>
-            <option value="Food & Drink">Food & Drink</option>
-            <option value="Nightlife">Nightlife</option>
-            <option value="Sports & Recreation">Sports & Recreation</option>
-            <option value="Theater">Theater</option>
-            <option value="Outdoor">Outdoor</option>
-            <option value="Family">Family</option>
-            <option value="Free">Free</option>
-          </select>
+          <label>Categories</label>
+          <div id="ev-categories-grid" class="cat-grid"></div>
+          <div class="cat-add-row">
+            <input type="text" id="ev-cat-custom" placeholder="Add custom category..." class="cat-add-input">
+            <button type="button" id="ev-cat-add-btn" class="btn btn-sm btn-outline">Add</button>
+          </div>
         </div>
+      </div>
+      <div class="form-row">
         <div class="form-group">
           <label for="ev-price">Price</label>
           <input type="text" id="ev-price" placeholder="Free, $25, $10-$50">
         </div>
+        <div class="form-group"></div>
       </div>
 
       <div class="form-row full">
@@ -1276,7 +1310,7 @@ body {
     document.getElementById('ev-address').value = ev ? ev.address || '' : '';
     document.getElementById('ev-neighborhood').value = ev ? ev.neighborhood || '' : '';
     document.getElementById('ev-city').value = ev ? ev.city || 'sf' : 'sf';
-    document.getElementById('ev-category').value = ev ? ev.category || 'Events' : 'Events';
+    loadCategoryCheckboxes(ev);
     document.getElementById('ev-price').value = ev ? ev.price || '' : '';
     document.getElementById('ev-image').value = ev ? ev.image_url || '' : '';
     document.getElementById('ev-ticket-url').value = ev ? ev.ticket_url || '' : '';
@@ -1350,7 +1384,8 @@ body {
       address: document.getElementById('ev-address').value.trim() || null,
       neighborhood: document.getElementById('ev-neighborhood').value.trim() || null,
       city: document.getElementById('ev-city').value,
-      category: document.getElementById('ev-category').value,
+      category: getSelectedCategories()[0] || 'Events',
+      categories: getSelectedCategories().length > 0 ? getSelectedCategories() : null,
       price: document.getElementById('ev-price').value.trim() || null,
       image_url: document.getElementById('ev-image').value.trim() || null,
       ticket_url: document.getElementById('ev-ticket-url').value.trim() || null,
@@ -1775,6 +1810,76 @@ body {
       document.execCommand('unlink', false, null);
     }
     rteEditor.focus();
+  });
+
+  // ---- Category Checkbox Grid ----
+  var DEFAULT_CATEGORIES = ['Events','Music','Art & Culture','Comedy','Community','Festivals','Film & Media','Food & Drink','Nightlife','Sports & Recreation','Theater','Outdoor','Family','Free'];
+  var customCategories = [];
+
+  function buildCategoryGrid(selected) {
+    var grid = document.getElementById('ev-categories-grid');
+    var allCats = DEFAULT_CATEGORIES.concat(customCategories.filter(function(c) { return DEFAULT_CATEGORIES.indexOf(c) === -1; }));
+    grid.innerHTML = allCats.map(function(cat) {
+      var checked = selected.indexOf(cat) !== -1;
+      return '<label class="' + (checked ? 'checked' : '') + '">'
+        + '<input type="checkbox" value="' + esc(cat) + '"' + (checked ? ' checked' : '') + '>'
+        + esc(cat) + '</label>';
+    }).join('');
+
+    grid.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        cb.parentElement.classList.toggle('checked', cb.checked);
+      });
+    });
+  }
+
+  function loadCategoryCheckboxes(ev) {
+    var selected = [];
+    if (ev) {
+      if (ev.categories && Array.isArray(ev.categories)) {
+        selected = ev.categories;
+      } else if (typeof ev.categories === 'string') {
+        try { selected = JSON.parse(ev.categories); } catch(e) { selected = [ev.category || 'Events']; }
+      } else {
+        selected = [ev.category || 'Events'];
+      }
+    }
+    // Add any categories from the event that aren't in defaults
+    selected.forEach(function(c) {
+      if (DEFAULT_CATEGORIES.indexOf(c) === -1 && customCategories.indexOf(c) === -1) {
+        customCategories.push(c);
+      }
+    });
+    buildCategoryGrid(selected);
+  }
+
+  function getSelectedCategories() {
+    var grid = document.getElementById('ev-categories-grid');
+    var checked = [];
+    grid.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) {
+      checked.push(cb.value);
+    });
+    return checked;
+  }
+
+  // Add custom category
+  document.getElementById('ev-cat-add-btn').addEventListener('click', function() {
+    var input = document.getElementById('ev-cat-custom');
+    var val = input.value.trim();
+    if (!val) return;
+    if (DEFAULT_CATEGORIES.indexOf(val) !== -1 || customCategories.indexOf(val) !== -1) {
+      input.value = '';
+      return;
+    }
+    customCategories.push(val);
+    var currentSelected = getSelectedCategories();
+    currentSelected.push(val);
+    buildCategoryGrid(currentSelected);
+    input.value = '';
+  });
+
+  document.getElementById('ev-cat-custom').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('ev-cat-add-btn').click(); }
   });
 
   // ---- Related Articles (Ghost CMS Search) ----
