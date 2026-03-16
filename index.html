@@ -1292,7 +1292,7 @@
       });
       var rows = await resp.json();
       if (!rows || rows.length === 0) return [];
-      return rows.map(function(r) {
+      var slots = rows.map(function(r) {
         var category = r.category || 'Events';
         return {
           title: r.title,
@@ -1305,6 +1305,28 @@
           featured_order: r.slot
         };
       });
+      /* Enrich slots missing excerpts by looking up the event in Supabase */
+      var needExcerpt = slots.filter(function(s) { return !s.excerpt && s.slug; });
+      if (needExcerpt.length > 0) {
+        try {
+          var slugList = needExcerpt.map(function(s) { return 'slug.eq.' + encodeURIComponent(s.slug); }).join(',');
+          var enrichUrl = SUPABASE_URL + '/rest/v1/events?select=slug,description&or=(' + slugList + ')';
+          var enrichResp = await fetch(enrichUrl, {
+            headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+          });
+          var enrichRows = await enrichResp.json();
+          if (Array.isArray(enrichRows)) {
+            var descMap = {};
+            enrichRows.forEach(function(e) { if (e.slug && e.description) descMap[e.slug] = e.description; });
+            slots.forEach(function(s) {
+              if (!s.excerpt && descMap[s.slug]) {
+                s.excerpt = stripHTML(descMap[s.slug]);
+              }
+            });
+          }
+        } catch (e) { /* enrichment is optional, don't break if it fails */ }
+      }
+      return slots;
     } catch (err) {
       console.warn('Failed to fetch featured slots:', err);
       return [];
