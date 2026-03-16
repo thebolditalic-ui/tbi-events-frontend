@@ -1304,6 +1304,44 @@ body {
   $addBtn.addEventListener('click', function() { openForm(null); });
 
   // ---- Form ----
+  var formSnapshot = null; // Tracks initial form state for unsaved-changes detection
+
+  function getFormState() {
+    var catBoxes = document.querySelectorAll('#ev-categories input[type="checkbox"]');
+    var cats = [];
+    catBoxes.forEach(function(cb) { if (cb.checked) cats.push(cb.value); });
+    return {
+      title: document.getElementById('ev-title').value,
+      slug: document.getElementById('ev-slug').value,
+      date: document.getElementById('ev-date').value,
+      endDate: document.getElementById('ev-end-date').value,
+      time: document.getElementById('ev-time').value,
+      timeNotes: document.getElementById('ev-time-notes').value,
+      venue: document.getElementById('ev-venue').value,
+      address: document.getElementById('ev-address').value,
+      neighborhood: document.getElementById('ev-neighborhood').value,
+      city: document.getElementById('ev-city').value,
+      categories: cats.sort().join(','),
+      price: document.getElementById('ev-price').value,
+      image: document.getElementById('ev-image').value,
+      ticketUrl: document.getElementById('ev-ticket-url').value,
+      performers: document.getElementById('ev-performers').value,
+      description: document.getElementById('ev-description').innerHTML,
+      editorsPick: document.getElementById('ev-editors-pick').checked,
+      featured: document.getElementById('ev-featured-candidate').checked,
+      soldOut: document.getElementById('ev-sold-out').checked
+    };
+  }
+
+  function hasUnsavedChanges() {
+    if (!formSnapshot) return false;
+    var current = getFormState();
+    for (var key in formSnapshot) {
+      if (formSnapshot[key] !== current[key]) return true;
+    }
+    return false;
+  }
+
   function openForm(ev) {
     editingId = ev ? ev.id : null;
     $modalTitle.textContent = ev ? 'Edit Event' : 'Add Event';
@@ -1340,18 +1378,23 @@ body {
 
     $modal.classList.add('active');
     document.getElementById('ev-title').focus();
+
+    // Snapshot form state after a brief delay so category checkboxes etc. are settled
+    setTimeout(function() { formSnapshot = getFormState(); }, 50);
   }
 
-  function closeForm() {
+  function closeForm(force) {
+    if (!force && hasUnsavedChanges()) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
+    }
     $modal.classList.remove('active');
     editingId = null;
+    formSnapshot = null;
   }
 
-  $modalClose.addEventListener('click', closeForm);
-  $formCancel.addEventListener('click', closeForm);
-  $modal.addEventListener('click', function(e) {
-    if (e.target === $modal) closeForm();
-  });
+  $modalClose.addEventListener('click', function() { closeForm(); });
+  $formCancel.addEventListener('click', function() { closeForm(); });
+  // Clicking outside the modal pane does NOT close it (prevents accidental data loss)
 
   // ---- Auto-generate slug ----
   document.getElementById('ev-title').addEventListener('input', function() {
@@ -1438,7 +1481,7 @@ body {
 
     showFormMsg('success', editingId ? 'Event updated!' : 'Event created!');
     setTimeout(function() {
-      closeForm();
+      closeForm(true);
       loadEvents();
     }, 600);
   });
@@ -1477,7 +1520,7 @@ body {
       alert('Delete failed: ' + error.message);
     } else {
       pendingDeleteId = null;
-      closeForm();
+      closeForm(true);
       loadEvents();
     }
   });
