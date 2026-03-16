@@ -1075,15 +1075,24 @@
     }
     return '<span class="ev-post-detail-value">' + esc(price) + '</span>';
   }
+  function parseDateUTC(iso) {
+    /* Parse ISO date string using UTC to avoid timezone shift */
+    var dateOnly = (iso || '').substring(0, 10);
+    var parts = dateOnly.split('-');
+    if (parts.length !== 3) return null;
+    return new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+  }
   function formatDetailDate(event) {
     if (event.event_date) {
-      var d = new Date(event.event_date);
-      var startStr = DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+      var d = parseDateUTC(event.event_date);
+      if (!d) return event.date || '';
+      var startStr = DAYS[d.getUTCDay()] + ', ' + MONTHS_FULL[d.getUTCMonth()] + ' ' + d.getUTCDate() + ', ' + d.getUTCFullYear();
       if (event.end_date && event.end_date > event.event_date) {
-        var e = new Date(event.end_date);
-        /* Same month: "Wednesday, March 19 – Sunday, March 22, 2026" */
-        var endStr = DAYS[e.getDay()] + ', ' + MONTHS_FULL[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
-        return DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ' \u2013 ' + endStr;
+        var e = parseDateUTC(event.end_date);
+        if (e) {
+          var endStr = DAYS[e.getUTCDay()] + ', ' + MONTHS_FULL[e.getUTCMonth()] + ' ' + e.getUTCDate() + ', ' + e.getUTCFullYear();
+          return DAYS[d.getUTCDay()] + ', ' + MONTHS_FULL[d.getUTCMonth()] + ' ' + d.getUTCDate() + ' \u2013 ' + endStr;
+        }
       }
       return startStr;
     }
@@ -1661,7 +1670,9 @@
           featHtml += '<span class="ev-badge" style="background:' + ev.catColor + '; color: #1E1B1B;">' + esc(ev.category) + '</span>';
         }
         featHtml += '<h2>' + esc(ev.title) + '</h2>';
-        featHtml += '<p>' + esc(stripHTML(ev.excerpt) || ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '')) + '</p>';
+        var featExcerpt = stripHTML(ev.excerpt);
+        if (!featExcerpt && ev.date) featExcerpt = ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '');
+        if (featExcerpt) featHtml += '<p>' + esc(featExcerpt) + '</p>';
         featHtml += '</div></a>';
       });
       featHtml += '</div></div>';
