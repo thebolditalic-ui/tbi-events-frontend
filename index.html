@@ -345,6 +345,7 @@
       color: rgb(34,34,34);
       margin-bottom: 16px;
     }
+    #tbi-events .ev-post-body p:empty { display: none; margin: 0; padding: 0; }
     #tbi-events .ev-related-header {
       max-width: 700px;
       margin: 32px auto 16px;
@@ -1088,6 +1089,12 @@
     if (!s) return '';
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  function stripHTML(s) {
+    if (!s) return '';
+    var tmp = document.createElement('div');
+    tmp.innerHTML = s;
+    return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim();
+  }
   function sanitizeHTML(html) {
     if (!html) return '';
     var allowedTags = /^(p|br|a|strong|em|b|i)$/i;
@@ -1120,6 +1127,8 @@
       }
     }
     traverse(temp);
+    /* Remove empty spacer paragraphs like <p><br><br></p> or <p><br></p> or <p></p> */
+    output = output.replace(/<p>(\s*(<br\s*\/?>)\s*)*<\/p>/gi, '');
     if (output && output.indexOf('<') === -1 && output.indexOf('\n') !== -1) {
       var lines = output.split('\n');
       output = '';
@@ -1601,7 +1610,7 @@
           featHtml += '<span class="ev-badge" style="background:' + ev.catColor + '; color: #1E1B1B;">' + esc(ev.category) + '</span>';
         }
         featHtml += '<h2>' + esc(ev.title) + '</h2>';
-        featHtml += '<p>' + esc(ev.excerpt || ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '')) + '</p>';
+        featHtml += '<p>' + esc(stripHTML(ev.excerpt) || ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '')) + '</p>';
         featHtml += '</div></a>';
       });
       featHtml += '</div></div>';
@@ -1680,7 +1689,8 @@
         picksHtml += '<div class="ev-meta">';
         if (pick.date) picksHtml += esc(pick.date);
         if (pick.excerpt) {
-          var shortExcerpt = pick.excerpt.length > 120 ? pick.excerpt.slice(0, 120).replace(/\s+\S*$/, '') + '...' : pick.excerpt;
+          var cleanExcerpt = stripHTML(pick.excerpt);
+          var shortExcerpt = cleanExcerpt.length > 120 ? cleanExcerpt.slice(0, 120).replace(/\s+\S*$/, '') + '...' : cleanExcerpt;
           picksHtml += (pick.date ? ' &middot; ' : '') + esc(shortExcerpt);
         }
         picksHtml += '</div>';
@@ -2144,7 +2154,8 @@
         html += '<div class="ev-bookmark-content">';
         html += '<div class="ev-bookmark-title">' + esc(article.title) + '</div>';
         if (article.excerpt) {
-          var shortExcerpt = article.excerpt.length > 150 ? article.excerpt.slice(0, 150).replace(/\s+\S*$/, '') + '...' : article.excerpt;
+          var cleanExcerpt = stripHTML(article.excerpt);
+          var shortExcerpt = cleanExcerpt.length > 150 ? cleanExcerpt.slice(0, 150).replace(/\s+\S*$/, '') + '...' : cleanExcerpt;
           html += '<div class="ev-bookmark-desc">' + esc(shortExcerpt) + '</div>';
         }
         html += '<div class="ev-bookmark-meta">';
