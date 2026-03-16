@@ -1078,7 +1078,14 @@
   function formatDetailDate(event) {
     if (event.event_date) {
       var d = new Date(event.event_date);
-      return DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+      var startStr = DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+      if (event.end_date && event.end_date > event.event_date) {
+        var e = new Date(event.end_date);
+        /* Same month: "Wednesday, March 19 – Sunday, March 22, 2026" */
+        var endStr = DAYS[e.getDay()] + ', ' + MONTHS_FULL[e.getMonth()] + ' ' + e.getDate() + ', ' + e.getFullYear();
+        return DAYS[d.getDay()] + ', ' + MONTHS_FULL[d.getMonth()] + ' ' + d.getDate() + ' \u2013 ' + endStr;
+      }
+      return startStr;
     }
     return event.date || '';
   }
@@ -1107,18 +1114,22 @@
       } else if (node.nodeType === 1) {
         var tag = node.tagName.toLowerCase();
         if (allowedTags.test(tag)) {
-          output += '<' + tag;
-          if (tag === 'a') {
-            var href = node.getAttribute('href');
-            var target = node.getAttribute('target');
-            if (href) output += ' href="' + esc(href) + '"';
-            if (target) output += ' target="' + esc(target) + '"';
+          if (tag === 'br') {
+            output += '<br>';
+          } else {
+            output += '<' + tag;
+            if (tag === 'a') {
+              var href = node.getAttribute('href');
+              var target = node.getAttribute('target');
+              if (href) output += ' href="' + esc(href) + '"';
+              if (target) output += ' target="' + esc(target) + '"';
+            }
+            output += '>';
+            for (var i = 0; i < node.childNodes.length; i++) {
+              traverse(node.childNodes[i]);
+            }
+            output += '</' + tag + '>';
           }
-          output += '>';
-          for (var i = 0; i < node.childNodes.length; i++) {
-            traverse(node.childNodes[i]);
-          }
-          output += '</' + tag + '>';
         } else {
           for (var i = 0; i < node.childNodes.length; i++) {
             traverse(node.childNodes[i]);
@@ -1128,7 +1139,7 @@
     }
     traverse(temp);
     /* Remove empty spacer paragraphs like <p><br><br></p> or <p><br></p> or <p></p> */
-    output = output.replace(/<p>(\s*(<br\s*\/?>)\s*)*<\/p>/gi, '');
+    output = output.replace(/<p>(?:\s|<br\s*\/?>|<\/br>)*<\/p>/gi, '');
     if (output && output.indexOf('<') === -1 && output.indexOf('\n') !== -1) {
       var lines = output.split('\n');
       output = '';
@@ -1139,6 +1150,40 @@
       }
     }
     return output;
+  }
+  function expandMultiDayEvents(events) {
+    var expanded = [];
+    events.forEach(function(ev) {
+      expanded.push(ev);
+      if (ev.end_date && ev.end_date > ev.event_date) {
+        var start = new Date(ev.event_date);
+        var end = new Date(ev.end_date);
+        /* Cap at 14 days to prevent runaway expansion */
+        var maxDays = 14;
+        var day = new Date(start);
+        day.setDate(day.getDate() + 1);
+        var count = 0;
+        while (day <= end && count < maxDays) {
+          var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
+          var humanDate = isoToHumanDate(isoDate);
+          var monthData = parseEventDate(humanDate);
+          var clone = {};
+          for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
+          clone.event_date = isoDate;
+          clone.date = humanDate;
+          clone.monthData = monthData;
+          clone._isMultiDayClone = true;
+          expanded.push(clone);
+          day.setDate(day.getDate() + 1);
+          count++;
+        }
+      }
+    });
+    /* Re-sort by event_date so clones land in correct date groups */
+    expanded.sort(function(a, b) {
+      return (a.event_date || '').localeCompare(b.event_date || '');
+    });
+    return expanded;
   }
   function parseEventDate(dateStr) {
     if (!dateStr) return null;
@@ -1340,7 +1385,7 @@
   async function fetchEditorsPicksFromSupabase() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc&limit=10';
+      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1388,7 +1433,8 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    query += '&event_date=gte.' + today;
+    /* Include events starting today+ OR multi-day events ending today+ */
+    query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
@@ -1475,11 +1521,15 @@
         source_url: r.source_url || '', description: r.description || '',
         isEditorsPick: r.editors_pick || false,
         categories: r.categories || null,
+        end_date: r.end_date || '', time_notes: r.time_notes || '',
       };
       ev.city = classifyCity(ev);
       ev.monthData = monthData;
       return ev;
     });
+
+    /* Expand multi-day events: duplicate entry for each day in the range */
+    events = expandMultiDayEvents(events);
 
     return { events: events, totalCount: totalCount, totalPages: totalPages };
   }
@@ -1577,7 +1627,8 @@
       ticketUrl: r.ticket_url || '', excerpt: r.description || '',
       isFeatured: r.featured || false, city: r.city || 'sf', monthData: monthData,
       source_url: r.source_url || '', source_name: r.source_name || '',
-      description: r.description || '', event_date: r.event_date || '', sold_out: r.sold_out || false,
+      description: r.description || '', event_date: r.event_date || '', end_date: r.end_date || '',
+      time_notes: r.time_notes || '', sold_out: r.sold_out || false,
       related_articles: r.related_articles || null,
       categories: r.categories || null,
     };
@@ -2108,6 +2159,10 @@
     /* Time */
     if (detailTime) {
       html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon">\ud83d\udd51</div><div><div class="ev-post-detail-label">Time</div><div class="ev-post-detail-value">' + esc(detailTime) + '</div></div></div>';
+    }
+    /* Time Notes (per-day schedule for multi-day events) */
+    if (event.time_notes) {
+      html += '<div class="ev-post-detail-row"><div class="ev-post-detail-icon">\ud83d\udcc6</div><div><div class="ev-post-detail-label">Schedule</div><div class="ev-post-detail-value">' + esc(event.time_notes) + '</div></div></div>';
     }
     /* Venue / Location */
     if (event.venue) {
