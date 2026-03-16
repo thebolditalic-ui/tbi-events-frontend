@@ -1256,14 +1256,22 @@
     return 'sf';
   }
   function inferCity(event) {
-    var addrStr = [event.address, event.venue].filter(Boolean).join(' ').toLowerCase();
+    var addrStr = [event.address, event.venue, event.neighborhood].filter(Boolean).join(' ').toLowerCase();
+    /* SF neighborhoods that could false-match other cities */
+    var sfNeighborhoods = ['marina district', 'marina blvd', 'marina green', 'fort mason'];
+    for (var n = 0; n < sfNeighborhoods.length; n++) {
+      if (addrStr.indexOf(sfNeighborhoods[n]) !== -1) return null; /* It's in SF */
+    }
     var bayAreaCities = [
       { match: 'berkeley', label: 'BERKELEY' }, { match: 'oakland', label: 'OAKLAND' },
       { match: 'san jose', label: 'SAN JOSE' }, { match: 'san mateo', label: 'SAN MATEO' },
       { match: 'palo alto', label: 'PALO ALTO' }, { match: 'mountain view', label: 'MOUNTAIN VIEW' },
       { match: 'redwood city', label: 'REDWOOD CITY' }, { match: 'santa cruz', label: 'SANTA CRUZ' },
       { match: 'sausalito', label: 'SAUSALITO' }, { match: 'mill valley', label: 'MILL VALLEY' },
-      { match: 'marin', label: 'MARIN' }, { match: 'walnut creek', label: 'WALNUT CREEK' },
+      { match: 'marin county', label: 'MARIN' }, { match: 'san rafael', label: 'MARIN' },
+      { match: 'novato', label: 'MARIN' }, { match: 'tiburon', label: 'MARIN' },
+      { match: 'larkspur', label: 'MARIN' }, { match: 'corte madera', label: 'MARIN' },
+      { match: 'walnut creek', label: 'WALNUT CREEK' },
       { match: 'emeryville', label: 'EMERYVILLE' }, { match: 'alameda', label: 'ALAMEDA' },
       { match: 'richmond', label: 'RICHMOND' }, { match: 'daly city', label: 'DALY CITY' },
       { match: 'south san francisco', label: 'SOUTH SAN FRANCISCO' },
