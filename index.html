@@ -1394,7 +1394,7 @@
   async function fetchEditorsPicksFromSupabase() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
+      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc&limit=10';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1442,8 +1442,7 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    /* Include events starting today+ OR multi-day events ending today+ */
-    query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+    query += '&event_date=gte.' + today;
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
