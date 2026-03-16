@@ -920,8 +920,18 @@ body {
           <input type="date" id="ev-date" required>
         </div>
         <div class="form-group">
+          <label for="ev-end-date">End Date <span style="font-weight:400;color:#999;">(optional, for multi-day events)</span></label>
+          <input type="date" id="ev-end-date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
           <label for="ev-time">Time</label>
           <input type="text" id="ev-time" placeholder="7:00 PM">
+        </div>
+        <div class="form-group">
+          <label for="ev-time-notes">Time Details <span style="font-weight:400;color:#999;">(optional, per-day hours)</span></label>
+          <input type="text" id="ev-time-notes" placeholder="e.g. Thu–Fri 4–10 PM, Sat–Sun 10 AM–10 PM">
         </div>
       </div>
 
@@ -1305,7 +1315,9 @@ body {
     document.getElementById('ev-title').value = ev ? ev.title || '' : '';
     document.getElementById('ev-slug').value = ev ? ev.slug || '' : '';
     document.getElementById('ev-date').value = ev ? (ev.event_date || '').slice(0, 10) : '';
+    document.getElementById('ev-end-date').value = ev ? (ev.end_date || '').slice(0, 10) : '';
     document.getElementById('ev-time').value = ev ? ev.time || '' : '';
+    document.getElementById('ev-time-notes').value = ev ? ev.time_notes || '' : '';
     document.getElementById('ev-venue').value = ev ? ev.venue || '' : '';
     document.getElementById('ev-address').value = ev ? ev.address || '' : '';
     document.getElementById('ev-neighborhood').value = ev ? ev.neighborhood || '' : '';
@@ -1374,12 +1386,15 @@ body {
 
     var slug = document.getElementById('ev-slug').value.trim() || makeSlug(title, date);
 
+    var endDate = document.getElementById('ev-end-date').value;
     var payload = {
       title: title,
       slug: slug,
       event_date: date + 'T00:00:00',
+      end_date: endDate ? endDate + 'T00:00:00' : null,
       date: date,
       time: document.getElementById('ev-time').value.trim() || null,
+      time_notes: document.getElementById('ev-time-notes').value.trim() || null,
       venue: document.getElementById('ev-venue').value.trim() || null,
       address: document.getElementById('ev-address').value.trim() || null,
       neighborhood: document.getElementById('ev-neighborhood').value.trim() || null,
