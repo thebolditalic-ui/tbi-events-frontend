@@ -1305,7 +1305,8 @@
           featured_order: r.slot
         };
       });
-      /* Enrich slots missing excerpts by looking up the event in Supabase */
+      /* Clean excerpts and enrich slots with missing/garbage excerpts from event data */
+      slots.forEach(function(s) { s.excerpt = stripHTML(s.excerpt); });
       var needExcerpt = slots.filter(function(s) { return !s.excerpt && s.slug; });
       if (needExcerpt.length > 0) {
         try {
