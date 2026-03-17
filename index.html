@@ -1877,7 +1877,7 @@
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
     var _md = ev.date;
-    if (ev._startDate && ev.end_date) {
+    if (ev.end_date) {
       var _s = parseDateUTC((ev.event_date || '').substring(0, 10)), _e = parseDateUTC(ev.end_date);
       if (_s && _e && _s < _e) {
         var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
