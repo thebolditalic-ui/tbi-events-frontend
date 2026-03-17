@@ -1092,23 +1092,17 @@
     if (parts.length !== 3) return null;
     return new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
   }
+  /* Returns a compact range like "March 13–26, 2026" or "March 13 – April 5, 2026" */
   function formatDateRange(startISO, endISO) {
-    /* Returns a compact date range string, e.g. "March 13–26, 2026" or "March 13 – April 5, 2026" */
     if (!startISO || !endISO) return null;
-    var start = parseDateUTC(startISO);
-    var end = parseDateUTC(endISO);
-    if (!start || !end || start >= end) return null;
-    var sm = MONTHS_FULL[start.getUTCMonth()];
-    var em = MONTHS_FULL[end.getUTCMonth()];
-    var sy = start.getUTCFullYear();
-    var ey = end.getUTCFullYear();
-    if (sm === em && sy === ey) {
-      return sm + ' ' + start.getUTCDate() + '\u2013' + end.getUTCDate() + ', ' + sy;
-    }
-    if (sy === ey) {
-      return sm + ' ' + start.getUTCDate() + ' \u2013 ' + em + ' ' + end.getUTCDate() + ', ' + sy;
-    }
-    return sm + ' ' + start.getUTCDate() + ', ' + sy + ' \u2013 ' + em + ' ' + end.getUTCDate() + ', ' + ey;
+    var s = parseDateUTC(startISO);
+    var e = parseDateUTC(endISO);
+    if (!s || !e || s >= e) return null;
+    var sm = MONTHS_FULL[s.getUTCMonth()], em = MONTHS_FULL[e.getUTCMonth()];
+    var sy = s.getUTCFullYear(), ey = e.getUTCFullYear();
+    if (sy === ey && sm === em) return sm + ' ' + s.getUTCDate() + '\u2013' + e.getUTCDate() + ', ' + sy;
+    if (sy === ey) return sm + ' ' + s.getUTCDate() + ' \u2013 ' + em + ' ' + e.getUTCDate() + ', ' + sy;
+    return sm + ' ' + s.getUTCDate() + ', ' + sy + ' \u2013 ' + em + ' ' + e.getUTCDate() + ', ' + ey;
   }
   function formatDetailDate(event) {
     if (event.event_date) {
@@ -1189,47 +1183,33 @@
     return output;
   }
   function expandMultiDayEvents(events) {
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     var expanded = [];
     events.forEach(function(ev) {
-      if (!ev.end_date || ev.end_date <= ev.event_date) {
-        /* Single-day event — pass through unchanged */
-        expanded.push(ev);
-        return;
-      }
-
-      /* Multi-day event: generate one entry per remaining day.
-         If the event has already started, begin from today so it appears
-         under the current date rather than the (past) start date. */
-      var startMs = new Date(ev.event_date);
-      startMs.setHours(0, 0, 0, 0);
-      var endMs = new Date(ev.end_date);
-      endMs.setHours(23, 59, 59, 0);
-
-      var firstDay = startMs < today ? new Date(today) : new Date(startMs);
-      var maxDays = 14;
-      var count = 0;
-      var day = new Date(firstDay);
-
-      while (day <= endMs && count < maxDays) {
-        var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
-        var humanDate = isoToHumanDate(isoDate);
-        var monthData = parseEventDate(humanDate);
-        var clone = {};
-        for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
-        clone.event_date = isoDate;
-        clone.date = humanDate;
-        clone.monthData = monthData;
-        clone._startDate = ev.event_date; /* original start, for date range display */
-        clone._isMultiDayClone = true;
-        expanded.push(clone);
+      expanded.push(ev);
+      if (ev.end_date && ev.end_date > ev.event_date) {
+        var start = new Date(ev.event_date);
+        var end = new Date(ev.end_date);
+        /* Cap at 14 days to prevent runaway expansion */
+        var maxDays = 14;
+        var day = new Date(start);
         day.setDate(day.getDate() + 1);
-        count++;
+        var count = 0;
+        while (day <= end && count < maxDays) {
+          var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
+          var humanDate = isoToHumanDate(isoDate);
+          var monthData = parseEventDate(humanDate);
+          var clone = {};
+          for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
+          clone.event_date = isoDate;
+          clone.date = humanDate;
+          clone.monthData = monthData;
+          clone._isMultiDayClone = true;
+          expanded.push(clone);
+          day.setDate(day.getDate() + 1);
+          count++;
+        }
       }
     });
-
     /* Re-sort by event_date so clones land in correct date groups */
     expanded.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
@@ -1554,18 +1534,21 @@
     return query;
   }
 
-  /* ---------- Fetch multi-day events that started before today but haven't ended yet ---------- */
+  /* Fetch multi-day events that started before today but haven't ended yet.
+     Uses two plain filters — no or() — so PostgREST handles it cleanly. */
   async function fetchCurrentlyRunning() {
     var today = new Date().toISOString().slice(0, 10);
-    /* event_date < today AND end_date >= today AND sold_out = false */
-    var url = SUPABASE_URL + '/rest/v1/events?select=*&sold_out=eq.false'
+    var url = SUPABASE_URL + '/rest/v1/events?select=*'
+      + '&sold_out=eq.false'
       + '&event_date=lt.' + today
       + '&end_date=gte.' + today;
     try {
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
-      return await resp.json();
+      var rows = await resp.json();
+      if (!Array.isArray(rows)) return [];
+      return rows;
     } catch (e) {
       return [];
     }
@@ -1629,45 +1612,61 @@
     /* Expand multi-day events: duplicate entry for each day in the range */
     events = expandMultiDayEvents(events);
 
-    /* On page 1 only: fetch and prepend any multi-day events that started
-       before today but are still running — these are missed by event_date >= today */
+    /* On page 1, also fetch multi-day events that started before today
+       but are still running — missed by event_date >= today */
     if (page === 1 && !filters.date) {
-      var runningRows = await fetchCurrentlyRunning();
-      if (runningRows && runningRows.length > 0) {
-        var existingSlugs = {};
-        events.forEach(function(e) { existingSlugs[e.slug] = true; });
-        var runningEvents = runningRows
-          .filter(function(r) { return !existingSlugs[r.slug]; })
-          .map(function(r) {
-            var humanDate = isoToHumanDate(r.event_date);
-            var monthData = parseEventDate(humanDate);
+      try {
+        var runningRows = await fetchCurrentlyRunning();
+        if (runningRows.length > 0) {
+          var today = new Date();
+          today.setHours(0, 0, 0, 0);
+          var existingSlugs = {};
+          events.forEach(function(e) { existingSlugs[e.slug] = true; });
+
+          runningRows.forEach(function(r) {
+            if (existingSlugs[r.slug]) return;
             var category = r.category || 'Events';
-            var ev = {
-              title: r.title, slug: r.slug, url: '/' + r.slug + '/',
-              date: humanDate, time: r.time || '',
-              venue: r.venue || '', neighborhood: r.neighborhood || '',
-              address: r.address || '', performers: r.performers || '',
-              price: r.price || '',
-              isFree: /^free$/i.test(r.price || ''), isSoldOut: r.sold_out || false,
-              category: category, catColor: CATEGORY_COLORS[category] || CATEGORY_COLORS['Events'],
-              image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
-              ticketUrl: r.ticket_url || '',
-              excerpt: r.description || '', isFeatured: r.featured || false,
-              source_url: r.source_url || '', description: r.description || '',
-              isEditorsPick: r.editors_pick || false,
-              categories: r.categories || null,
-              end_date: r.end_date || '', time_notes: r.time_notes || '',
-            };
-            ev.city = classifyCity(ev);
-            ev.monthData = monthData;
-            return ev;
+            var end = new Date(r.end_date);
+            end.setHours(23, 59, 59, 0);
+            var maxDays = 14;
+            var count = 0;
+            var day = new Date(today);
+            /* Generate one entry per remaining day, starting from today */
+            while (day <= end && count < maxDays) {
+              var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
+              var humanDate = isoToHumanDate(isoDate);
+              var monthData = parseEventDate(humanDate);
+              events.push({
+                title: r.title, slug: r.slug, url: '/' + r.slug + '/',
+                date: humanDate, time: r.time || '',
+                venue: r.venue || '', neighborhood: r.neighborhood || '',
+                address: r.address || '', performers: r.performers || '',
+                price: r.price || '',
+                isFree: /^free$/i.test(r.price || ''), isSoldOut: r.sold_out || false,
+                category: category, catColor: CATEGORY_COLORS[category] || CATEGORY_COLORS['Events'],
+                image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'],
+                ticketUrl: r.ticket_url || '',
+                excerpt: r.description || '', isFeatured: r.featured || false,
+                source_url: r.source_url || '', description: r.description || '',
+                isEditorsPick: r.editors_pick || false,
+                categories: r.categories || null,
+                end_date: r.end_date || '', time_notes: r.time_notes || '',
+                _startDate: r.event_date || '',
+                event_date: isoDate,
+                city: r.city || 'sf',
+                monthData: monthData,
+              });
+              day.setDate(day.getDate() + 1);
+              count++;
+            }
+            existingSlugs[r.slug] = true;
           });
-        var runningExpanded = expandMultiDayEvents(runningEvents);
-        events = runningExpanded.concat(events);
-        events.sort(function(a, b) {
-          return (a.event_date || '').localeCompare(b.event_date || '');
-        });
-      }
+
+          events.sort(function(a, b) {
+            return (a.event_date || '').localeCompare(b.event_date || '');
+          });
+        }
+      } catch (e) { /* non-fatal — main list still works */ }
     }
 
     return { events: events, totalCount: totalCount, totalPages: totalPages };
@@ -1979,8 +1978,8 @@
     var metaDate = ev.date;
     if (ev.end_date) {
       var rangeStart = ev._startDate || ev.event_date;
-      var dateRange = formatDateRange(rangeStart, ev.end_date);
-      if (dateRange) metaDate = dateRange;
+      var range = formatDateRange(rangeStart, ev.end_date);
+      if (range) metaDate = range;
     }
     html += '<div class="ev-meta">' + esc(metaDate) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
     if (ev.venue) html += ' \u00b7 ' + esc(ev.venue);
