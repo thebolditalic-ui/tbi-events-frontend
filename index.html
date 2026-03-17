@@ -1172,49 +1172,27 @@
   }
   function expandMultiDayEvents(events) {
     var todayStr = new Date().toISOString().slice(0, 10);
-    var expanded = [];
     events.forEach(function(ev) {
+      if (!ev.end_date) return;
       var startStr = (ev.event_date || '').substring(0, 10);
-      var endStr   = (ev.end_date   || '').substring(0, 10);
-      var isMultiDay = ev.end_date && endStr > startStr;
-
-      if (!isMultiDay) {
-        /* Single-day event — pass through unchanged */
-        expanded.push(ev);
-        return;
-      }
-
-      /* Multi-day event: if already started, begin from today so it
-         doesn't appear under a past date header */
-      var firstDay = startStr < todayStr ? todayStr : startStr;
-
-      /* Parse boundaries as UTC to avoid timezone drift */
-      var fp = firstDay.split('-'), ep = endStr.split('-');
-      var dayUTC = new Date(Date.UTC(+fp[0], +fp[1]-1, +fp[2]));
-      var endUTC = new Date(Date.UTC(+ep[0], +ep[1]-1, +ep[2]));
-
-      var maxDays = 14, count = 0;
-      while (dayUTC <= endUTC && count < maxDays) {
-        var isoDate = dayUTC.toISOString().slice(0, 10) + 'T00:00:00';
-        var humanDate = isoToHumanDate(isoDate);
-        var monthData = parseEventDate(humanDate);
-        var clone = {};
-        for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
-        clone.event_date  = isoDate;
-        clone.date        = humanDate;
-        clone.monthData   = monthData;
-        clone._startDate  = ev.event_date; /* original start, for date range label */
-        clone._isMultiDayClone = true;
-        expanded.push(clone);
-        dayUTC.setUTCDate(dayUTC.getUTCDate() + 1);
-        count++;
+      var endStr   = ev.end_date.substring(0, 10);
+      if (endStr <= startStr) return;
+      /* Store original start so the row can show the full date range */
+      ev._startDate = startStr;
+      /* If already started, pin to today so it appears under today's date header */
+      if (startStr < todayStr) {
+        var tp = todayStr.split('-');
+        var todayISO = todayStr + 'T00:00:00';
+        ev.event_date = todayISO;
+        ev.date       = isoToHumanDate(todayISO);
+        ev.monthData  = parseEventDate(ev.date);
       }
     });
-    /* Re-sort by event_date so everything lands in correct date groups */
-    expanded.sort(function(a, b) {
+    /* Re-sort in case pinned events moved */
+    events.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
     });
-    return expanded;
+    return events;
   }
   function parseEventDate(dateStr) {
     if (!dateStr) return null;
