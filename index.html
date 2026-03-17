@@ -1172,45 +1172,26 @@
   }
   function expandMultiDayEvents(events) {
     var todayStr = new Date().toISOString().slice(0, 10);
-    var expanded = [];
     events.forEach(function(ev) {
-      expanded.push(ev);
       if (!ev.end_date) return;
       var startStr = (ev.event_date || '').substring(0, 10);
       var endStr   = ev.end_date.substring(0, 10);
       if (endStr <= startStr) return;
-      /* Store original start date on the primary entry */
+      /* Store original start so the card can show the full date range */
       ev._startDate = startStr;
-      /* Create a clone for each additional day in the range */
-      var start = new Date(Date.UTC(parseInt(startStr.split('-')[0]), parseInt(startStr.split('-')[1]) - 1, parseInt(startStr.split('-')[2])));
-      var end   = new Date(Date.UTC(parseInt(endStr.split('-')[0]),   parseInt(endStr.split('-')[1]) - 1,   parseInt(endStr.split('-')[2])));
-      var day = new Date(start.getTime());
-      day.setUTCDate(day.getUTCDate() + 1);
-      var maxDays = 30;
-      var count = 0;
-      while (day <= end && count < maxDays) {
-        var isoDate = day.getUTCFullYear() + '-' + String(day.getUTCMonth() + 1).padStart(2, '0') + '-' + String(day.getUTCDate()).padStart(2, '0');
-        /* Skip past days */
-        if (isoDate >= todayStr) {
-          var isoFull = isoDate + 'T00:00:00';
-          var humanDate = isoToHumanDate(isoFull);
-          var clone = {};
-          for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
-          clone.event_date = isoFull;
-          clone.date = humanDate;
-          clone.monthData = parseEventDate(humanDate);
-          clone._isMultiDayClone = true;
-          clone._startDate = startStr;
-          expanded.push(clone);
-        }
-        day.setUTCDate(day.getUTCDate() + 1);
-        count++;
+      /* If already started, pin to today so it appears under today's date header */
+      if (startStr < todayStr) {
+        var todayISO = todayStr + 'T00:00:00';
+        ev.event_date = todayISO;
+        ev.date       = isoToHumanDate(todayISO);
+        ev.monthData  = parseEventDate(ev.date);
       }
     });
-    expanded.sort(function(a, b) {
+    /* Re-sort in case pinned events moved */
+    events.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
     });
-    return expanded;
+    return events;
   }
   function parseEventDate(dateStr) {
     if (!dateStr) return null;
@@ -1250,6 +1231,28 @@
     var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+  /**
+   * Format a date range string from event_date + end_date.
+   * Single-day: "Thursday, March 19, 2026"
+   * Multi-day same month: "March 13–22, 2026"
+   * Multi-day cross month: "March 13 – April 2, 2026"
+   */
+  function formatDateRange(eventDate, endDate) {
+    if (!eventDate) return '';
+    var startISO = (eventDate || '').substring(0, 10);
+    var endISO = endDate ? endDate.substring(0, 10) : '';
+    if (!endISO || endISO <= startISO) return isoToHumanDate(eventDate);
+    var _s = parseDateUTC(startISO), _e = parseDateUTC(endISO);
+    if (!_s || !_e) return isoToHumanDate(eventDate);
+    var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
+    var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
+    if (_sy === _ey && _sm === _em)
+      return _sm + ' ' + _s.getUTCDate() + '\u2013' + _e.getUTCDate() + ', ' + _sy;
+    else if (_sy === _ey)
+      return _sm + ' ' + _s.getUTCDate() + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
+    else
+      return _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
   }
   function getMonthLabel(monthData) {
     return monthData.monthName + ' ' + monthData.year;
@@ -1443,14 +1446,14 @@
   async function fetchEditorsPicksFromSupabase() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&event_date=gte.' + today + '&order=event_date.asc&limit=10';
+      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
       var rows = await resp.json();
       if (!rows || rows.length === 0) return [];
       return rows.map(function(r) {
-        var humanDate = isoToHumanDate(r.event_date);
+        var humanDate = formatDateRange(r.event_date, r.end_date);
         var category = r.category || 'Events';
         return {
           title: r.title,
@@ -1911,22 +1914,9 @@
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
-    var _md = ev.date;
-    if (ev.end_date) {
-      /* Use _startDate for cloned multi-day entries so the range reflects the full span */
-      var _startISO = ev._startDate || (ev.event_date || '').substring(0, 10);
-      var _s = parseDateUTC(_startISO), _e = parseDateUTC(ev.end_date);
-      if (_s && _e && _s < _e) {
-        var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
-        var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
-        if (_sy === _ey && _sm === _em)
-          _md = _sm + ' ' + _s.getUTCDate() + '\u2013' + _e.getUTCDate() + ', ' + _sy;
-        else if (_sy === _ey)
-          _md = _sm + ' ' + _s.getUTCDate() + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
-        else
-          _md = _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
-      }
-    }
+    /* Show date range for multi-day events, using _startDate if the event was pinned to today */
+    var _startForRange = ev._startDate ? ev._startDate + 'T00:00:00' : ev.event_date;
+    var _md = ev.end_date ? formatDateRange(_startForRange, ev.end_date) : ev.date;
     html += '<div class="ev-meta">' + esc(_md) + (ev.time ? ' · ' + esc(ev.time) : '');
     if (ev.venue) html += ' · ' + esc(ev.venue);
     html += '</div></div>';
