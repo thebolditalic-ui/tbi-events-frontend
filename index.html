@@ -1467,7 +1467,7 @@
   async function fetchEditorsPicksFromSupabase() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(end_date.gte.' + today + ',and(end_date.is.null,event_date.gte.' + today + '))&order=event_date.asc&limit=10';
+      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1515,7 +1515,7 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    query += '&or=(end_date.gte.' + today + ',and(end_date.is.null,event_date.gte.' + today + '))';
+    query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
@@ -1618,7 +1618,7 @@
   async function fetchCategoryCounts() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&or=(end_date.gte.' + today + ',and(end_date.is.null,event_date.gte.' + today + '))';
+      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1641,7 +1641,7 @@
   async function fetchAvailableMonths() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=event_date&sold_out=eq.false&or=(end_date.gte.' + today + ',and(end_date.is.null,event_date.gte.' + today + '))';
+      var url = SUPABASE_URL + '/rest/v1/events?select=event_date&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
