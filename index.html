@@ -1171,24 +1171,19 @@
     return output;
   }
   function expandMultiDayEvents(events) {
-    var todayStr = new Date().toISOString().slice(0, 10);
     var expanded = [];
     events.forEach(function(ev) {
-      var startDateOnly = (ev.event_date || '').substring(0, 10);
-      var endDateOnly   = (ev.end_date   || '').substring(0, 10);
-      var isMultiDay    = ev.end_date && endDateOnly > startDateOnly;
-      var isCurrentlyRunning = isMultiDay && startDateOnly < todayStr && endDateOnly >= todayStr;
-
-      if (isCurrentlyRunning) {
-        /* Event started in the past but is still running.
-           Skip the original (past-dated) entry entirely — start expansion from today. */
-        var sp = todayStr.split('-');
-        var ep = endDateOnly.split('-');
-        var dayUTC = new Date(Date.UTC(+sp[0], +sp[1]-1, +sp[2]));
-        var endUTC = new Date(Date.UTC(+ep[0], +ep[1]-1, +ep[2]));
-        var maxDays = 14, count = 0;
-        while (dayUTC <= endUTC && count < maxDays) {
-          var isoDate = dayUTC.toISOString().slice(0, 10) + 'T00:00:00';
+      expanded.push(ev);
+      if (ev.end_date && ev.end_date > ev.event_date) {
+        var start = new Date(ev.event_date);
+        var end = new Date(ev.end_date);
+        /* Cap at 14 days to prevent runaway expansion */
+        var maxDays = 14;
+        var day = new Date(start);
+        day.setDate(day.getDate() + 1);
+        var count = 0;
+        while (day <= end && count < maxDays) {
+          var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
           var humanDate = isoToHumanDate(isoDate);
           var monthData = parseEventDate(humanDate);
           var clone = {};
@@ -1196,43 +1191,14 @@
           clone.event_date = isoDate;
           clone.date = humanDate;
           clone.monthData = monthData;
-          clone._startDate = ev.event_date;
           clone._isMultiDayClone = true;
           expanded.push(clone);
-          dayUTC.setUTCDate(dayUTC.getUTCDate() + 1);
+          day.setDate(day.getDate() + 1);
           count++;
         }
-      } else if (isMultiDay) {
-        /* Future multi-day event — push original then clone each subsequent day */
-        ev._startDate = ev.event_date;
-        expanded.push(ev);
-        var sp2 = startDateOnly.split('-');
-        var ep2 = endDateOnly.split('-');
-        var dayUTC2 = new Date(Date.UTC(+sp2[0], +sp2[1]-1, +sp2[2]));
-        var endUTC2 = new Date(Date.UTC(+ep2[0], +ep2[1]-1, +ep2[2]));
-        dayUTC2.setUTCDate(dayUTC2.getUTCDate() + 1);
-        var maxDays2 = 14, count2 = 0;
-        while (dayUTC2 <= endUTC2 && count2 < maxDays2) {
-          var isoDate2 = dayUTC2.toISOString().slice(0, 10) + 'T00:00:00';
-          var humanDate2 = isoToHumanDate(isoDate2);
-          var monthData2 = parseEventDate(humanDate2);
-          var clone2 = {};
-          for (var k in ev) { if (ev.hasOwnProperty(k)) clone2[k] = ev[k]; }
-          clone2.event_date = isoDate2;
-          clone2.date = humanDate2;
-          clone2.monthData = monthData2;
-          clone2._startDate = ev.event_date;
-          clone2._isMultiDayClone = true;
-          expanded.push(clone2);
-          dayUTC2.setUTCDate(dayUTC2.getUTCDate() + 1);
-          count2++;
-        }
-      } else {
-        /* Single-day event — pass through unchanged */
-        expanded.push(ev);
       }
     });
-    /* Re-sort by event_date so everything lands in correct date groups */
+    /* Re-sort by event_date so clones land in correct date groups */
     expanded.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
     });
@@ -1517,9 +1483,7 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    var _lb = new Date(); _lb.setDate(_lb.getDate() - 90);
-    var lookback = _lb.toISOString().slice(0, 10);
-    query += '&event_date=gte.' + lookback;
+    query += '&event_date=gte.' + today;
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
@@ -1922,19 +1886,8 @@
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
-    var _metaDate = ev.date;
-    if (ev._startDate && ev.end_date) {
-      var _s = parseDateUTC(ev._startDate), _e = parseDateUTC(ev.end_date);
-      if (_s && _e && _s < _e) {
-        var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
-        var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
-        if (_sy === _ey && _sm === _em) _metaDate = _sm + ' ' + _s.getUTCDate() + '–' + _e.getUTCDate() + ', ' + _sy;
-        else if (_sy === _ey) _metaDate = _sm + ' ' + _s.getUTCDate() + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
-        else _metaDate = _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
-      }
-    }
-    html += '<div class="ev-meta">' + esc(_metaDate) + (ev.time ? ' · ' + esc(ev.time) : '');
-    if (ev.venue) html += ' · ' + esc(ev.venue);
+    html += '<div class="ev-meta">' + esc(ev.date) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
+    if (ev.venue) html += ' \u00b7 ' + esc(ev.venue);
     html += '</div></div>';
     html += '<div class="ev-right">';
     html += priceHTML(ev.price, ev.isSoldOut);
