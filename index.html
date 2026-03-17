@@ -1092,6 +1092,24 @@
     if (parts.length !== 3) return null;
     return new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
   }
+  function formatDateRange(startISO, endISO) {
+    /* Returns a compact date range string, e.g. "March 13–26, 2026" or "March 13 – April 5, 2026" */
+    if (!startISO || !endISO) return null;
+    var start = parseDateUTC(startISO);
+    var end = parseDateUTC(endISO);
+    if (!start || !end || start >= end) return null;
+    var sm = MONTHS_FULL[start.getUTCMonth()];
+    var em = MONTHS_FULL[end.getUTCMonth()];
+    var sy = start.getUTCFullYear();
+    var ey = end.getUTCFullYear();
+    if (sm === em && sy === ey) {
+      return sm + ' ' + start.getUTCDate() + '\u2013' + end.getUTCDate() + ', ' + sy;
+    }
+    if (sy === ey) {
+      return sm + ' ' + start.getUTCDate() + ' \u2013 ' + em + ' ' + end.getUTCDate() + ', ' + sy;
+    }
+    return sm + ' ' + start.getUTCDate() + ', ' + sy + ' \u2013 ' + em + ' ' + end.getUTCDate() + ', ' + ey;
+  }
   function formatDetailDate(event) {
     if (event.event_date) {
       var d = parseDateUTC(event.event_date);
@@ -1171,33 +1189,47 @@
     return output;
   }
   function expandMultiDayEvents(events) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     var expanded = [];
     events.forEach(function(ev) {
-      expanded.push(ev);
-      if (ev.end_date && ev.end_date > ev.event_date) {
-        var start = new Date(ev.event_date);
-        var end = new Date(ev.end_date);
-        /* Cap at 14 days to prevent runaway expansion */
-        var maxDays = 14;
-        var day = new Date(start);
+      if (!ev.end_date || ev.end_date <= ev.event_date) {
+        /* Single-day event — pass through unchanged */
+        expanded.push(ev);
+        return;
+      }
+
+      /* Multi-day event: generate one entry per remaining day.
+         If the event has already started, begin from today so it appears
+         under the current date rather than the (past) start date. */
+      var startMs = new Date(ev.event_date);
+      startMs.setHours(0, 0, 0, 0);
+      var endMs = new Date(ev.end_date);
+      endMs.setHours(23, 59, 59, 0);
+
+      var firstDay = startMs < today ? new Date(today) : new Date(startMs);
+      var maxDays = 14;
+      var count = 0;
+      var day = new Date(firstDay);
+
+      while (day <= endMs && count < maxDays) {
+        var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
+        var humanDate = isoToHumanDate(isoDate);
+        var monthData = parseEventDate(humanDate);
+        var clone = {};
+        for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
+        clone.event_date = isoDate;
+        clone.date = humanDate;
+        clone.monthData = monthData;
+        clone._startDate = ev.event_date; /* original start, for date range display */
+        clone._isMultiDayClone = true;
+        expanded.push(clone);
         day.setDate(day.getDate() + 1);
-        var count = 0;
-        while (day <= end && count < maxDays) {
-          var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
-          var humanDate = isoToHumanDate(isoDate);
-          var monthData = parseEventDate(humanDate);
-          var clone = {};
-          for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
-          clone.event_date = isoDate;
-          clone.date = humanDate;
-          clone.monthData = monthData;
-          clone._isMultiDayClone = true;
-          expanded.push(clone);
-          day.setDate(day.getDate() + 1);
-          count++;
-        }
+        count++;
       }
     });
+
     /* Re-sort by event_date so clones land in correct date groups */
     expanded.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
@@ -1886,7 +1918,13 @@
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
-    html += '<div class="ev-meta">' + esc(ev.date) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
+    var metaDate = ev.date;
+    if (ev.end_date) {
+      var rangeStart = ev._startDate || ev.event_date;
+      var dateRange = formatDateRange(rangeStart, ev.end_date);
+      if (dateRange) metaDate = dateRange;
+    }
+    html += '<div class="ev-meta">' + esc(metaDate) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
     if (ev.venue) html += ' \u00b7 ' + esc(ev.venue);
     html += '</div></div>';
     html += '<div class="ev-right">';
