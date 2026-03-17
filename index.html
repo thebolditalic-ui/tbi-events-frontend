@@ -1177,10 +1177,11 @@
       var startStr = (ev.event_date || '').substring(0, 10);
       var endStr   = ev.end_date.substring(0, 10);
       if (endStr <= startStr) return;
-      /* Store original start so the card can show the full date range */
+      /* Store original start so the row can show the full date range */
       ev._startDate = startStr;
       /* If already started, pin to today so it appears under today's date header */
       if (startStr < todayStr) {
+        var tp = todayStr.split('-');
         var todayISO = todayStr + 'T00:00:00';
         ev.event_date = todayISO;
         ev.date       = isoToHumanDate(todayISO);
@@ -1231,28 +1232,6 @@
     var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
-  }
-  /**
-   * Format a date range string from event_date + end_date.
-   * Single-day: "Thursday, March 19, 2026"
-   * Multi-day same month: "March 13–22, 2026"
-   * Multi-day cross month: "March 13 – April 2, 2026"
-   */
-  function formatDateRange(eventDate, endDate) {
-    if (!eventDate) return '';
-    var startISO = (eventDate || '').substring(0, 10);
-    var endISO = endDate ? endDate.substring(0, 10) : '';
-    if (!endISO || endISO <= startISO) return isoToHumanDate(eventDate);
-    var _s = parseDateUTC(startISO), _e = parseDateUTC(endISO);
-    if (!_s || !_e) return isoToHumanDate(eventDate);
-    var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
-    var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
-    if (_sy === _ey && _sm === _em)
-      return _sm + ' ' + _s.getUTCDate() + '\u2013' + _e.getUTCDate() + ', ' + _sy;
-    else if (_sy === _ey)
-      return _sm + ' ' + _s.getUTCDate() + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
-    else
-      return _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' \u2013 ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
   }
   function getMonthLabel(monthData) {
     return monthData.monthName + ' ' + monthData.year;
@@ -1453,7 +1432,22 @@
       var rows = await resp.json();
       if (!rows || rows.length === 0) return [];
       return rows.map(function(r) {
-        var humanDate = formatDateRange(r.event_date, r.end_date);
+        /* Build date string — show range for multi-day events */
+        var humanDate = isoToHumanDate(r.event_date);
+        if (r.end_date) {
+          var _s = parseDateUTC((r.event_date || '').substring(0, 10));
+          var _e = parseDateUTC(r.end_date);
+          if (_s && _e && _s < _e) {
+            var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
+            var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
+            if (_sy === _ey && _sm === _em)
+              humanDate = _sm + ' ' + _s.getUTCDate() + '–' + _e.getUTCDate() + ', ' + _sy;
+            else if (_sy === _ey)
+              humanDate = _sm + ' ' + _s.getUTCDate() + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
+            else
+              humanDate = _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
+          }
+        }
         var category = r.category || 'Events';
         return {
           title: r.title,
@@ -1506,17 +1500,16 @@
       query += '&city=eq.' + filters.city;
     }
     if (filters.date && filters.date !== 'all') {
-      /* Specific date: include events starting on this day OR multi-day events spanning it */
+      /* Specific date overrides month filter */
       var dateStart = filters.date;
       var dateParts = filters.date.split('-');
       if (dateParts.length === 3) {
         var dateNext = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]) + 1);
         var dateEnd = dateNext.getFullYear() + '-' + String(dateNext.getMonth() + 1).padStart(2, '0') + '-' + String(dateNext.getDate()).padStart(2, '0');
-        /* event starts on this day, OR event started before and end_date is on/after this day */
-        query += '&or=(and(event_date.gte.' + dateStart + ',event_date.lt.' + dateEnd + '),and(event_date.lte.' + dateStart + ',end_date.gte.' + dateStart + '))';
+        query += '&event_date=gte.' + dateStart + '&event_date=lt.' + dateEnd;
       }
     } else if (filters.month && filters.month !== 'all') {
-      /* Month filter: include events starting in this month OR multi-day events spanning into it */
+      /* Month filter — only applies when no specific date is set */
       var parts = filters.month.split('-');
       if (parts.length === 2) {
         var monthStart = filters.month + '-01';
@@ -1524,8 +1517,7 @@
         var nextYear = parseInt(parts[0]);
         if (nextMonth > 12) { nextMonth = 1; nextYear++; }
         var monthEnd = nextYear + '-' + String(nextMonth).padStart(2, '0') + '-01';
-        /* event starts in this month, OR event started before and end_date is in/after this month */
-        query += '&or=(and(event_date.gte.' + monthStart + ',event_date.lt.' + monthEnd + '),and(event_date.lt.' + monthStart + ',end_date.gte.' + monthStart + '))';
+        query += '&event_date=gte.' + monthStart + '&event_date=lt.' + monthEnd;
       }
     }
     if (filters.search && filters.search.trim()) {
@@ -1599,7 +1591,7 @@
   async function fetchCategoryCounts() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&event_date=gte.' + today;
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1622,7 +1614,7 @@
   async function fetchAvailableMonths() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=event_date,end_date&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+      var url = SUPABASE_URL + '/rest/v1/events?select=event_date&sold_out=eq.false&event_date=gte.' + today;
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1634,39 +1626,24 @@
       var monthOrder = [];
       var availableDates = {};
 
-      function addDateToCalendar(isoDate) {
+      rows.forEach(function(r) {
+        if (!r.event_date) return;
+        var isoDate = r.event_date.substring(0, 10);
         var d = new Date(isoDate + 'T00:00:00Z');
         var monthKey = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
         var day = d.getUTCDate();
+
         if (monthKey >= currentMonthKey) {
           if (!monthSet[monthKey]) {
-            monthSet[monthKey] = { monthName: MONTHS_FULL[d.getUTCMonth()], year: d.getUTCFullYear(), key: monthKey };
+            monthSet[monthKey] = {
+              monthName: MONTHS_FULL[d.getUTCMonth()],
+              year: d.getUTCFullYear(),
+              key: monthKey
+            };
             monthOrder.push(monthKey);
           }
           if (!availableDates[monthKey]) availableDates[monthKey] = {};
           availableDates[monthKey][day] = true;
-        }
-      }
-      rows.forEach(function(r) {
-        if (!r.event_date) return;
-        var startISO = r.event_date.substring(0, 10);
-        addDateToCalendar(startISO);
-        /* For multi-day events, add dots for each intermediate day */
-        if (r.end_date) {
-          var endISO = r.end_date.substring(0, 10);
-          if (endISO > startISO) {
-            var sp = startISO.split('-'), ep = endISO.split('-');
-            var cursor = new Date(Date.UTC(parseInt(sp[0]), parseInt(sp[1]) - 1, parseInt(sp[2])));
-            var limit = new Date(Date.UTC(parseInt(ep[0]), parseInt(ep[1]) - 1, parseInt(ep[2])));
-            cursor.setUTCDate(cursor.getUTCDate() + 1);
-            var safety = 0;
-            while (cursor <= limit && safety < 60) {
-              var iso = cursor.getUTCFullYear() + '-' + String(cursor.getUTCMonth() + 1).padStart(2, '0') + '-' + String(cursor.getUTCDate()).padStart(2, '0');
-              if (iso >= today) addDateToCalendar(iso);
-              cursor.setUTCDate(cursor.getUTCDate() + 1);
-              safety++;
-            }
-          }
         }
       });
 
@@ -1914,9 +1891,21 @@
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
-    /* Show date range for multi-day events, using _startDate if the event was pinned to today */
-    var _startForRange = ev._startDate ? ev._startDate + 'T00:00:00' : ev.event_date;
-    var _md = ev.end_date ? formatDateRange(_startForRange, ev.end_date) : ev.date;
+    var _md = ev.date;
+    if (ev.end_date) {
+      var _startISO = ev._startDate || (ev.event_date || '').substring(0, 10);
+      var _s = parseDateUTC(_startISO), _e = parseDateUTC(ev.end_date);
+      if (_s && _e && _s < _e) {
+        var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
+        var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
+        if (_sy === _ey && _sm === _em)
+          _md = _sm + ' ' + _s.getUTCDate() + '–' + _e.getUTCDate() + ', ' + _sy;
+        else if (_sy === _ey)
+          _md = _sm + ' ' + _s.getUTCDate() + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
+        else
+          _md = _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
+      }
+    }
     html += '<div class="ev-meta">' + esc(_md) + (ev.time ? ' · ' + esc(ev.time) : '');
     if (ev.venue) html += ' · ' + esc(ev.venue);
     html += '</div></div>';
