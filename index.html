@@ -1092,7 +1092,7 @@
     if (parts.length !== 3) return null;
     return new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
   }
-  /* Returns a compact range like "March 13–26, 2026" or "March 13 – April 5, 2026" */
+  /* Returns compact range string e.g. "March 13–26, 2026" or "March 13 – April 5, 2026" */
   function formatDateRange(startISO, endISO) {
     if (!startISO || !endISO) return null;
     var s = parseDateUTC(startISO);
@@ -1185,14 +1185,23 @@
   function expandMultiDayEvents(events) {
     var expanded = [];
     events.forEach(function(ev) {
+      /* Tag original with _startDate so the row can show the full date range */
+      if (ev.end_date) ev._startDate = ev.event_date;
       expanded.push(ev);
-      if (ev.end_date && ev.end_date > ev.event_date) {
-        var start = new Date(ev.event_date);
-        var end = new Date(ev.end_date);
+      if (ev.end_date) {
+        /* Compare date-only strings to avoid timezone boundary issues */
+        var startDateOnly = (ev.event_date || '').substring(0, 10);
+        var endDateOnly   = (ev.end_date   || '').substring(0, 10);
+        if (endDateOnly <= startDateOnly) return;
+        /* Parse as UTC so the loop doesn't drift with local timezone */
+        var sp = startDateOnly.split('-');
+        var ep = endDateOnly.split('-');
+        var start = new Date(Date.UTC(+sp[0], +sp[1]-1, +sp[2]));
+        var end   = new Date(Date.UTC(+ep[0], +ep[1]-1, +ep[2]));
         /* Cap at 14 days to prevent runaway expansion */
         var maxDays = 14;
         var day = new Date(start);
-        day.setDate(day.getDate() + 1);
+        day.setUTCDate(day.getUTCDate() + 1);
         var count = 0;
         while (day <= end && count < maxDays) {
           var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
@@ -1203,9 +1212,10 @@
           clone.event_date = isoDate;
           clone.date = humanDate;
           clone.monthData = monthData;
+          clone._startDate = ev.event_date; /* preserve original start for range display */
           clone._isMultiDayClone = true;
           expanded.push(clone);
-          day.setDate(day.getDate() + 1);
+          day.setUTCDate(day.getUTCDate() + 1);
           count++;
         }
       }
@@ -1534,26 +1544,6 @@
     return query;
   }
 
-  /* Fetch multi-day events that started before today but haven't ended yet.
-     Uses two plain filters — no or() — so PostgREST handles it cleanly. */
-  async function fetchCurrentlyRunning() {
-    var today = new Date().toISOString().slice(0, 10);
-    var url = SUPABASE_URL + '/rest/v1/events?select=*'
-      + '&sold_out=eq.false'
-      + '&event_date=lt.' + today
-      + '&end_date=gte.' + today;
-    try {
-      var resp = await fetch(url, {
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
-      });
-      var rows = await resp.json();
-      if (!Array.isArray(rows)) return [];
-      return rows;
-    } catch (e) {
-      return [];
-    }
-  }
-
   async function fetchEvents(filters, page) {
     if (!filters) filters = {};
     if (!page) page = 1;
@@ -1612,27 +1602,40 @@
     /* Expand multi-day events: duplicate entry for each day in the range */
     events = expandMultiDayEvents(events);
 
-    /* On page 1, also fetch multi-day events that started before today
-       but are still running — missed by event_date >= today */
-    if (page === 1 && !filters.date) {
+    /* On page 1, also fetch multi-day events that started before today but
+       are still running — these are excluded by event_date >= today.
+       Skip this when a search term is active (no point adding unfiltered events). */
+    if (page === 1 && !filters.search) {
       try {
-        var runningRows = await fetchCurrentlyRunning();
-        if (runningRows.length > 0) {
-          var today = new Date();
-          today.setHours(0, 0, 0, 0);
+        var today = new Date().toISOString().slice(0, 10);
+        var runUrl = SUPABASE_URL + '/rest/v1/events?select=*'
+          + '&sold_out=eq.false'
+          + '&event_date=lt.' + today
+          + '&end_date=gte.' + today;
+        var runResp = await fetch(runUrl, {
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
+        });
+        var runRows = await runResp.json();
+        if (Array.isArray(runRows) && runRows.length > 0) {
+          /* Apply category/city filters client-side */
+          if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
+            runRows = runRows.filter(function(r) { return r.category === filters.category; });
+          }
+          if (filters.city && filters.city !== 'all') {
+            runRows = runRows.filter(function(r) { return (r.city || 'sf') === filters.city; });
+          }
+          /* Build a set of slugs already in the list to avoid duplication */
           var existingSlugs = {};
           events.forEach(function(e) { existingSlugs[e.slug] = true; });
-
-          runningRows.forEach(function(r) {
+          runRows.forEach(function(r) {
             if (existingSlugs[r.slug]) return;
+            var todayUTC = new Date(today + 'T00:00:00Z');
+            var endParts = (r.end_date || '').substring(0, 10).split('-');
+            var endUTC = new Date(Date.UTC(+endParts[0], +endParts[1]-1, +endParts[2]));
             var category = r.category || 'Events';
-            var end = new Date(r.end_date);
-            end.setHours(23, 59, 59, 0);
-            var maxDays = 14;
-            var count = 0;
-            var day = new Date(today);
-            /* Generate one entry per remaining day, starting from today */
-            while (day <= end && count < maxDays) {
+            var maxDays = 14, count = 0;
+            var day = new Date(todayUTC);
+            while (day <= endUTC && count < maxDays) {
               var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
               var humanDate = isoToHumanDate(isoDate);
               var monthData = parseEventDate(humanDate);
@@ -1656,12 +1659,11 @@
                 city: r.city || 'sf',
                 monthData: monthData,
               });
-              day.setDate(day.getDate() + 1);
+              day.setUTCDate(day.getUTCDate() + 1);
               count++;
             }
             existingSlugs[r.slug] = true;
           });
-
           events.sort(function(a, b) {
             return (a.event_date || '').localeCompare(b.event_date || '');
           });
@@ -1977,8 +1979,7 @@
     html += '<h3>' + esc(ev.title) + '</h3>';
     var metaDate = ev.date;
     if (ev.end_date) {
-      var rangeStart = ev._startDate || ev.event_date;
-      var range = formatDateRange(rangeStart, ev.end_date);
+      var range = formatDateRange(ev._startDate || ev.event_date, ev.end_date);
       if (range) metaDate = range;
     }
     html += '<div class="ev-meta">' + esc(metaDate) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
