@@ -1171,34 +1171,46 @@
     return output;
   }
   function expandMultiDayEvents(events) {
+    var todayStr = new Date().toISOString().slice(0, 10);
     var expanded = [];
     events.forEach(function(ev) {
-      expanded.push(ev);
-      if (ev.end_date && ev.end_date > ev.event_date) {
-        var start = new Date(ev.event_date);
-        var end = new Date(ev.end_date);
-        /* Cap at 14 days to prevent runaway expansion */
-        var maxDays = 14;
-        var day = new Date(start);
-        day.setDate(day.getDate() + 1);
-        var count = 0;
-        while (day <= end && count < maxDays) {
-          var isoDate = day.toISOString().slice(0, 10) + 'T00:00:00';
-          var humanDate = isoToHumanDate(isoDate);
-          var monthData = parseEventDate(humanDate);
-          var clone = {};
-          for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
-          clone.event_date = isoDate;
-          clone.date = humanDate;
-          clone.monthData = monthData;
-          clone._isMultiDayClone = true;
-          expanded.push(clone);
-          day.setDate(day.getDate() + 1);
-          count++;
-        }
+      var startStr = (ev.event_date || '').substring(0, 10);
+      var endStr   = (ev.end_date   || '').substring(0, 10);
+      var isMultiDay = ev.end_date && endStr > startStr;
+
+      if (!isMultiDay) {
+        /* Single-day event — pass through unchanged */
+        expanded.push(ev);
+        return;
+      }
+
+      /* Multi-day event: if already started, begin from today so it
+         doesn't appear under a past date header */
+      var firstDay = startStr < todayStr ? todayStr : startStr;
+
+      /* Parse boundaries as UTC to avoid timezone drift */
+      var fp = firstDay.split('-'), ep = endStr.split('-');
+      var dayUTC = new Date(Date.UTC(+fp[0], +fp[1]-1, +fp[2]));
+      var endUTC = new Date(Date.UTC(+ep[0], +ep[1]-1, +ep[2]));
+
+      var maxDays = 14, count = 0;
+      while (dayUTC <= endUTC && count < maxDays) {
+        var isoDate = dayUTC.toISOString().slice(0, 10) + 'T00:00:00';
+        var humanDate = isoToHumanDate(isoDate);
+        var monthData = parseEventDate(humanDate);
+        var clone = {};
+        for (var k in ev) { if (ev.hasOwnProperty(k)) clone[k] = ev[k]; }
+        clone.event_date  = isoDate;
+        clone.date        = humanDate;
+        clone.monthData   = monthData;
+        clone._startDate  = ev.event_date; /* original start, for date range label */
+        clone._isMultiDayClone = true;
+        expanded.push(clone);
+        dayUTC.setUTCDate(dayUTC.getUTCDate() + 1);
+        count++;
       }
     });
-    /* Re-sort by event_date so clones land in correct date groups */
+    /* Re-sort by event_date so everything lands in correct date groups */
     expanded.sort(function(a, b) {
       return (a.event_date || '').localeCompare(b.event_date || '');
     });
@@ -1483,7 +1495,7 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    query += '&event_date=gte.' + today;
+    query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
@@ -1886,8 +1898,22 @@
       html += '<span class="ev-catpill" style="background:#f9e2af; color:#1E1B1B;">\u2726 Editor\u2019s Pick</span>';
     }
     html += '<h3>' + esc(ev.title) + '</h3>';
-    html += '<div class="ev-meta">' + esc(ev.date) + (ev.time ? ' \u00b7 ' + esc(ev.time) : '');
-    if (ev.venue) html += ' \u00b7 ' + esc(ev.venue);
+    var _md = ev.date;
+    if (ev._startDate && ev.end_date) {
+      var _s = parseDateUTC(ev._startDate), _e = parseDateUTC(ev.end_date);
+      if (_s && _e && _s < _e) {
+        var _sm = MONTHS_FULL[_s.getUTCMonth()], _em = MONTHS_FULL[_e.getUTCMonth()];
+        var _sy = _s.getUTCFullYear(), _ey = _e.getUTCFullYear();
+        if (_sy === _ey && _sm === _em)
+          _md = _sm + ' ' + _s.getUTCDate() + '–' + _e.getUTCDate() + ', ' + _sy;
+        else if (_sy === _ey)
+          _md = _sm + ' ' + _s.getUTCDate() + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _sy;
+        else
+          _md = _sm + ' ' + _s.getUTCDate() + ', ' + _sy + ' – ' + _em + ' ' + _e.getUTCDate() + ', ' + _ey;
+      }
+    }
+    html += '<div class="ev-meta">' + esc(_md) + (ev.time ? ' · ' + esc(ev.time) : '');
+    if (ev.venue) html += ' · ' + esc(ev.venue);
     html += '</div></div>';
     html += '<div class="ev-right">';
     html += priceHTML(ev.price, ev.isSoldOut);
