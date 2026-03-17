@@ -1483,7 +1483,9 @@
   async function buildFilterQuery(filters) {
     var query = '?select=*&sold_out=eq.false';
     var today = new Date().toISOString().slice(0, 10);
-    query += '&event_date=gte.' + today;
+    var _lookback = new Date(); _lookback.setDate(_lookback.getDate() - 30);
+    var lookback = _lookback.toISOString().slice(0, 10);
+    query += '&event_date=gte.' + lookback;
 
     if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
       query += '&category=eq.' + encodeURIComponent(filters.category);
