@@ -440,9 +440,21 @@ textarea.input-text {
 (function() {
   'use strict';
 
-  // ---- State ----
-  var queue = [];
+  // ---- State (persisted in localStorage) ----
+  var STORAGE_KEY = 'tbi_event_queue';
+  var queue = loadQueue();
   var editingIndex = null;
+
+  function loadQueue() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
+  }
+
+  function saveQueue() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(queue)); } catch (e) {}
+  }
 
   // ---- DOM refs ----
   var $blob = document.getElementById('blob-input');
@@ -504,6 +516,7 @@ textarea.input-text {
       showToast('Added to queue', 'success');
     }
 
+    saveQueue();
     clearForm();
     renderQueue();
   });
@@ -602,6 +615,7 @@ textarea.input-text {
         } else if (editingIndex !== null && editingIndex > idx) {
           editingIndex--;
         }
+        saveQueue();
         renderQueue();
         showToast('Removed from queue');
       }
@@ -612,6 +626,7 @@ textarea.input-text {
     if (e.target.type === 'checkbox' && e.target.hasAttribute('data-idx')) {
       var idx = parseInt(e.target.getAttribute('data-idx'));
       queue[idx].selected = e.target.checked;
+      saveQueue();
       var card = e.target.closest('.event-card');
       if (card) card.classList.toggle('selected', e.target.checked);
       updateCount();
@@ -620,11 +635,13 @@ textarea.input-text {
 
   $selectAll.addEventListener('click', function() {
     queue.forEach(function(e) { e.selected = true; });
+    saveQueue();
     renderQueue();
   });
 
   $deselectAll.addEventListener('click', function() {
     queue.forEach(function(e) { e.selected = false; });
+    saveQueue();
     renderQueue();
   });
 
@@ -633,6 +650,7 @@ textarea.input-text {
     if (confirm('Clear all ' + queue.length + ' events from the queue?')) {
       queue = [];
       editingIndex = null;
+      saveQueue();
       $addBtn.textContent = '+ Add to Queue';
       clearForm();
       renderQueue();
@@ -648,12 +666,22 @@ textarea.input-text {
     return d.innerHTML;
   }
 
+  // ---- Render on load (restores persisted queue) ----
+  renderQueue();
+
   // ================================================================
   // PDF EXPORT
   // ================================================================
   $exportBtn.addEventListener('click', function() {
     var selected = queue.filter(function(e) { return e.selected; });
     if (selected.length === 0) return;
+
+    if (typeof jspdf === 'undefined' || typeof jspdf.jsPDF !== 'function') {
+      showToast('PDF library failed to load. Check your connection and refresh.');
+      return;
+    }
+
+    try {
 
     var doc = new jspdf.jsPDF({ unit: 'pt', format: 'letter' });
     var W = doc.internal.pageSize.getWidth();
@@ -713,7 +741,7 @@ textarea.input-text {
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 27, 27);
-    doc.text('TBI Events \u2014 Manual Event Import', margin, y);
+    doc.text('TBI Events - Manual Event Import', margin, y);
     y += 28;
 
     doc.setFontSize(10);
@@ -783,12 +811,12 @@ textarea.input-text {
       'featured: Default false.',
     ];
     for (var r = 0; r < rules.length; r++) {
-      writeText('\u2022 ' + rules[r], { fontSize: 9, indent: 10 });
+      writeText('- ' + rules[r], { fontSize: 9, indent: 10 });
       spacer(2);
     }
 
     spacer(8);
-    writeText('IMPORTANT: Show the user your parsed results BEFORE inserting. The raw blobs may be messy \u2014 use your best judgment to extract clean, accurate event data. If info is ambiguous or missing, note it and ask.', { fontSize: 10, fontStyle: 'bold', color: [180, 60, 40] });
+    writeText('IMPORTANT: Show the user your parsed results BEFORE inserting. The raw blobs may be messy -- use your best judgment to extract clean, accurate event data. If info is ambiguous or missing, note it and ask.', { fontSize: 10, fontStyle: 'bold', color: [180, 60, 40] });
 
     // ============================================================
     // SUBSEQUENT PAGES — EVENT BLOBS
@@ -841,6 +869,11 @@ textarea.input-text {
     var dateStr = new Date().toISOString().slice(0, 10);
     doc.save('tbi-events-' + dateStr + '.pdf');
     showToast('PDF exported!', 'success');
+
+    } catch (err) {
+      console.error('PDF export error:', err);
+      showToast('PDF export failed: ' + err.message);
+    }
   });
 
 })();
