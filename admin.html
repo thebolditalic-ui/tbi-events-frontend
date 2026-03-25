@@ -130,10 +130,36 @@ body {
   align-items: center;
   justify-content: space-between;
 }
+.admin-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 .admin-header h1 {
   font-family: var(--title-font);
   font-size: 18px;
   font-weight: 400;
+}
+.admin-nav {
+  display: flex;
+  gap: 4px;
+}
+.admin-nav a {
+  color: rgba(255,255,255,0.5);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.admin-nav a:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+}
+.admin-nav a.active {
+  color: var(--gold);
+  background: rgba(255,214,130,0.12);
 }
 .admin-header .user-info {
   display: flex;
@@ -828,7 +854,13 @@ body {
 <!-- ============ ADMIN APP ============ -->
 <div id="admin-app">
   <header class="admin-header">
-    <h1>TBI Events Admin</h1>
+    <div class="admin-header-left">
+      <h1>TBI Events Admin</h1>
+      <nav class="admin-nav">
+        <a href="/admin" class="active">Events</a>
+        <a href="/queue">Manual Queue</a>
+      </nav>
+    </div>
     <div class="user-info">
       <span id="user-email"></span>
       <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
