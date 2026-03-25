@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TBI Events — Manual Queue</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <style>
 :root {
   --cream: #fff6e6;
@@ -672,14 +672,56 @@ textarea.input-text {
   // ================================================================
   // PDF EXPORT
   // ================================================================
+  // ---- Dynamic jsPDF loader with fallback CDNs ----
+  var JSPDF_CDNS = [
+    'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+    'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js'
+  ];
+
+  function loadJsPdf(callback) {
+    if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function') {
+      return callback(null);
+    }
+    var idx = 0;
+    function tryNext() {
+      if (idx >= JSPDF_CDNS.length) {
+        return callback(new Error('All CDN sources failed'));
+      }
+      var s = document.createElement('script');
+      s.src = JSPDF_CDNS[idx];
+      s.onload = function() {
+        if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function') {
+          callback(null);
+        } else {
+          idx++;
+          tryNext();
+        }
+      };
+      s.onerror = function() {
+        idx++;
+        tryNext();
+      };
+      document.head.appendChild(s);
+    }
+    tryNext();
+  }
+
   $exportBtn.addEventListener('click', function() {
     var selected = queue.filter(function(e) { return e.selected; });
     if (selected.length === 0) return;
 
-    if (typeof jspdf === 'undefined' || typeof jspdf.jsPDF !== 'function') {
-      showToast('PDF library failed to load. Check your connection and refresh.');
-      return;
-    }
+    $exportBtn.disabled = true;
+    $exportBtn.textContent = 'Loading...';
+
+    loadJsPdf(function(err) {
+      $exportBtn.disabled = false;
+      $exportBtn.textContent = 'Export Selected as PDF';
+
+      if (err) {
+        showToast('PDF library failed to load from all sources. Check your connection and refresh.');
+        return;
+      }
 
     try {
 
@@ -874,6 +916,8 @@ textarea.input-text {
       console.error('PDF export error:', err);
       showToast('PDF export failed: ' + err.message);
     }
+
+    }); // end loadJsPdf callback
   });
 
 })();
