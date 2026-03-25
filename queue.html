@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TBI Events — Manual Queue</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <style>
 :root {
@@ -74,6 +75,67 @@ a { color: var(--blue); }
 .admin-nav a.active {
   color: var(--gold);
   background: rgba(255,214,130,0.12);
+}
+
+/* ---- Login Screen ---- */
+#login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+.login-box {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.login-box h1 {
+  font-family: var(--title-font);
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+.login-box p {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+.login-box label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+  margin-bottom: 4px;
+}
+.login-box input[type="email"],
+.login-box input[type="password"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  background: var(--bg-alt);
+}
+.login-box input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+.login-box .btn { width: 100%; justify-content: center; }
+.login-error {
+  background: #fde8e8;
+  color: var(--red);
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
 }
 
 /* ---- Layout ---- */
@@ -351,6 +413,23 @@ textarea.input-text {
 </head>
 <body>
 
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Events</h1>
+    <p>Sign in to access the manual event queue</p>
+    <div class="login-error" id="login-error"></div>
+    <label>Email</label>
+    <input type="email" id="login-email" placeholder="you@thebolditalic.com">
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password">
+    <button class="btn btn-gold" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ MAIN APP (hidden until auth) ============ -->
+<div id="queue-app" style="display:none;">
+
 <header class="page-header">
   <div class="header-top">
     <div class="header-left">
@@ -359,6 +438,10 @@ textarea.input-text {
         <a href="/admin">Events</a>
         <a href="/queue" class="active">Manual Queue</a>
       </nav>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="user-email" style="font-size:12px;color:rgba(255,255,255,0.5);"></span>
+      <button class="btn btn-outline btn-sm" id="logout-btn" style="color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.2);font-size:11px;padding:4px 10px;">Sign Out</button>
     </div>
   </div>
   <div class="header-sub">
@@ -432,6 +515,8 @@ textarea.input-text {
 
 </div>
 
+</div><!-- end #queue-app -->
+
 <!-- ============ TOAST ============ -->
 <div class="toast" id="toast"></div>
 
@@ -439,6 +524,82 @@ textarea.input-text {
 <script>
 (function() {
   'use strict';
+
+  // ---- Supabase Config ----
+  var SUPABASE_URL = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  var currentAccessToken = null;
+
+  // ---- Auth DOM refs ----
+  var $loginScreen = document.getElementById('login-screen');
+  var $queueApp = document.getElementById('queue-app');
+  var $loginEmail = document.getElementById('login-email');
+  var $loginPass = document.getElementById('login-pass');
+  var $loginBtn = document.getElementById('login-btn');
+  var $loginError = document.getElementById('login-error');
+  var $logoutBtn = document.getElementById('logout-btn');
+  var $userEmail = document.getElementById('user-email');
+
+  // ---- Auth logic ----
+  async function checkSession() {
+    var { data } = await sb.auth.getSession();
+    if (data.session) {
+      showApp(data.session);
+    }
+  }
+
+  function showApp(session) {
+    currentAccessToken = session.access_token;
+    $loginScreen.style.display = 'none';
+    $queueApp.style.display = 'block';
+    $userEmail.textContent = session.user.email;
+  }
+
+  $loginBtn.addEventListener('click', async function() {
+    $loginError.style.display = 'none';
+    var email = $loginEmail.value.trim();
+    var pass = $loginPass.value;
+    if (!email || !pass) {
+      $loginError.textContent = 'Enter email and password';
+      $loginError.style.display = 'block';
+      return;
+    }
+    $loginBtn.textContent = 'Signing in...';
+    $loginBtn.disabled = true;
+    var { data, error } = await sb.auth.signInWithPassword({ email: email, password: pass });
+    $loginBtn.textContent = 'Sign In';
+    $loginBtn.disabled = false;
+    if (error) {
+      $loginError.textContent = error.message;
+      $loginError.style.display = 'block';
+      return;
+    }
+    showApp(data.session);
+  });
+
+  $loginPass.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') $loginBtn.click();
+  });
+
+  $logoutBtn.addEventListener('click', async function() {
+    await sb.auth.signOut();
+    currentAccessToken = null;
+    $queueApp.style.display = 'none';
+    $loginScreen.style.display = 'flex';
+  });
+
+  // Listen for token refresh
+  sb.auth.onAuthStateChange(function(event, session) {
+    if (session) {
+      currentAccessToken = session.access_token;
+    } else {
+      currentAccessToken = null;
+    }
+  });
+
+  // Check for existing session on load
+  checkSession();
 
   // ---- State (persisted in localStorage) ----
   var STORAGE_KEY = 'tbi_event_queue';
@@ -808,7 +969,7 @@ textarea.input-text {
     var steps = [
       '1. Read each event blob below and extract structured fields: title, date(s), time, venue, address, neighborhood (if in SF), city, category, price, performers, and description.',
       '2. For each event, present the parsed fields to the user in a clear summary for confirmation BEFORE inserting. Ask if anything needs correction.',
-      '3. Once the user confirms, insert each event into the Supabase "events" table using the REST API.',
+      '3. Once the user confirms, insert each event by POSTing to the API endpoint above with the Authorization header and body: { "event": { ...fields... } }.',
     ];
     for (var s = 0; s < steps.length; s++) {
       writeText(steps[s], { fontSize: 10, indent: 10 });
@@ -816,13 +977,17 @@ textarea.input-text {
     }
 
     spacer(10);
-    writeText('SUPABASE API DETAILS:', { fontSize: 11, fontStyle: 'bold' });
+    writeText('API DETAILS:', { fontSize: 11, fontStyle: 'bold' });
     spacer(4);
-    writeText('URL: https://scawgrjcjgcmvsimvash.supabase.co', { fontSize: 10, indent: 10 });
-    writeText('Table: events', { fontSize: 10, indent: 10 });
-    writeText('Method: POST to {URL}/rest/v1/events', { fontSize: 10, indent: 10 });
-    writeText('Headers required: apikey and Authorization (Bearer) with the service role key.', { fontSize: 10, indent: 10 });
-    writeText('If you do not have the service role key, ask the user to provide it.', { fontSize: 10, indent: 10 });
+    writeText('Endpoint: https://events.thebolditalic.com/api/insert-event', { fontSize: 10, indent: 10 });
+    writeText('Method: POST', { fontSize: 10, indent: 10 });
+    writeText('Content-Type: application/json', { fontSize: 10, indent: 10 });
+    writeText('Authorization: Bearer ' + (currentAccessToken || '<TOKEN_MISSING>'), { fontSize: 8, indent: 10, color: [100, 100, 100] });
+    spacer(4);
+    writeText('Request body format: { "event": { ...fields... } }', { fontSize: 10, indent: 10 });
+    writeText('The endpoint validates your auth token, checks required fields, and inserts into Supabase.', { fontSize: 10, indent: 10 });
+    spacer(4);
+    writeText('NOTE: The auth token above expires after ~1 hour. If it fails, re-export the PDF from the queue page while logged in.', { fontSize: 9, indent: 10, fontStyle: 'italic', color: [150, 120, 40] });
     spacer(10);
 
     writeText('FIELD MAPPING & RULES:', { fontSize: 11, fontStyle: 'bold' });
