@@ -478,11 +478,22 @@ textarea.input-text {
       </div>
       <div>
         <label class="field-label">
+          More Info / Ticket URL
+          <span class="field-hint">— link to event page or tickets</span>
+        </label>
+        <input type="url" class="input-text" id="ticket-input" placeholder="https://example.com/tickets">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div>
+        <label class="field-label">
           Source
           <span class="field-hint">— where you found this</span>
         </label>
         <input type="text" class="input-text" id="source-input" placeholder='e.g. "Email from venue", "Instagram @sfmusic"'>
       </div>
+      <div></div>
     </div>
 
     <div class="add-actions">
@@ -620,6 +631,7 @@ textarea.input-text {
   // ---- DOM refs ----
   var $blob = document.getElementById('blob-input');
   var $image = document.getElementById('image-input');
+  var $ticket = document.getElementById('ticket-input');
   var $source = document.getElementById('source-input');
   var $addBtn = document.getElementById('add-btn');
   var $clearFormBtn = document.getElementById('clear-form-btn');
@@ -662,6 +674,7 @@ textarea.input-text {
     var entry = {
       blob: blob,
       imageUrl: $image.value.trim(),
+      ticketUrl: $ticket.value.trim(),
       source: $source.value.trim(),
       selected: true,
       displayTitle: guessTitle(blob),
@@ -693,6 +706,7 @@ textarea.input-text {
   function clearForm() {
     $blob.value = '';
     $image.value = '';
+    $ticket.value = '';
     $source.value = '';
   }
 
@@ -722,6 +736,10 @@ textarea.input-text {
         ? '<span class="has-image-tag">has image</span>'
         : '<span class="no-image-tag">no image</span>';
 
+      var ticketTag = entry.ticketUrl
+        ? '<span class="has-image-tag">has link</span>'
+        : '';
+
       var sourceText = entry.source ? esc(entry.source) : '<em style="color:#bbb;">no source noted</em>';
 
       card.innerHTML = ''
@@ -730,6 +748,7 @@ textarea.input-text {
         + '  <div class="card-title">' + esc(entry.displayTitle) + '</div>'
         + '  <div class="card-meta">'
         + '    <span>' + imgTag + '</span>'
+        + (ticketTag ? '    <span>' + ticketTag + '</span>' : '')
         + '    <span>Source: ' + sourceText + '</span>'
         + '  </div>'
         + '  <div class="card-blob-preview">' + esc(blobPreview) + '</div>'
@@ -759,6 +778,7 @@ textarea.input-text {
       var entry = queue[idx];
       $blob.value = entry.blob;
       $image.value = entry.imageUrl;
+      $ticket.value = entry.ticketUrl || '';
       $source.value = entry.source;
       editingIndex = idx;
       $addBtn.textContent = 'Update Event';
@@ -968,8 +988,9 @@ textarea.input-text {
 
     var steps = [
       '1. Read each event blob below and extract structured fields: title, date(s), time, venue, address, neighborhood (if in SF), city, category, price, performers, and description.',
-      '2. For each event, present the parsed fields to the user in a clear summary for confirmation BEFORE inserting. Ask if anything needs correction.',
-      '3. Once the user confirms, insert each event by POSTing to the API endpoint above with the Authorization header and body: { "event": { ...fields... } }.',
+      '2. If any fields are missing or ambiguous (e.g. no address, no price, unclear neighborhood), automatically search the web to fill in the gaps. Do NOT ask the user to provide missing details -- find them yourself or leave them null.',
+      '3. For each event, present the parsed fields to the user in a clear summary for confirmation BEFORE inserting.',
+      '4. Once the user confirms, insert each event using the API. IMPORTANT: You must execute the API call from a browser tab using JavaScript (fetch), NOT from curl or the sandbox terminal. Use the browser JavaScript tool to run the fetch call on any open tab.',
     ];
     for (var s = 0; s < steps.length; s++) {
       writeText(steps[s], { fontSize: 10, indent: 10 });
@@ -1009,8 +1030,8 @@ textarea.input-text {
       'price: Display string, e.g. "Free", "$25", "$10-$50", "Varies".',
       'image_url: Use the image URL provided with each event below. May be null.',
       'description: A clean, concise description extracted/written from the blob. 1-3 paragraphs max.',
-      'source_url: If a URL is found in the blob, use it as the event link. Otherwise null.',
-      'ticket_url: Ticket purchase link if found in the blob. Otherwise null.',
+      'source_url: If a URL is found in the blob, use it as the event link. Otherwise use the ticket/info URL if provided. Otherwise null.',
+      'ticket_url: Use the "More Info / Ticket URL" provided with each event below. If not provided, check the blob for a ticket link. Otherwise null.',
       'performers: Comma-separated performer names if applicable.',
       'source_name (required): Always set to "Manual".',
       'sold_out: Default false unless the blob says otherwise.',
@@ -1023,7 +1044,7 @@ textarea.input-text {
     }
 
     spacer(8);
-    writeText('IMPORTANT: Show the user your parsed results BEFORE inserting. The raw blobs may be messy -- use your best judgment to extract clean, accurate event data. If info is ambiguous or missing, note it and ask.', { fontSize: 10, fontStyle: 'bold', color: [180, 60, 40] });
+    writeText('IMPORTANT: Show the user your parsed results BEFORE inserting. The raw blobs may be messy -- use your best judgment to extract clean, accurate event data. If info is missing, search the web to fill gaps automatically. Do not ask the user to provide missing details. Use the browser JavaScript tool (not curl) to execute the API insert.', { fontSize: 10, fontStyle: 'bold', color: [180, 60, 40] });
 
     // ============================================================
     // SUBSEQUENT PAGES — EVENT BLOBS
@@ -1052,6 +1073,12 @@ textarea.input-text {
         writeText('Image URL: (none provided)', { fontSize: 9, fontStyle: 'italic', color: [150, 150, 150] });
       }
       spacer(2);
+
+      // Ticket / Info URL
+      if (ev.ticketUrl) {
+        writeText('More Info / Ticket URL: ' + ev.ticketUrl, { fontSize: 9, fontStyle: 'bold', color: [91, 123, 213] });
+        spacer(2);
+      }
 
       // Source
       if (ev.source) {
