@@ -1771,9 +1771,20 @@ body {
   async function removeGhostTag(ghostPostId, postTitle) {
     if (!confirm('Remove #featuredevent tag from "' + postTitle + '" in Ghost?')) return;
     try {
+      // Pull the current Supabase session and forward the access token so the
+      // /api/ghost-admin route can verify the caller is signed in.
+      var sessRes = await sb.auth.getSession();
+      var accessToken = sessRes && sessRes.data && sessRes.data.session && sessRes.data.session.access_token;
+      if (!accessToken) {
+        alert('Your session has expired. Please sign in again.');
+        return;
+      }
       var resp = await fetch('/api/ghost-admin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + accessToken
+        },
         body: JSON.stringify({ action: 'remove-featured-tag', postId: ghostPostId })
       });
       var data = await resp.json();
