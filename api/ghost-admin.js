@@ -5,6 +5,11 @@ const GHOST_URL = process.env.GHOST_URL || 'https://the-bold-italic.ghost.io';
 const GHOST_ADMIN_KEY_ID = process.env.GHOST_ADMIN_KEY_ID;
 const GHOST_ADMIN_SECRET = process.env.GHOST_ADMIN_SECRET;
 
+// Supabase — used to validate the caller's session token before allowing this
+// admin action. Same pattern as insert-event.js / update-event.js / delete-event.js.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://scawgrjcjgcmvsimvash.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+
 function createGhostAdminJWT() {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: 'HS256', typ: 'JWT', kid: GHOST_ADMIN_KEY_ID };
@@ -21,6 +26,15 @@ function createGhostAdminJWT() {
 }
 
 module.exports = async function handler(req, res) {
+  // CORS headers (matches the other /api routes)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   // Only allow POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -29,6 +43,37 @@ module.exports = async function handler(req, res) {
   // Check that secrets are configured
   if (!GHOST_ADMIN_KEY_ID || !GHOST_ADMIN_SECRET) {
     return res.status(500).json({ error: 'Ghost Admin credentials not configured' });
+  }
+
+  // ---- Validate the caller's Supabase auth token ----
+  // This was missing previously: anyone with the URL could POST to this
+  // endpoint and strip #featuredevent tags from any Ghost post by ID.
+  // Now we require a valid Supabase session token, same as the other routes.
+  var authHeader = req.headers['authorization'] || '';
+  var token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+  if (!token) {
+    return res.status(401).json({ error: 'Missing Authorization header. Provide Bearer <supabase_access_token>.' });
+  }
+
+  try {
+    var userResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'apikey': SUPABASE_ANON_KEY
+      }
+    });
+
+    if (!userResp.ok) {
+      return res.status(401).json({ error: 'Invalid or expired auth token.' });
+    }
+
+    var userData = await userResp.json();
+    if (!userData.id) {
+      return res.status(401).json({ error: 'Could not verify user from token.' });
+    }
+  } catch (err) {
+    return res.status(500).json({ error: 'Auth verification failed: ' + err.message });
   }
 
   const { action, postId } = req.body || {};
