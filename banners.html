@@ -102,7 +102,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .stats-pages { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
 .stats-pages .pg-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
 .stats-pages .pg-row:last-child { border-bottom: 0; }
-.stats-pages .pg-url { color: var(--blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
+.stats-pages .pg-url { color: var(--blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; text-decoration: none; }
+.stats-pages a.pg-url:hover { text-decoration: underline; }
 .stats-pages .pg-count { color: #888; font-variant-numeric: tabular-nums; }
 .stats-loading { color: #888; font-size: 13px; }
 
@@ -605,34 +606,48 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
 
   // ---- Stats rendering ----
+  // Display window for the daily sparkline, in days. Bump higher to look back
+  // further; lifetime totals above the chart are unaffected by this number.
+  var STATS_WINDOW_DAYS = 30;
+
   function renderStatsHTML(b) {
     var s = statsCache[b.id] || { impressions: [], clicks: [] };
-    var impDaily = bucketByDay(s.impressions, 'viewable_at', 14);
-    var clkDaily = bucketByDay(s.clicks, 'clicked_at', 14);
-    var topPages = topReferrers(s.impressions, 5);
+    var impDaily = bucketByDay(s.impressions, 'viewable_at', STATS_WINDOW_DAYS);
+    var clkDaily = bucketByDay(s.clicks, 'clicked_at', STATS_WINDOW_DAYS);
+    var topPages = topReferrers(s.impressions, 10);
     var imp = s.impressions.length, clk = s.clicks.length;
     var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
+    var winLabel = 'Last ' + STATS_WINDOW_DAYS + ' days';
+    var sparkLabel = STATS_WINDOW_DAYS + 'd';
 
     return ''
       + '<div class="stats-wrap">'
       +   '<div class="stats-grid">'
-      +     statCard('Impressions', imp, 'Last 14 days: ' + impDaily.reduce(sum, 0))
-      +     statCard('Clicks',      clk, 'Last 14 days: ' + clkDaily.reduce(sum, 0))
+      +     statCard('Impressions', imp, winLabel + ': ' + impDaily.reduce(sum, 0))
+      +     statCard('Clicks',      clk, winLabel + ': ' + clkDaily.reduce(sum, 0))
       +   '</div>'
       +   '<div class="stats-grid" style="margin-bottom:14px;">'
       +     statCard('CTR', ctr, '&nbsp;')
       +     statCard('Status', bannerStatus(b), '&nbsp;')
       +   '</div>'
       +   '<div class="stats-spark-wrap">'
-      +     '<div class="stats-spark"><div class="spark-label">Impressions, 14d</div>' + sparkline(impDaily, '#5b7bd5') + '</div>'
-      +     '<div class="stats-spark"><div class="spark-label">Clicks, 14d</div>' + sparkline(clkDaily, '#27ae60') + '</div>'
+      +     '<div class="stats-spark"><div class="spark-label">Impressions, ' + sparkLabel + '</div>' + sparkline(impDaily, '#5b7bd5') + '</div>'
+      +     '<div class="stats-spark"><div class="spark-label">Clicks, ' + sparkLabel + '</div>' + sparkline(clkDaily, '#27ae60') + '</div>'
       +   '</div>'
       +   '<div class="stats-pages">'
       +     '<div class="spark-label" style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin-bottom:4px;">Top referring pages</div>'
       +     (topPages.length === 0
-        ? '<div class="pg-row"><div class="pg-url">—</div><div class="pg-count">0</div></div>'
+        ? '<div class="pg-row"><span class="pg-url">—</span><div class="pg-count">0</div></div>'
         : topPages.map(function (p) {
-            return '<div class="pg-row"><div class="pg-url" title="' + escapeAttr(p.url) + '">' + escapeHTML(p.url || '(direct)') + '</div><div class="pg-count">' + p.count + '</div></div>';
+            // Render the URL as a clickable anchor when we have one; fall back
+            // to a plain span for "(direct)" / empty referrer rows.
+            var urlCell;
+            if (p.url) {
+              urlCell = '<a class="pg-url" href="' + escapeAttr(p.url) + '" target="_blank" rel="noopener noreferrer" title="' + escapeAttr(p.url) + '">' + escapeHTML(p.url) + '</a>';
+            } else {
+              urlCell = '<span class="pg-url" title="No referrer was sent">(direct)</span>';
+            }
+            return '<div class="pg-row">' + urlCell + '<div class="pg-count">' + p.count + '</div></div>';
           }).join(''))
       +   '</div>'
       + '</div>';
@@ -667,17 +682,19 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var w = 280, h = 60, padX = 4, padY = 6;
     var max = Math.max.apply(null, data); if (max === 0) max = 1;
     var step = (w - padX * 2) / Math.max(data.length - 1, 1);
+    // Scale dot size to bucket count so they don't overlap on wider windows.
+    var dotR = step >= 14 ? 2.2 : (step >= 7 ? 1.8 : (step >= 4 ? 1.3 : 0));
     var pts = data.map(function (v, i) {
       var x = padX + i * step;
       var y = h - padY - (v / max) * (h - padY * 2);
       return x.toFixed(1) + ',' + y.toFixed(1);
     });
     var path = 'M ' + pts.join(' L ');
-    var dots = data.map(function (v, i) {
+    var dots = dotR > 0 ? data.map(function (v, i) {
       var x = padX + i * step;
       var y = h - padY - (v / max) * (h - padY * 2);
-      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.2" fill="' + color + '" />';
-    }).join('');
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + dotR + '" fill="' + color + '" />';
+    }).join('') : '';
     return ''
       + '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
       +   '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
