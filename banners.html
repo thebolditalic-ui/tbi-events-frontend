@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBI Banners Admin</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #fff6e6;
+  --dark: #1E1B1B;
+  --gold: #FFD682;
+  --blue: #5b7bd5;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --border: #e0d8cc;
+  --bg-alt: #faf5eb;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --title-font: 'Georgia', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--cream); color: var(--dark); min-height: 100vh; }
+
+/* ---- Login Screen ---- */
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.login-box h1 { font-family: var(--title-font); font-size: 22px; margin-bottom: 6px; }
+.login-box p { color: #888; font-size: 13px; margin-bottom: 24px; }
+.login-box label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+.login-box input[type="email"], .login-box input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 16px; background: var(--bg-alt); }
+.login-box input:focus { outline: none; border-color: var(--blue); }
+
+/* ---- Buttons ---- */
+.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--dark); color: #fff; width: 100%; }
+.btn-gold { background: var(--gold); color: var(--dark); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+
+/* ---- Admin Shell ---- */
+#admin-app { display: none; }
+.admin-header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.admin-header-left { display: flex; align-items: center; gap: 20px; }
+.admin-header h1 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
+.admin-nav { display: flex; gap: 4px; }
+.admin-nav a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 4px; }
+.admin-nav a:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.06); }
+.admin-nav a.active { color: #fff; background: rgba(255,255,255,0.12); }
+.user-info { display: flex; align-items: center; gap: 14px; font-size: 13px; color: rgba(255,255,255,0.75); }
+
+/* ---- Page sections ---- */
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.section-title { font-family: var(--title-font); font-size: 22px; margin: 0 0 12px; }
+.section-sub { color: #888; font-size: 13px; margin-bottom: 14px; }
+
+/* ---- Active banner card ---- */
+.active-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
+.active-card.empty { color: #888; font-size: 14px; padding: 18px; }
+.active-card .thumb { width: 120px; height: 60px; object-fit: cover; border-radius: 6px; background: var(--bg-alt); flex: 0 0 auto; }
+.active-card .info { flex: 1; min-width: 0; }
+.active-card .name { font-weight: 600; font-size: 15px; }
+.active-card .meta { color: #888; font-size: 12px; margin-top: 4px; }
+.active-card .actions { display: flex; gap: 8px; }
+
+/* ---- Toolbar ---- */
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.toolbar h2 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
+
+/* ---- Banner list table ---- */
+.bn-table-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.bn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bn-table th, .bn-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.bn-table thead th { background: var(--bg-alt); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; }
+.bn-table tbody tr { cursor: pointer; }
+.bn-table tbody tr:hover { background: var(--bg-alt); }
+.bn-table tbody tr.expanded { background: var(--bg-alt); }
+.bn-table .thumb-cell { width: 80px; }
+.bn-table .thumb-cell img { width: 64px; height: 32px; object-fit: cover; border-radius: 4px; background: var(--bg-alt); display: block; }
+.bn-table .actions-cell { width: 80px; text-align: right; }
+.status-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.status-active    { background: rgba(39,174,96,0.12);  color: var(--green); }
+.status-scheduled { background: rgba(91,123,213,0.12); color: var(--blue); }
+.status-ended     { background: rgba(0,0,0,0.06);       color: #888; }
+.status-draft     { background: var(--bg-alt);          color: #888; }
+
+/* ---- Stats drawer (per-row, expanded) ---- */
+.stats-row td { padding: 0; background: var(--bg-alt); }
+.stats-wrap { padding: 16px 18px; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.stats-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.stats-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+.stats-card .num { font-size: 22px; font-weight: 700; }
+.stats-card .num small { font-size: 12px; color: #888; font-weight: 400; margin-left: 6px; }
+.stats-spark-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.stats-spark { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.stats-spark .spark-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+.stats-spark svg { display: block; width: 100%; height: 60px; }
+.stats-pages { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.stats-pages .pg-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
+.stats-pages .pg-row:last-child { border-bottom: 0; }
+.stats-pages .pg-url { color: var(--blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 8px; }
+.stats-pages .pg-count { color: #888; font-variant-numeric: tabular-nums; }
+.stats-loading { color: #888; font-size: 13px; }
+
+/* ---- Modal ---- */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+.modal-overlay.show { display: flex; }
+.modal { background: #fff; border-radius: 12px; width: 100%; max-width: 720px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.modal-head h2 { font-family: var(--title-font); font-size: 19px; font-weight: 400; }
+.close-btn { background: none; border: 0; font-size: 24px; line-height: 1; color: #888; cursor: pointer; padding: 0 4px; }
+.modal-body { padding: 18px 20px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 8px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.form-row.single { grid-template-columns: 1fr; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+.form-group input[type="text"], .form-group input[type="url"], .form-group input[type="number"], .form-group input[type="datetime-local"], .form-group select, .form-group textarea {
+  width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: var(--bg-alt); font-family: inherit;
+}
+.form-group textarea { resize: vertical; min-height: 56px; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--blue); }
+.form-group .hint { font-size: 11px; color: #888; margin-top: 3px; }
+.form-check { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.form-check input { accent-color: var(--gold); }
+
+/* ---- Upload zone ---- */
+.upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 18px; text-align: center; background: var(--bg-alt); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.upload-zone:hover, .upload-zone.dragging { border-color: var(--blue); background: #fff; }
+.upload-zone.has-image { padding: 10px; cursor: default; }
+.upload-zone .uz-prompt { color: #888; font-size: 13px; }
+.upload-zone .uz-sub { color: #aaa; font-size: 11px; margin-top: 2px; }
+.upload-zone img { max-width: 100%; max-height: 160px; display: block; margin: 0 auto; border-radius: 4px; }
+.upload-zone .uz-meta { font-size: 11px; color: #888; margin-top: 6px; text-align: center; }
+.upload-zone .uz-replace { margin-top: 6px; font-size: 12px; color: var(--blue); cursor: pointer; }
+.upload-zone .uz-progress { font-size: 12px; color: #888; }
+
+.status-msg { padding: 10px 12px; border-radius: 6px; font-size: 13px; display: none; margin-bottom: 12px; }
+.status-msg.show { display: block; }
+.status-msg.ok    { background: rgba(39,174,96,0.1);   color: var(--green); border: 1px solid rgba(39,174,96,0.3); }
+.status-msg.err   { background: rgba(231,76,60,0.1);   color: var(--red);   border: 1px solid rgba(231,76,60,0.3); }
+.status-msg.warn  { background: rgba(255,214,130,0.2); color: #8a6d1f;       border: 1px solid var(--gold); }
+
+/* ---- Confirm dialog ---- */
+#confirm-dialog { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 60; align-items: center; justify-content: center; padding: 20px; }
+#confirm-dialog.show { display: flex; }
+.confirm-box { background: #fff; border-radius: 10px; padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.confirm-box h3 { font-family: var(--title-font); font-size: 18px; font-weight: 400; margin-bottom: 8px; }
+.confirm-box p { color: #555; font-size: 14px; line-height: 1.45; margin-bottom: 18px; }
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+@media (max-width: 720px) {
+  .form-row { grid-template-columns: 1fr; }
+  .stats-grid, .stats-spark-wrap { grid-template-columns: 1fr; }
+  .bn-table th:nth-child(4), .bn-table td:nth-child(4),
+  .bn-table th:nth-child(5), .bn-table td:nth-child(5) { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Banners</h1>
+    <p>Sign in to manage banner ads.</p>
+    <div class="login-error" id="login-error"></div>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1>TBI Banners Admin</h1>
+      <nav class="admin-nav">
+        <a href="/admin">Events</a>
+        <a href="/queue">Manual Queue</a>
+        <a href="/banners" class="active">Banners</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <h2 class="section-title">Currently live</h2>
+    <p class="section-sub">One banner runs at a time. When no banner is active, Mediavine has the slot.</p>
+    <div id="active-card-wrap"></div>
+
+    <div class="toolbar" style="margin-top:24px;">
+      <h2>All banners</h2>
+      <button class="btn btn-gold btn-sm" id="add-banner-btn">+ New banner</button>
+    </div>
+
+    <div class="bn-table-wrap">
+      <table class="bn-table">
+        <thead>
+          <tr>
+            <th class="thumb-cell">&nbsp;</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Impr.</th>
+            <th>Clicks</th>
+            <th>CTR</th>
+            <th class="actions-cell">&nbsp;</th>
+          </tr>
+        </thead>
+        <tbody id="bn-tbody"><tr><td colspan="9" style="padding:18px;text-align:center;color:#888;font-size:13px;">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BANNER FORM MODAL ============ -->
+<div class="modal-overlay" id="banner-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">New banner</h2>
+      <button class="close-btn" id="modal-close">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="form-status" class="status-msg"></div>
+      <input type="hidden" id="bn-id">
+      <input type="hidden" id="bn-creative-url">
+      <input type="hidden" id="bn-creative-w">
+      <input type="hidden" id="bn-creative-h">
+      <input type="hidden" id="bn-creative-mobile-url">
+      <input type="hidden" id="bn-creative-mobile-w">
+      <input type="hidden" id="bn-creative-mobile-h">
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label for="bn-name">Name (internal)</label>
+          <input type="text" id="bn-name" placeholder="e.g. Superfair – June takeover">
+          <div class="hint">For your reference only. Not shown to readers.</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Creative — desktop *</label>
+          <div class="upload-zone" id="uz-desktop" data-target="desktop">
+            <div class="uz-content">
+              <div class="uz-prompt">Click or drag image here</div>
+              <div class="uz-sub">JPEG, PNG, WebP, or GIF · max 5 MB</div>
+            </div>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Creative — mobile (optional)</label>
+          <div class="upload-zone" id="uz-mobile" data-target="mobile">
+            <div class="uz-content">
+              <div class="uz-prompt">Click or drag image here</div>
+              <div class="uz-sub">Used on phones if provided</div>
+            </div>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label for="bn-dest">Destination URL *</label>
+          <input type="url" id="bn-dest" placeholder="https://...">
+          <div class="hint">Must be a TBI-owned destination (events.thebolditalic.com or sponsored editorial).</div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label for="bn-alt">Alt text *</label>
+          <input type="text" id="bn-alt" placeholder="Describes the creative for screen readers">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bn-disclosure">Disclosure label</label>
+          <select id="bn-disclosure">
+            <option value="">— None (house ad) —</option>
+            <option value="Sponsored">Sponsored</option>
+            <option value="Presented by">Presented by</option>
+          </select>
+          <div class="hint">Shown above the image. Leave blank for in-house promotion.</div>
+        </div>
+        <div class="form-group">
+          <label for="bn-paragraph">Place after paragraph #</label>
+          <input type="number" id="bn-paragraph" min="1" max="20" value="5">
+          <div class="hint">Default 5. Lower numbers = higher in the article.</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bn-start">Start (optional)</label>
+          <input type="datetime-local" id="bn-start">
+        </div>
+        <div class="form-group">
+          <label for="bn-end">End (optional)</label>
+          <input type="datetime-local" id="bn-end">
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
+          <label class="form-check"><input type="checkbox" id="bn-active"> Set as the live banner</label>
+          <div class="hint">If another banner is currently live, you'll be asked to confirm replacing it.</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" id="form-delete" style="display:none;">Delete</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="btn btn-outline btn-sm" id="form-cancel">Cancel</button>
+        <button class="btn btn-gold btn-sm" id="form-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM DIALOG ============ -->
+<div id="confirm-dialog">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg">…</p>
+    <div class="confirm-actions">
+      <button class="btn btn-outline btn-sm" id="confirm-no">Cancel</button>
+      <button class="btn btn-danger btn-sm" id="confirm-yes">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Config ----
+  var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+  var BUCKET = 'banners';
+
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  // ---- State ----
+  var allBanners = [];
+  var statsCache = {};      // banner_id -> { impressions: [...], clicks: [...] }
+  var expandedBannerId = null;
+  var editingId = null;
+  var pendingConfirmCb = null;
+
+  // ---- DOM refs ----
+  var $loginScreen = document.getElementById('login-screen');
+  var $adminApp = document.getElementById('admin-app');
+  var $loginEmail = document.getElementById('login-email');
+  var $loginPass = document.getElementById('login-pass');
+  var $loginBtn = document.getElementById('login-btn');
+  var $loginError = document.getElementById('login-error');
+  var $logoutBtn = document.getElementById('logout-btn');
+  var $userEmail = document.getElementById('user-email');
+  var $addBtn = document.getElementById('add-banner-btn');
+  var $tbody = document.getElementById('bn-tbody');
+  var $activeWrap = document.getElementById('active-card-wrap');
+  var $modal = document.getElementById('banner-modal');
+  var $modalTitle = document.getElementById('modal-title');
+  var $modalClose = document.getElementById('modal-close');
+  var $formStatus = document.getElementById('form-status');
+  var $formSave = document.getElementById('form-save');
+  var $formCancel = document.getElementById('form-cancel');
+  var $formDelete = document.getElementById('form-delete');
+  var $confirmDialog = document.getElementById('confirm-dialog');
+  var $confirmTitle = document.getElementById('confirm-title');
+  var $confirmMsg = document.getElementById('confirm-msg');
+  var $confirmYes = document.getElementById('confirm-yes');
+  var $confirmNo = document.getElementById('confirm-no');
+
+  // ---- Auth ----
+  async function checkSession() {
+    var sess = await sb.auth.getSession();
+    if (sess.data && sess.data.session) showAdmin(sess.data.session.user);
+  }
+  function showAdmin(user) {
+    $loginScreen.style.display = 'none';
+    $adminApp.style.display = 'block';
+    $userEmail.textContent = user.email || '';
+    loadBanners();
+  }
+  $loginBtn.addEventListener('click', async function () {
+    $loginError.style.display = 'none';
+    var email = $loginEmail.value.trim();
+    var pass = $loginPass.value;
+    if (!email || !pass) {
+      $loginError.textContent = 'Enter email and password';
+      $loginError.style.display = 'block';
+      return;
+    }
+    $loginBtn.textContent = 'Signing in…';
+    $loginBtn.disabled = true;
+    var res = await sb.auth.signInWithPassword({ email: email, password: pass });
+    $loginBtn.textContent = 'Sign In';
+    $loginBtn.disabled = false;
+    if (res.error) {
+      $loginError.textContent = res.error.message;
+      $loginError.style.display = 'block';
+      return;
+    }
+    showAdmin(res.data.user);
+  });
+  $loginPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') $loginBtn.click(); });
+  $logoutBtn.addEventListener('click', async function () {
+    await sb.auth.signOut();
+    location.reload();
+  });
+
+  // ---- Confirm dialog helper ----
+  function confirmDialog(title, msg, yesLabel, danger) {
+    return new Promise(function (resolve) {
+      $confirmTitle.textContent = title;
+      $confirmMsg.textContent = msg;
+      $confirmYes.textContent = yesLabel || 'Confirm';
+      $confirmYes.classList.toggle('btn-danger', !!danger);
+      $confirmYes.classList.toggle('btn-gold', !danger);
+      $confirmDialog.classList.add('show');
+      pendingConfirmCb = resolve;
+    });
+  }
+  $confirmYes.addEventListener('click', function () {
+    $confirmDialog.classList.remove('show');
+    if (pendingConfirmCb) { pendingConfirmCb(true); pendingConfirmCb = null; }
+  });
+  $confirmNo.addEventListener('click', function () {
+    $confirmDialog.classList.remove('show');
+    if (pendingConfirmCb) { pendingConfirmCb(false); pendingConfirmCb = null; }
+  });
+
+  // ---- Status helpers ----
+  function setStatus(msg, kind) {
+    $formStatus.textContent = msg;
+    $formStatus.className = 'status-msg show ' + (kind || 'ok');
+  }
+  function clearStatus() { $formStatus.className = 'status-msg'; $formStatus.textContent = ''; }
+
+  // ---- Status / period helpers ----
+  function bannerStatus(b) {
+    var now = new Date();
+    if (!b.is_active) return 'Draft';
+    if (b.start_at && new Date(b.start_at) > now) return 'Scheduled';
+    if (b.end_at && new Date(b.end_at) < now) return 'Ended';
+    return 'Active';
+  }
+  function statusPill(s) {
+    var cls = 'status-' + s.toLowerCase();
+    return '<span class="status-pill ' + cls + '">' + s + '</span>';
+  }
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+  function toLocalDtInput(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function fromLocalDtInput(v) {
+    if (!v) return null;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  // ---- Load banners + counts ----
+  async function loadBanners() {
+    var res = await sb.from('banners').select('*').order('created_at', { ascending: false });
+    if (res.error) {
+      $tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;color:var(--red);">Failed to load: ' + res.error.message + '</td></tr>';
+      return;
+    }
+    allBanners = res.data || [];
+    statsCache = {};
+
+    // Single-pass count fetches (only for banners that exist).
+    if (allBanners.length > 0) {
+      var ids = allBanners.map(function (b) { return b.id; });
+      var idFilter = ids.map(function (id) { return '"' + id + '"'; }).join(',');
+      // Aggregate impressions and clicks. We pull the rows themselves (kept light)
+      // so we can use them later for sparklines without re-fetching.
+      var impRes = await sb.from('banner_impressions')
+        .select('banner_id,viewable_at,page_url')
+        .in('banner_id', ids);
+      var clkRes = await sb.from('banner_clicks')
+        .select('banner_id,clicked_at,page_url')
+        .in('banner_id', ids);
+      var imps = (impRes.data || []);
+      var clks = (clkRes.data || []);
+      ids.forEach(function (id) {
+        statsCache[id] = {
+          impressions: imps.filter(function (r) { return r.banner_id === id; }),
+          clicks: clks.filter(function (r) { return r.banner_id === id; })
+        };
+      });
+      // Suppress unused
+      void idFilter;
+    }
+
+    renderActiveCard();
+    renderTable();
+  }
+
+  // ---- Render active card ----
+  function renderActiveCard() {
+    var live = allBanners.find(function (b) { return bannerStatus(b) === 'Active'; });
+    if (!live) {
+      $activeWrap.innerHTML = '<div class="active-card empty">No active banner. Mediavine has the slot on every post.</div>';
+      return;
+    }
+    var s = statsCache[live.id] || { impressions: [], clicks: [] };
+    var meta = [];
+    meta.push('Started ' + fmtDate(live.start_at || live.created_at));
+    if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
+    meta.push(s.impressions.length + ' impressions');
+    meta.push(s.clicks.length + ' clicks');
+    var card = ''
+      + '<div class="active-card">'
+      +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
+      +   '<div class="info">'
+      +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill('Active') + '</div>'
+      +     '<div class="meta">' + meta.join(' · ') + '</div>'
+      +   '</div>'
+      +   '<div class="actions">'
+      +     '<button class="btn btn-outline btn-sm" data-edit="' + live.id + '">Edit</button>'
+      +     '<button class="btn btn-danger btn-sm" data-deactivate="' + live.id + '">Deactivate</button>'
+      +   '</div>'
+      + '</div>';
+    $activeWrap.innerHTML = card;
+  }
+
+  // ---- Render table ----
+  function renderTable() {
+    if (allBanners.length === 0) {
+      $tbody.innerHTML = '<tr><td colspan="9" style="padding:18px;text-align:center;color:#888;font-size:13px;">No banners yet. Click "+ New banner" to create one.</td></tr>';
+      return;
+    }
+    var html = '';
+    allBanners.forEach(function (b) {
+      var s = statsCache[b.id] || { impressions: [], clicks: [] };
+      var imp = s.impressions.length;
+      var clk = s.clicks.length;
+      var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
+      var status = bannerStatus(b);
+      html += ''
+        + '<tr data-id="' + b.id + '" class="' + (expandedBannerId === b.id ? 'expanded' : '') + '">'
+        +   '<td class="thumb-cell"><img src="' + escapeAttr(b.creative_url) + '" alt=""></td>'
+        +   '<td>' + escapeHTML(b.name) + '</td>'
+        +   '<td>' + statusPill(status) + '</td>'
+        +   '<td>' + fmtDate(b.start_at) + '</td>'
+        +   '<td>' + fmtDate(b.end_at) + '</td>'
+        +   '<td>' + imp + '</td>'
+        +   '<td>' + clk + '</td>'
+        +   '<td>' + ctr + '</td>'
+        +   '<td class="actions-cell"><button class="btn btn-outline btn-sm" data-edit="' + b.id + '">Edit</button></td>'
+        + '</tr>';
+      if (expandedBannerId === b.id) {
+        html += '<tr class="stats-row"><td colspan="9">' + renderStatsHTML(b) + '</td></tr>';
+      }
+    });
+    $tbody.innerHTML = html;
+  }
+
+  // ---- Stats rendering ----
+  function renderStatsHTML(b) {
+    var s = statsCache[b.id] || { impressions: [], clicks: [] };
+    var impDaily = bucketByDay(s.impressions, 'viewable_at', 14);
+    var clkDaily = bucketByDay(s.clicks, 'clicked_at', 14);
+    var topPages = topReferrers(s.impressions, 5);
+    var imp = s.impressions.length, clk = s.clicks.length;
+    var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
+
+    return ''
+      + '<div class="stats-wrap">'
+      +   '<div class="stats-grid">'
+      +     statCard('Impressions', imp, 'Last 14 days: ' + impDaily.reduce(sum, 0))
+      +     statCard('Clicks',      clk, 'Last 14 days: ' + clkDaily.reduce(sum, 0))
+      +   '</div>'
+      +   '<div class="stats-grid" style="margin-bottom:14px;">'
+      +     statCard('CTR', ctr, '&nbsp;')
+      +     statCard('Status', bannerStatus(b), '&nbsp;')
+      +   '</div>'
+      +   '<div class="stats-spark-wrap">'
+      +     '<div class="stats-spark"><div class="spark-label">Impressions, 14d</div>' + sparkline(impDaily, '#5b7bd5') + '</div>'
+      +     '<div class="stats-spark"><div class="spark-label">Clicks, 14d</div>' + sparkline(clkDaily, '#27ae60') + '</div>'
+      +   '</div>'
+      +   '<div class="stats-pages">'
+      +     '<div class="spark-label" style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin-bottom:4px;">Top referring pages</div>'
+      +     (topPages.length === 0
+        ? '<div class="pg-row"><div class="pg-url">—</div><div class="pg-count">0</div></div>'
+        : topPages.map(function (p) {
+            return '<div class="pg-row"><div class="pg-url" title="' + escapeAttr(p.url) + '">' + escapeHTML(p.url || '(direct)') + '</div><div class="pg-count">' + p.count + '</div></div>';
+          }).join(''))
+      +   '</div>'
+      + '</div>';
+  }
+  function statCard(label, num, sub) {
+    return '<div class="stats-card"><div class="label">' + label + '</div><div class="num">' + num + '<small>' + sub + '</small></div></div>';
+  }
+  function sum(a, b) { return a + b; }
+  function bucketByDay(rows, dateField, days) {
+    var buckets = new Array(days).fill(0);
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    for (var i = 0; i < rows.length; i++) {
+      var d = new Date(rows[i][dateField]);
+      d.setHours(0, 0, 0, 0);
+      var diff = Math.floor((today - d) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff < days) buckets[days - 1 - diff]++;
+    }
+    return buckets;
+  }
+  function topReferrers(rows, limit) {
+    var map = {};
+    for (var i = 0; i < rows.length; i++) {
+      var u = rows[i].page_url || '';
+      map[u] = (map[u] || 0) + 1;
+    }
+    var arr = Object.keys(map).map(function (k) { return { url: k, count: map[k] }; });
+    arr.sort(function (a, b) { return b.count - a.count; });
+    return arr.slice(0, limit);
+  }
+  // Inline-SVG sparkline. No library needed.
+  function sparkline(data, color) {
+    var w = 280, h = 60, padX = 4, padY = 6;
+    var max = Math.max.apply(null, data); if (max === 0) max = 1;
+    var step = (w - padX * 2) / Math.max(data.length - 1, 1);
+    var pts = data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var path = 'M ' + pts.join(' L ');
+    var dots = data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.2" fill="' + color + '" />';
+    }).join('');
+    return ''
+      + '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+      +   '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
+      +   dots
+      + '</svg>';
+  }
+
+  // ---- Row click → expand stats ----
+  $tbody.addEventListener('click', function (e) {
+    var editBtn = e.target.closest('[data-edit]');
+    if (editBtn) { e.stopPropagation(); openModal(editBtn.getAttribute('data-edit')); return; }
+    var tr = e.target.closest('tr[data-id]');
+    if (!tr) return;
+    var id = tr.getAttribute('data-id');
+    expandedBannerId = (expandedBannerId === id) ? null : id;
+    renderTable();
+  });
+
+  // ---- Active card actions ----
+  $activeWrap.addEventListener('click', async function (e) {
+    var editBtn = e.target.closest('[data-edit]');
+    if (editBtn) { openModal(editBtn.getAttribute('data-edit')); return; }
+    var deactBtn = e.target.closest('[data-deactivate]');
+    if (deactBtn) {
+      var id = deactBtn.getAttribute('data-deactivate');
+      var ok = await confirmDialog('Deactivate banner?', 'Mediavine will take the slot on every post until another banner is activated.', 'Deactivate', true);
+      if (!ok) return;
+      var upd = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id);
+      if (upd.error) { alert('Failed: ' + upd.error.message); return; }
+      loadBanners();
+    }
+  });
+
+  // ---- Modal lifecycle ----
+  $addBtn.addEventListener('click', function () { openModal(null); });
+  $modalClose.addEventListener('click', closeModal);
+  $formCancel.addEventListener('click', closeModal);
+  $modal.addEventListener('click', function (e) { if (e.target === $modal) closeModal(); });
+
+  function openModal(id) {
+    editingId = id || null;
+    clearStatus();
+    resetUploadZone('desktop');
+    resetUploadZone('mobile');
+    if (id) {
+      var b = allBanners.find(function (x) { return x.id === id; });
+      if (!b) return;
+      $modalTitle.textContent = 'Edit banner';
+      document.getElementById('bn-id').value = b.id;
+      document.getElementById('bn-name').value = b.name || '';
+      document.getElementById('bn-creative-url').value = b.creative_url || '';
+      document.getElementById('bn-creative-w').value = b.natural_width || '';
+      document.getElementById('bn-creative-h').value = b.natural_height || '';
+      document.getElementById('bn-creative-mobile-url').value = b.creative_url_mobile || '';
+      document.getElementById('bn-creative-mobile-w').value = b.natural_width_mobile || '';
+      document.getElementById('bn-creative-mobile-h').value = b.natural_height_mobile || '';
+      document.getElementById('bn-dest').value = b.destination_url || '';
+      document.getElementById('bn-alt').value = b.alt_text || '';
+      document.getElementById('bn-disclosure').value = b.disclosure_label || '';
+      document.getElementById('bn-paragraph').value = b.placement_paragraph || 5;
+      document.getElementById('bn-start').value = toLocalDtInput(b.start_at);
+      document.getElementById('bn-end').value = toLocalDtInput(b.end_at);
+      document.getElementById('bn-active').checked = !!b.is_active;
+      if (b.creative_url) showUploadedImage('desktop', b.creative_url, b.natural_width, b.natural_height);
+      if (b.creative_url_mobile) showUploadedImage('mobile', b.creative_url_mobile, b.natural_width_mobile, b.natural_height_mobile);
+      $formDelete.style.display = '';
+    } else {
+      $modalTitle.textContent = 'New banner';
+      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end'].forEach(function (id) { document.getElementById(id).value = ''; });
+      document.getElementById('bn-paragraph').value = 5;
+      document.getElementById('bn-active').checked = false;
+      $formDelete.style.display = 'none';
+    }
+    $modal.classList.add('show');
+  }
+  function closeModal() {
+    $modal.classList.remove('show');
+    editingId = null;
+  }
+
+  // ---- Upload zones ----
+  function setupUploadZone(target) {
+    var zoneId = target === 'desktop' ? 'uz-desktop' : 'uz-mobile';
+    var zone = document.getElementById(zoneId);
+    var input = zone.querySelector('input[type="file"]');
+    zone.addEventListener('click', function (e) {
+      if (e.target.classList.contains('uz-replace')) { input.value = ''; input.click(); return; }
+      if (zone.classList.contains('has-image')) return;
+      input.click();
+    });
+    zone.addEventListener('dragover', function (e) { e.preventDefault(); zone.classList.add('dragging'); });
+    zone.addEventListener('dragleave', function () { zone.classList.remove('dragging'); });
+    zone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      zone.classList.remove('dragging');
+      var f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) handleUpload(target, f);
+    });
+    input.addEventListener('change', function () {
+      if (input.files && input.files[0]) handleUpload(target, input.files[0]);
+    });
+  }
+  setupUploadZone('desktop');
+  setupUploadZone('mobile');
+
+  function resetUploadZone(target) {
+    var zoneId = target === 'desktop' ? 'uz-desktop' : 'uz-mobile';
+    var zone = document.getElementById(zoneId);
+    zone.classList.remove('has-image');
+    var subText = target === 'desktop' ? 'JPEG, PNG, WebP, or GIF · max 5 MB' : 'Used on phones if provided';
+    zone.querySelector('.uz-content').innerHTML =
+      '<div class="uz-prompt">Click or drag image here</div>' +
+      '<div class="uz-sub">' + subText + '</div>';
+  }
+  function showUploadedImage(target, url, w, h) {
+    var zoneId = target === 'desktop' ? 'uz-desktop' : 'uz-mobile';
+    var zone = document.getElementById(zoneId);
+    zone.classList.add('has-image');
+    var meta = (w && h) ? (w + ' × ' + h + ' px') : 'image';
+    zone.querySelector('.uz-content').innerHTML =
+      '<img src="' + escapeAttr(url) + '" alt="">' +
+      '<div class="uz-meta">' + meta + '</div>' +
+      '<div class="uz-replace">Replace image</div>';
+  }
+  function showUploadProgress(target, msg) {
+    var zoneId = target === 'desktop' ? 'uz-desktop' : 'uz-mobile';
+    var zone = document.getElementById(zoneId);
+    zone.querySelector('.uz-content').innerHTML = '<div class="uz-progress">' + msg + '</div>';
+  }
+
+  async function handleUpload(target, file) {
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file (JPEG, PNG, WebP, or GIF).');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('That image is over 5 MB. Please compress it or choose a smaller version.');
+      return;
+    }
+
+    showUploadProgress(target, 'Reading image…');
+
+    // Capture natural dimensions before uploading.
+    var dims = await new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { resolve({ w: img.naturalWidth, h: img.naturalHeight, url: url }); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+      img.src = url;
+    }).catch(function (e) { return null; });
+
+    if (!dims) {
+      showUploadProgress(target, 'Failed to read image.');
+      return;
+    }
+
+    showUploadProgress(target, 'Uploading…');
+
+    // Filename: <uuid>.<ext>. Path inside bucket is just the filename.
+    var ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    var rand = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('bn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+    var path = rand + '.' + ext;
+
+    var up = await sb.storage.from(BUCKET).upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type
+    });
+    if (up.error) {
+      showUploadProgress(target, 'Upload failed: ' + up.error.message);
+      return;
+    }
+
+    var pub = sb.storage.from(BUCKET).getPublicUrl(path);
+    var publicUrl = pub.data.publicUrl;
+
+    // Store in hidden form fields and reflect in the zone.
+    if (target === 'desktop') {
+      document.getElementById('bn-creative-url').value = publicUrl;
+      document.getElementById('bn-creative-w').value = dims.w;
+      document.getElementById('bn-creative-h').value = dims.h;
+      // Auto-fill banner name from filename if empty
+      var nameEl = document.getElementById('bn-name');
+      if (!nameEl.value.trim()) nameEl.value = file.name.replace(/\.[^.]+$/, '');
+    } else {
+      document.getElementById('bn-creative-mobile-url').value = publicUrl;
+      document.getElementById('bn-creative-mobile-w').value = dims.w;
+      document.getElementById('bn-creative-mobile-h').value = dims.h;
+    }
+    showUploadedImage(target, publicUrl, dims.w, dims.h);
+    URL.revokeObjectURL(dims.url);
+  }
+
+  // ---- Save ----
+  $formSave.addEventListener('click', async function () {
+    clearStatus();
+
+    var creativeUrl = document.getElementById('bn-creative-url').value.trim();
+    var name = document.getElementById('bn-name').value.trim();
+    var dest = document.getElementById('bn-dest').value.trim();
+    var alt = document.getElementById('bn-alt').value.trim();
+    var disclosure = document.getElementById('bn-disclosure').value || null;
+    var paragraph = parseInt(document.getElementById('bn-paragraph').value, 10) || 5;
+    var startAt = fromLocalDtInput(document.getElementById('bn-start').value);
+    var endAt = fromLocalDtInput(document.getElementById('bn-end').value);
+    var isActive = document.getElementById('bn-active').checked;
+
+    if (!creativeUrl) { setStatus('Please upload a desktop creative.', 'err'); return; }
+    if (!dest)        { setStatus('Destination URL is required.', 'err'); return; }
+    if (!alt)         { setStatus('Alt text is required.', 'err'); return; }
+    if (!name)        { setStatus('Name is required.', 'err'); return; }
+
+    if (startAt && endAt && new Date(endAt) <= new Date(startAt)) {
+      setStatus('End must be after start.', 'err'); return;
+    }
+
+    var record = {
+      name: name,
+      creative_url: creativeUrl,
+      creative_url_mobile: document.getElementById('bn-creative-mobile-url').value.trim() || null,
+      natural_width:  parseInt(document.getElementById('bn-creative-w').value, 10) || null,
+      natural_height: parseInt(document.getElementById('bn-creative-h').value, 10) || null,
+      natural_width_mobile:  parseInt(document.getElementById('bn-creative-mobile-w').value, 10) || null,
+      natural_height_mobile: parseInt(document.getElementById('bn-creative-mobile-h').value, 10) || null,
+      destination_url: dest,
+      alt_text: alt,
+      disclosure_label: disclosure,
+      placement_paragraph: paragraph,
+      is_active: isActive,
+      start_at: startAt,
+      end_at: endAt,
+      updated_at: new Date().toISOString()
+    };
+
+    // If activating, check whether another active banner exists and confirm replacement.
+    if (isActive) {
+      var others = allBanners.filter(function (b) {
+        return b.id !== editingId && bannerStatus(b) === 'Active';
+      });
+      if (others.length > 0) {
+        var other = others[0];
+        var ok = await confirmDialog(
+          'Replace currently-active banner?',
+          '"' + other.name + '" is live right now. Activating this banner will deactivate "' + other.name + '". Continue?',
+          'Replace', false
+        );
+        if (!ok) return;
+        var deact = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', other.id);
+        if (deact.error) { setStatus('Failed to deactivate previous: ' + deact.error.message, 'err'); return; }
+      }
+    }
+
+    $formSave.disabled = true;
+    $formSave.textContent = 'Saving…';
+    var res;
+    if (editingId) {
+      res = await sb.from('banners').update(record).eq('id', editingId).select().single();
+    } else {
+      res = await sb.from('banners').insert(record).select().single();
+    }
+    $formSave.disabled = false;
+    $formSave.textContent = 'Save';
+
+    if (res.error) { setStatus('Save failed: ' + res.error.message, 'err'); return; }
+
+    closeModal();
+    loadBanners();
+  });
+
+  // ---- Delete ----
+  $formDelete.addEventListener('click', async function () {
+    if (!editingId) return;
+    var b = allBanners.find(function (x) { return x.id === editingId; });
+    if (!b) return;
+    var ok = await confirmDialog('Delete banner?', 'This cannot be undone. Stats history for "' + b.name + '" will also be removed.', 'Delete', true);
+    if (!ok) return;
+    var del = await sb.from('banners').delete().eq('id', editingId);
+    if (del.error) { setStatus('Delete failed: ' + del.error.message, 'err'); return; }
+    closeModal();
+    loadBanners();
+  });
+
+  // ---- Escape helpers ----
+  function escapeHTML(s) {
+    if (s == null) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function escapeAttr(s) { return escapeHTML(s); }
+
+  // ---- Boot ----
+  checkSession();
+})();
+</script>
+</body>
+</html>
