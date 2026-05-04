@@ -694,7 +694,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   $addBtn.addEventListener('click', function () { openModal(null); });
   $modalClose.addEventListener('click', closeModal);
   $formCancel.addEventListener('click', closeModal);
-  $modal.addEventListener('click', function (e) { if (e.target === $modal) closeModal(); });
+  // Note: no overlay-click handler — clicking outside the modal does NOT close it.
+  // Same convention as admin.html, which had this same accidental-close issue.
 
   function openModal(id) {
     editingId = id || null;
