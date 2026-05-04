@@ -195,7 +195,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   <div class="page-wrap">
     <h2 class="section-title">Currently live</h2>
-    <p class="section-sub">One banner runs at a time. When no banner is active, Mediavine has the slot.</p>
+    <p class="section-sub">Up to two banners run at a time. When no banner is active, Mediavine has the slot.</p>
     <div id="active-card-wrap"></div>
 
     <div class="toolbar" style="margin-top:24px;">
@@ -318,7 +318,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       <div class="form-row single">
         <div class="form-group">
           <label class="form-check"><input type="checkbox" id="bn-active"> Set as the live banner</label>
-          <div class="hint">If another banner is currently live, you'll be asked to confirm replacing it.</div>
+          <div class="hint">Up to two banners can be live at once. If two are already live and you save another, you'll be asked to confirm deactivating the oldest.</div>
         </div>
       </div>
     </div>
@@ -523,32 +523,53 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     renderTable();
   }
 
-  // ---- Render active card ----
+  // ---- Render active card(s) ----
+  // Up to two banners can be active at once. Sort by placement_paragraph
+  // (lower number = higher in the article) so the top banner is shown first.
   function renderActiveCard() {
-    var live = allBanners.find(function (b) { return bannerStatus(b) === 'Active'; });
-    if (!live) {
+    var liveList = allBanners.filter(function (b) {
+      return bannerStatus(b) === 'Active';
+    });
+    liveList.sort(function (a, b) {
+      var pa = a.placement_paragraph || 5;
+      var pb = b.placement_paragraph || 5;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+
+    if (liveList.length === 0) {
       $activeWrap.innerHTML = '<div class="active-card empty">No active banner. Mediavine has the slot on every post.</div>';
       return;
     }
-    var s = statsCache[live.id] || { impressions: [], clicks: [] };
-    var meta = [];
-    meta.push('Started ' + fmtDate(live.start_at || live.created_at));
-    if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
-    meta.push(s.impressions.length + ' impressions');
-    meta.push(s.clicks.length + ' clicks');
-    var card = ''
-      + '<div class="active-card">'
-      +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
-      +   '<div class="info">'
-      +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill('Active') + '</div>'
-      +     '<div class="meta">' + meta.join(' · ') + '</div>'
-      +   '</div>'
-      +   '<div class="actions">'
-      +     '<button class="btn btn-outline btn-sm" data-edit="' + live.id + '">Edit</button>'
-      +     '<button class="btn btn-danger btn-sm" data-deactivate="' + live.id + '">Deactivate</button>'
-      +   '</div>'
-      + '</div>';
-    $activeWrap.innerHTML = card;
+
+    var html = '';
+    liveList.forEach(function (live) {
+      var s = statsCache[live.id] || { impressions: [], clicks: [] };
+      var meta = [];
+      meta.push('Started ' + fmtDate(live.start_at || live.created_at));
+      if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
+      meta.push('after ¶' + (live.placement_paragraph || 5));
+      meta.push(s.impressions.length + ' impressions');
+      meta.push(s.clicks.length + ' clicks');
+      html += ''
+        + '<div class="active-card">'
+        +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
+        +   '<div class="info">'
+        +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill('Active') + '</div>'
+        +     '<div class="meta">' + meta.join(' · ') + '</div>'
+        +   '</div>'
+        +   '<div class="actions">'
+        +     '<button class="btn btn-outline btn-sm" data-edit="' + live.id + '">Edit</button>'
+        +     '<button class="btn btn-danger btn-sm" data-deactivate="' + live.id + '">Deactivate</button>'
+        +   '</div>'
+        + '</div>';
+    });
+
+    // Stack two cards with a small gap when both are present
+    if (liveList.length > 1) {
+      html = '<div style="display:flex;flex-direction:column;gap:10px;">' + html + '</div>';
+    }
+    $activeWrap.innerHTML = html;
   }
 
   // ---- Render table ----
@@ -682,7 +703,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var deactBtn = e.target.closest('[data-deactivate]');
     if (deactBtn) {
       var id = deactBtn.getAttribute('data-deactivate');
-      var ok = await confirmDialog('Deactivate banner?', 'Mediavine will take the slot on every post until another banner is activated.', 'Deactivate', true);
+      var ok = await confirmDialog('Deactivate banner?', 'This banner will stop running. Any other active banner stays live; if there are none, Mediavine takes the slot.', 'Deactivate', true);
       if (!ok) return;
       var upd = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id);
       if (upd.error) { alert('Failed: ' + upd.error.message); return; }
@@ -892,22 +913,27 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       updated_at: new Date().toISOString()
     };
 
-    // If activating, check whether another active banner exists and confirm replacement.
+    // Up to two banners may be live at once. If activating would push us to
+    // three, deactivate the OLDEST currently-active banner so we stay capped.
     if (isActive) {
       var others = allBanners.filter(function (b) {
         return b.id !== editingId && bannerStatus(b) === 'Active';
       });
-      if (others.length > 0) {
-        var other = others[0];
+      if (others.length >= 2) {
+        var oldest = others.slice().sort(function (a, b) {
+          return new Date(a.created_at) - new Date(b.created_at);
+        })[0];
         var ok = await confirmDialog(
-          'Replace currently-active banner?',
-          '"' + other.name + '" is live right now. Activating this banner will deactivate "' + other.name + '". Continue?',
-          'Replace', false
+          'Two banners are already live',
+          'Two banners are already running ("' + others[0].name + '" and "' + others[1].name + '"). ' +
+          'Saving this one as live will deactivate the oldest, "' + oldest.name + '", to keep the cap at two. Continue?',
+          'Continue', false
         );
         if (!ok) return;
-        var deact = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', other.id);
-        if (deact.error) { setStatus('Failed to deactivate previous: ' + deact.error.message, 'err'); return; }
+        var deact = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', oldest.id);
+        if (deact.error) { setStatus('Failed to deactivate oldest: ' + deact.error.message, 'err'); return; }
       }
+      // If 0 or 1 others are active, no prompt — just save and we'll have 1 or 2 active.
     }
 
     $formSave.disabled = true;
