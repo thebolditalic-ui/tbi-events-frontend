@@ -88,6 +88,12 @@ module.exports = async function handler(req, res) {
 
     var canonicalUrl = SITE_URL + '/' + event.slug + '/';
 
+    // Round-14: build a JSON-LD Event block so Google's "Events on [date]"
+    // rich results can pick up the event. Only include fields we actually
+    // have — Schema.org tolerates partials, but invalid types (e.g. an
+    // empty string for startDate) get the whole block rejected.
+    var jsonLd = buildEventJsonLd(event, canonicalUrl, image);
+
     var html = '<!DOCTYPE html>\n'
       + '<html lang="en">\n<head>\n'
       + '<meta charset="UTF-8">\n'
@@ -106,6 +112,7 @@ module.exports = async function handler(req, res) {
       + '<meta name="twitter:title" content="' + escapeHTML(title) + '">\n'
       + '<meta name="twitter:description" content="' + escapeHTML(metaDesc) + '">\n'
       + '<meta name="twitter:image" content="' + escapeHTML(image) + '">\n'
+      + (jsonLd ? '\n<script type="application/ld+json">\n' + jsonLd + '\n</script>\n' : '')
       + '</head>\n'
       + '<body>\n'
       + '<h1>' + escapeHTML(title) + '</h1>\n'
@@ -119,31 +126,140 @@ module.exports = async function handler(req, res) {
     return res.status(200).send(html);
 
   } catch (err) {
+    // Round-14: any unexpected error (Supabase brief outage, network hiccup)
+    // should return 503 — that tells Googlebot "try again later" and keeps
+    // the event in the index. Returning 404 here would risk dropping real
+    // events whenever Supabase has a momentary issue.
     console.error('OG handler error:', err);
-    return serveFallback(res, slug);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Retry-After', '120');
+    return res.status(503).send('Service temporarily unavailable');
   }
 };
 
+// Round-14: when a crawler asks for a slug that doesn't exist, return a
+// real 404 with noindex headers. Previously this returned 200 with a
+// generic page, which (a) wasted Google's crawl budget on phantom URLs
+// and (b) risked them landing in the index. The 200-with-meta-noindex
+// pattern doesn't work either — robots tag in HTML is ignored on URLs
+// that 404, but X-Robots-Tag in the header is the safe belt-and-suspenders.
 function serveFallback(res, slug) {
-  var title = 'The Bold Italic Events';
-  var desc = 'The Bold Italic\'s guide to the greatest events in San Francisco and the Bay Area.';
-  var url = SITE_URL + '/' + (slug || '') + '/';
-
-  var html = '<!DOCTYPE html>\n'
-    + '<html lang="en">\n<head>\n'
-    + '<meta charset="UTF-8">\n'
-    + '<title>' + escapeHTML(title) + '</title>\n'
-    + '<meta name="description" content="' + escapeHTML(desc) + '">\n'
-    + '<meta property="og:title" content="' + escapeHTML(title) + '">\n'
-    + '<meta property="og:description" content="' + escapeHTML(desc) + '">\n'
-    + '<meta property="og:image" content="' + escapeHTML(DEFAULT_IMAGE) + '">\n'
-    + '<meta property="og:url" content="' + escapeHTML(url) + '">\n'
-    + '<meta property="og:site_name" content="The Bold Italic">\n'
-    + '<meta name="twitter:card" content="summary_large_image">\n'
-    + '</head>\n'
-    + '<body><p><a href="' + escapeHTML(url) + '">View on The Bold Italic</a></p></body>\n</html>';
-
-  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+  res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  return res.status(200).send(html);
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  return res.status(404).send(
+      '<!DOCTYPE html>\n'
+    + '<html lang="en"><head><meta charset="UTF-8">\n'
+    + '<meta name="robots" content="noindex, nofollow">\n'
+    + '<title>Event not found — The Bold Italic</title></head>\n'
+    + '<body><h1>Event not found</h1>\n'
+    + '<p>The event you\'re looking for isn\'t on our site. '
+    +   '<a href="' + escapeHTML(SITE_URL) + '/">Browse all events</a>.</p>\n'
+    + '</body></html>'
+  );
+}
+
+// Round-14: build a Schema.org Event JSON-LD payload. Returns null if we
+// don't have the minimum required fields (name + valid startDate).
+// We pass startDate/endDate through as ISO strings; Google accepts both
+// date-only ("2026-05-12") and full ISO timestamps. We don't try to
+// combine event_date + time strings — time fields in the DB are free
+// text ("7:00 PM", "doors at 6"), so parsing is unreliable. Date-only
+// is fine for rich results.
+function buildEventJsonLd(event, canonicalUrl, image) {
+  if (!event || !event.event_date) return null;
+
+  var startDate = isoDateOnly(event.event_date);
+  if (!startDate) return null;
+
+  var ld = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    'name': event.title || 'Event',
+    'startDate': startDate,
+    'eventStatus': 'https://schema.org/EventScheduled',
+    'eventAttendanceMode': 'https://schema.org/OfflineEventAttendanceMode',
+    'url': canonicalUrl,
+    'organizer': {
+      '@type': 'Organization',
+      'name': 'The Bold Italic',
+      'url': 'https://www.thebolditalic.com/'
+    }
+  };
+
+  var endDate = isoDateOnly(event.end_date);
+  if (endDate && endDate >= startDate) ld.endDate = endDate;
+
+  if (image) ld.image = image;
+
+  // Description
+  var cleanDesc = stripHTML(event.description || '');
+  if (cleanDesc) ld.description = truncate(cleanDesc, 500);
+
+  // Location: at minimum we need a name. Address is optional but improves
+  // the rich result.
+  if (event.venue) {
+    var loc = { '@type': 'Place', 'name': event.venue };
+    var addrParts = [];
+    if (event.address) addrParts.push(event.address);
+    if (event.neighborhood) addrParts.push(event.neighborhood);
+    if (addrParts.length > 0) {
+      loc.address = {
+        '@type': 'PostalAddress',
+        'streetAddress': event.address || event.venue,
+        'addressLocality': event.neighborhood || 'San Francisco',
+        'addressRegion': 'CA',
+        'addressCountry': 'US'
+      };
+    } else {
+      loc.address = { '@type': 'PostalAddress', 'addressLocality': 'San Francisco', 'addressRegion': 'CA', 'addressCountry': 'US' };
+    }
+    ld.location = loc;
+  } else {
+    ld.location = {
+      '@type': 'Place',
+      'name': 'San Francisco Bay Area',
+      'address': { '@type': 'PostalAddress', 'addressLocality': 'San Francisco', 'addressRegion': 'CA', 'addressCountry': 'US' }
+    };
+  }
+
+  // Offers (price). We only know a free-text price string, which Google's
+  // strict validator dislikes. Skip if we can't parse a clean number, but
+  // include availability + URL for free events.
+  if (event.price) {
+    var priceText = String(event.price).toLowerCase();
+    var freeMatch = priceText.indexOf('free') !== -1 || priceText === '0' || priceText === '$0';
+    var priceMatch = String(event.price).match(/\$?\s*(\d+(?:\.\d+)?)/);
+    if (freeMatch) {
+      ld.offers = {
+        '@type': 'Offer',
+        'price': '0',
+        'priceCurrency': 'USD',
+        'availability': 'https://schema.org/InStock',
+        'url': canonicalUrl
+      };
+    } else if (priceMatch) {
+      ld.offers = {
+        '@type': 'Offer',
+        'price': priceMatch[1],
+        'priceCurrency': 'USD',
+        'availability': 'https://schema.org/InStock',
+        'url': canonicalUrl
+      };
+    }
+  }
+
+  return JSON.stringify(ld, null, 2);
+}
+
+// Returns 'YYYY-MM-DD' from an ISO timestamp, or null if the input
+// doesn't parse cleanly.
+function isoDateOnly(iso) {
+  if (!iso) return null;
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  var y = d.getUTCFullYear();
+  var m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  var day = String(d.getUTCDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
 }
