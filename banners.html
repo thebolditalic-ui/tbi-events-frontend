@@ -487,6 +487,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
 
   // ---- Load banners + counts ----
+  // Per banner we fetch:
+  //   - lifetime impression count (head:true → count only, no row cap)
+  //   - lifetime click count (same)
+  //   - last-30-day impression rows (for sparkline + top referring pages)
+  //   - last-30-day click rows (for sparkline)
+  // The count queries are unaffected by Supabase's 1000-row REST cap, which
+  // is what was making the live counter freeze at 1000. Row fetches stay
+  // scoped to the visible window so we keep page load fast.
   async function loadBanners() {
     var res = await sb.from('banners').select('*').order('created_at', { ascending: false });
     if (res.error) {
@@ -496,28 +504,42 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     allBanners = res.data || [];
     statsCache = {};
 
-    // Single-pass count fetches (only for banners that exist).
     if (allBanners.length > 0) {
-      var ids = allBanners.map(function (b) { return b.id; });
-      var idFilter = ids.map(function (id) { return '"' + id + '"'; }).join(',');
-      // Aggregate impressions and clicks. We pull the rows themselves (kept light)
-      // so we can use them later for sparklines without re-fetching.
-      var impRes = await sb.from('banner_impressions')
-        .select('banner_id,viewable_at,page_url')
-        .in('banner_id', ids);
-      var clkRes = await sb.from('banner_clicks')
-        .select('banner_id,clicked_at,page_url')
-        .in('banner_id', ids);
-      var imps = (impRes.data || []);
-      var clks = (clkRes.data || []);
-      ids.forEach(function (id) {
-        statsCache[id] = {
-          impressions: imps.filter(function (r) { return r.banner_id === id; }),
-          clicks: clks.filter(function (r) { return r.banner_id === id; })
+      var thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - STATS_WINDOW_DAYS);
+      var thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
+
+      // Run all four queries per banner concurrently across all banners.
+      await Promise.all(allBanners.map(async function (b) {
+        var quad = await Promise.all([
+          // Lifetime totals via count:exact head:true — returns count, no rows.
+          sb.from('banner_impressions')
+            .select('*', { count: 'exact', head: true })
+            .eq('banner_id', b.id),
+          sb.from('banner_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('banner_id', b.id),
+          // Last-N-day rows for sparkline + top pages, with bumped row cap.
+          sb.from('banner_impressions')
+            .select('viewable_at,page_url')
+            .eq('banner_id', b.id)
+            .gte('viewable_at', thirtyDaysAgoIso)
+            .order('viewable_at', { ascending: false })
+            .limit(10000),
+          sb.from('banner_clicks')
+            .select('clicked_at,page_url')
+            .eq('banner_id', b.id)
+            .gte('clicked_at', thirtyDaysAgoIso)
+            .order('clicked_at', { ascending: false })
+            .limit(10000)
+        ]);
+        statsCache[b.id] = {
+          impressionCount: quad[0].count || 0,
+          clickCount:      quad[1].count || 0,
+          impressions:     quad[2].data || [],
+          clicks:          quad[3].data || []
         };
-      });
-      // Suppress unused
-      void idFilter;
+      }));
     }
 
     renderActiveCard();
@@ -545,13 +567,13 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
     var html = '';
     liveList.forEach(function (live) {
-      var s = statsCache[live.id] || { impressions: [], clicks: [] };
+      var s = statsCache[live.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
       var meta = [];
       meta.push('Started ' + fmtDate(live.start_at || live.created_at));
       if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
       meta.push('after ¶' + (live.placement_paragraph || 5));
-      meta.push(s.impressions.length + ' impressions');
-      meta.push(s.clicks.length + ' clicks');
+      meta.push(s.impressionCount + ' impressions');
+      meta.push(s.clickCount + ' clicks');
       html += ''
         + '<div class="active-card">'
         +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
@@ -581,9 +603,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     }
     var html = '';
     allBanners.forEach(function (b) {
-      var s = statsCache[b.id] || { impressions: [], clicks: [] };
-      var imp = s.impressions.length;
-      var clk = s.clicks.length;
+      var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
+      var imp = s.impressionCount;
+      var clk = s.clickCount;
       var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
       var status = bannerStatus(b);
       html += ''
@@ -611,11 +633,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   var STATS_WINDOW_DAYS = 30;
 
   function renderStatsHTML(b) {
-    var s = statsCache[b.id] || { impressions: [], clicks: [] };
+    var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
     var impDaily = bucketByDay(s.impressions, 'viewable_at', STATS_WINDOW_DAYS);
     var clkDaily = bucketByDay(s.clicks, 'clicked_at', STATS_WINDOW_DAYS);
     var topPages = topReferrers(s.impressions, 10);
-    var imp = s.impressions.length, clk = s.clicks.length;
+    var imp = s.impressionCount, clk = s.clickCount;
     var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
     var winLabel = 'Last ' + STATS_WINDOW_DAYS + ' days';
     var sparkLabel = STATS_WINDOW_DAYS + 'd';
