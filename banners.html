@@ -488,13 +488,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   // ---- Load banners + counts ----
   // Per banner we fetch:
-  //   - lifetime impression count (head:true → count only, no row cap)
+  //   - lifetime impression count (count:exact head:true — no row cap)
   //   - lifetime click count (same)
-  //   - last-30-day impression rows (for sparkline + top referring pages)
-  //   - last-30-day click rows (for sparkline)
-  // The count queries are unaffected by Supabase's 1000-row REST cap, which
-  // is what was making the live counter freeze at 1000. Row fetches stay
-  // scoped to the visible window so we keep page load fast.
+  //   - daily aggregate for the last N days (RPC banner_daily_stats)
+  //   - top N referring pages for the last N days (RPC banner_top_pages)
+  //
+  // The RPCs aggregate server-side and return small fixed-size results, so
+  // counts stay accurate at any volume. No more 10k-row truncation pushing
+  // older impressions out of the displayed numbers.
   async function loadBanners() {
     var res = await sb.from('banners').select('*').order('created_at', { ascending: false });
     if (res.error) {
@@ -505,39 +506,31 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     statsCache = {};
 
     if (allBanners.length > 0) {
-      var thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - STATS_WINDOW_DAYS);
-      var thirtyDaysAgoIso = thirtyDaysAgo.toISOString();
-
-      // Run all four queries per banner concurrently across all banners.
       await Promise.all(allBanners.map(async function (b) {
-        var quad = await Promise.all([
-          // Lifetime totals via count:exact head:true — returns count, no rows.
+        var results = await Promise.all([
           sb.from('banner_impressions')
             .select('*', { count: 'exact', head: true })
             .eq('banner_id', b.id),
           sb.from('banner_clicks')
             .select('*', { count: 'exact', head: true })
             .eq('banner_id', b.id),
-          // Last-N-day rows for sparkline + top pages, with bumped row cap.
-          sb.from('banner_impressions')
-            .select('viewable_at,page_url')
-            .eq('banner_id', b.id)
-            .gte('viewable_at', thirtyDaysAgoIso)
-            .order('viewable_at', { ascending: false })
-            .limit(10000),
-          sb.from('banner_clicks')
-            .select('clicked_at,page_url')
-            .eq('banner_id', b.id)
-            .gte('clicked_at', thirtyDaysAgoIso)
-            .order('clicked_at', { ascending: false })
-            .limit(10000)
+          sb.rpc('banner_daily_stats', {
+            p_banner_id: b.id,
+            p_days: STATS_WINDOW_DAYS
+          }),
+          sb.rpc('banner_top_pages', {
+            p_banner_id: b.id,
+            p_days: STATS_WINDOW_DAYS,
+            p_limit: 10
+          })
         ]);
         statsCache[b.id] = {
-          impressionCount: quad[0].count || 0,
-          clickCount:      quad[1].count || 0,
-          impressions:     quad[2].data || [],
-          clicks:          quad[3].data || []
+          impressionCount: results[0].count || 0,
+          clickCount:      results[1].count || 0,
+          // daily: array of { day_offset, impressions, clicks }, oldest-first
+          daily:           results[2].data || [],
+          // topPages: array of { page_url, views }, ranked desc
+          topPages:        results[3].data || []
         };
       }));
     }
@@ -567,7 +560,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
     var html = '';
     liveList.forEach(function (live) {
-      var s = statsCache[live.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
+      var s = statsCache[live.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
       var meta = [];
       meta.push('Started ' + fmtDate(live.start_at || live.created_at));
       if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
@@ -603,7 +596,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     }
     var html = '';
     allBanners.forEach(function (b) {
-      var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
+      var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
       var imp = s.impressionCount;
       var clk = s.clickCount;
       var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
@@ -633,10 +626,17 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   var STATS_WINDOW_DAYS = 30;
 
   function renderStatsHTML(b) {
-    var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, impressions: [], clicks: [] };
-    var impDaily = bucketByDay(s.impressions, 'viewable_at', STATS_WINDOW_DAYS);
-    var clkDaily = bucketByDay(s.clicks, 'clicked_at', STATS_WINDOW_DAYS);
-    var topPages = topReferrers(s.impressions, 10);
+    var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
+    // Daily aggregates come from the banner_daily_stats RPC, oldest-first.
+    // Convert to plain number arrays for the sparkline; bigint values from
+    // Postgres come through as numbers but Number() guards against any
+    // edge-case strings.
+    var impDaily = (s.daily || []).map(function (r) { return Number(r.impressions) || 0; });
+    var clkDaily = (s.daily || []).map(function (r) { return Number(r.clicks) || 0; });
+    // Top pages comes from banner_top_pages RPC. Map to the renderer's shape.
+    var topPages = (s.topPages || []).map(function (r) {
+      return { url: r.page_url || '', count: Number(r.views) || 0 };
+    });
     var imp = s.impressionCount, clk = s.clickCount;
     var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
     var winLabel = 'Last ' + STATS_WINDOW_DAYS + ' days';
@@ -678,27 +678,10 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     return '<div class="stats-card"><div class="label">' + label + '</div><div class="num">' + num + '<small>' + sub + '</small></div></div>';
   }
   function sum(a, b) { return a + b; }
-  function bucketByDay(rows, dateField, days) {
-    var buckets = new Array(days).fill(0);
-    var today = new Date(); today.setHours(0, 0, 0, 0);
-    for (var i = 0; i < rows.length; i++) {
-      var d = new Date(rows[i][dateField]);
-      d.setHours(0, 0, 0, 0);
-      var diff = Math.floor((today - d) / (1000 * 60 * 60 * 24));
-      if (diff >= 0 && diff < days) buckets[days - 1 - diff]++;
-    }
-    return buckets;
-  }
-  function topReferrers(rows, limit) {
-    var map = {};
-    for (var i = 0; i < rows.length; i++) {
-      var u = rows[i].page_url || '';
-      map[u] = (map[u] || 0) + 1;
-    }
-    var arr = Object.keys(map).map(function (k) { return { url: k, count: map[k] }; });
-    arr.sort(function (a, b) { return b.count - a.count; });
-    return arr.slice(0, limit);
-  }
+  // Note: bucketByDay() and topReferrers() helpers were removed in Round 12.
+  // Daily and top-pages aggregation now happens server-side via the
+  // banner_daily_stats and banner_top_pages Postgres RPCs.
+
   // Inline-SVG sparkline. No library needed.
   function sparkline(data, color) {
     var w = 280, h = 60, padX = 4, padY = 6;
