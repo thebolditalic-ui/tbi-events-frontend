@@ -15,7 +15,12 @@
   <meta name="twitter:title" content="What's Happening in SF — The Bold Italic">
   <meta name="twitter:description" content="The Bold Italic's guide to the greatest events in San Francisco and the Bay Area.">
   <meta name="twitter:image" content="https://www.thebolditalic.com/content/images/size/w1200/2025/04/TBILogo-copy.png">
-  <meta name="robots" content="noindex, nofollow">
+  <!-- Homepage stays noindex on purpose — the events index page itself isn't a useful
+       search result. We DO want Google to follow links from here to individual event
+       pages (which are indexable via the api/og.js bot path), so noindex without
+       nofollow. Crawlers requesting /<slug>/ get diverted by middleware.js to
+       api/og.js, which serves clean SSR HTML for indexing. -->
+  <meta name="robots" content="noindex, follow">
   <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
   <link rel="preconnect" href="https://fonts.bunny.net">
   <link href="https://fonts.bunny.net/css?family=playfair-display:400,600,700,800&display=swap" rel="stylesheet">

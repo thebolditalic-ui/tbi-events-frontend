@@ -2,8 +2,13 @@
 // and rewrites them to /api/og which serves proper Open Graph meta tags.
 // Normal users get the SPA (index.html) as usual via vercel.json rewrites.
 
+// Round-14: matcher now also excludes the other admin surfaces (queue,
+// banners, analytics) AND sitemap.xml, so a Googlebot request to e.g.
+// /banners can never accidentally match the slug regex below and fall
+// through to the OG fallback page. The robots.txt also blocks them, but
+// belt-and-suspenders is cheap.
 export const config = {
-  matcher: ['/((?!_next|static|api|admin|robots\\.txt|favicon).*)'],
+  matcher: ['/((?!_next|static|api|admin|queue|banners|analytics|robots\\.txt|sitemap\\.xml|favicon).*)'],
 };
 
 const BOT_PATTERNS = [

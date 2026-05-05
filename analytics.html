@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>TBI Events Analytics</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -144,6 +145,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     <div class="window-bar">
       <label for="window-select">Window</label>
       <select id="window-select">
+        <option value="1">Last 24 hours</option>
         <option value="7">Last 7 days</option>
         <option value="30" selected>Last 30 days</option>
         <option value="90">Last 90 days</option>
@@ -347,8 +349,15 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     $refreshed.textContent = 'Last refreshed ' + now.toLocaleTimeString();
   }
 
+  // Friendly label for whatever window is selected.
+  // Picks the singular "Last 24 hours" phrasing for the 1-day case so the
+  // headline cards don't read "Last 1 days" awkwardly.
+  function windowLabel(days) {
+    return days === 1 ? 'Last 24 hours' : 'Last ' + days + ' days';
+  }
+
   function setLoadingState(days) {
-    var winLabel = 'Last ' + days + ' days';
+    var winLabel = windowLabel(days);
     var grid = document.getElementById('stat-cards');
     grid.innerHTML = ''
       + statCard('Page sessions', '…', winLabel)
@@ -373,7 +382,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var listClk  = daily.reduce(function (s, r) { return s + (Number(r.list_clicks)      || 0); }, 0);
     var totalViews = topViewed.reduce(function (s, r) { return s + (Number(r.views) || 0); }, 0);
 
-    var winLabel = 'Last ' + ($windowSel.value) + ' days';
+    var winLabel = windowLabel(parseInt($windowSel.value, 10) || 30);
     var grid = document.getElementById('stat-cards');
     grid.innerHTML = ''
       + statCard('Page sessions',     fmtNum(pageImp), winLabel)

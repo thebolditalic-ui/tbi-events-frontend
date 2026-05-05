@@ -1,2 +1,25 @@
+# events.thebolditalic.com
+#
+# What's allowed:
+#   - Individual event detail pages: /<slug>/
+#     (served as clean SSR HTML to crawlers via api/og.js)
+#
+# What's blocked:
+#   - The homepage / events list (it's the SPA shell, intentionally noindex
+#     because the events list itself isn't useful in search results — readers
+#     come from the Ghost site nav or newsletter, not from "best SF events"
+#     queries; we want Google focused on the individual event entries instead)
+#   - The admin and the public tracking endpoints
+
 User-agent: *
-Disallow: /
+Disallow: /admin
+Disallow: /admin.html
+Disallow: /queue
+Disallow: /queue.html
+Disallow: /banners
+Disallow: /banners.html
+Disallow: /analytics
+Disallow: /analytics.html
+Disallow: /api/
+
+Sitemap: https://events.thebolditalic.com/sitemap.xml
