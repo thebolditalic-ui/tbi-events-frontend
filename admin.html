@@ -274,6 +274,27 @@ body {
 .ev-table .actions-cell .edit-btn:hover { background: #eee; }
 .ev-table .actions-cell .del-btn { color: var(--red); }
 .ev-table .actions-cell .del-btn:hover { background: #fde8e8; }
+.ev-table .actions-cell .stats-btn { background: transparent; border: 0; cursor: pointer; padding: 4px 8px; font-size: 13px; border-radius: 4px; }
+.ev-table .actions-cell .stats-btn:hover { background: #eee; }
+.ev-table tr.expanded td { background: var(--bg-alt); }
+
+/* ---- Per-event stats drawer (round-13) ---- */
+.ev-stats-row td { padding: 0; background: var(--bg-alt); }
+.ev-stats-wrap { padding: 16px 18px; }
+.ev-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
+.ev-stats-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.ev-stats-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+.ev-stats-card .num { font-size: 22px; font-weight: 700; }
+.ev-stats-card .num small { font-size: 12px; color: #888; font-weight: 400; margin-left: 6px; }
+.ev-stats-spark-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ev-stats-spark { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.ev-stats-spark .spark-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+.ev-stats-spark svg { display: block; width: 100%; height: 60px; }
+.ev-stats-loading { color: #888; font-size: 13px; padding: 18px; text-align: center; }
+@media (max-width: 720px) {
+  .ev-stats-grid { grid-template-columns: 1fr; }
+  .ev-stats-spark-wrap { grid-template-columns: 1fr; }
+}
 
 .table-footer {
   display: flex;
@@ -860,6 +881,7 @@ body {
         <a href="/admin" class="active">Events</a>
         <a href="/queue">Manual Queue</a>
         <a href="/banners">Banners</a>
+        <a href="/analytics">Analytics</a>
       </nav>
     </div>
     <div class="user-info">
@@ -1109,6 +1131,11 @@ body {
   var sortAsc = true;
   var editingId = null;
 
+  // Round-13: per-event analytics drawer state
+  var STATS_WINDOW_DAYS = 30;
+  var expandedEventId = null;          // id of event whose stats drawer is open
+  var eventStatsCache = {};            // slug -> { daily: [...], loaded: bool, loading: bool }
+
   // ---- DOM refs ----
   var $loginScreen = document.getElementById('login-screen');
   var $adminApp = document.getElementById('admin-app');
@@ -1274,7 +1301,9 @@ body {
         var imgHtml = ev.image_url
           ? '<img src="' + esc(ev.image_url) + '" alt="" onerror="this.style.display=\'none\'">'
           : '<div style="width:44px;height:44px;background:#eee;border-radius:4px;"></div>';
-        return '<tr data-id="' + ev.id + '">'
+        var slugAttr = ev.slug ? ' data-slug="' + esc(ev.slug) + '"' : '';
+        var isExpanded = expandedEventId === ev.id;
+        var rowHtml = '<tr data-id="' + ev.id + '"' + slugAttr + (isExpanded ? ' class="expanded"' : '') + '>'
           + '<td class="thumb-cell">' + imgHtml + '</td>'
           + '<td>' + esc(dateStr) + '</td>'
           + '<td class="title-cell">' + esc(ev.title) + '</td>'
@@ -1284,9 +1313,16 @@ body {
           + '<td><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
           + '<td>' + (ev.featured ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9733;</span>' : '') + '</td>'
           + '<td class="actions-cell">'
+          + (ev.slug ? '<button class="stats-btn" title="View 30-day stats">📊</button>' : '')
           + '<button class="edit-btn" title="Edit">✏️</button>'
           + '<button class="del-btn" title="Delete">🗑️</button>'
           + '</td></tr>';
+        if (isExpanded) {
+          rowHtml += '<tr class="ev-stats-row" data-stats-for="' + ev.id + '">'
+                  +    '<td colspan="9">' + renderEventStatsHTML(ev) + '</td>'
+                  +  '</tr>';
+        }
+        return rowHtml;
       }).join('');
     }
 
@@ -1298,8 +1334,119 @@ body {
   $prevPage.addEventListener('click', function() { currentPage--; renderTable(); });
   $nextPage.addEventListener('click', function() { currentPage++; renderTable(); });
 
+  // ---- Per-event analytics drawer (round-13) ----
+  // Calls the event_daily_stats RPC for this slug. Result is cached in
+  // eventStatsCache so re-expanding the same row is instant. Re-renders
+  // the table when the data lands so the drawer updates from "Loading…"
+  // to the populated sparklines + totals.
+  async function loadEventStats(slug) {
+    if (!slug) return;
+    var cached = eventStatsCache[slug];
+    if (cached && (cached.loaded || cached.loading)) return;
+    eventStatsCache[slug] = { loaded: false, loading: true, daily: [] };
+    var resp = await sb.rpc('event_daily_stats', {
+      p_event_slug: slug,
+      p_days: STATS_WINDOW_DAYS
+    });
+    if (resp.error) {
+      console.warn('event_daily_stats failed for', slug, resp.error);
+      eventStatsCache[slug] = { loaded: true, loading: false, daily: [], error: resp.error.message };
+    } else {
+      // RPC returns newest-first; reverse so the sparkline reads left=oldest.
+      var oldestFirst = (resp.data || []).slice().reverse();
+      eventStatsCache[slug] = { loaded: true, loading: false, daily: oldestFirst };
+    }
+    if (expandedEventId) renderTable();
+  }
+
+  function renderEventStatsHTML(ev) {
+    var slug = ev.slug || '';
+    if (!slug) {
+      return '<div class="ev-stats-wrap"><div class="ev-stats-loading">No slug available for this event yet.</div></div>';
+    }
+    var cache = eventStatsCache[slug];
+    if (!cache || cache.loading) {
+      return '<div class="ev-stats-wrap"><div class="ev-stats-loading">Loading stats…</div></div>';
+    }
+    if (cache.error) {
+      return '<div class="ev-stats-wrap"><div class="ev-stats-loading">Couldn’t load stats: ' + esc(cache.error) + '</div></div>';
+    }
+
+    var daily = cache.daily || [];
+    var feat  = daily.map(function (r) { return Number(r.clicks_featured) || 0; });
+    var list  = daily.map(function (r) { return Number(r.clicks_list)     || 0; });
+    var views = daily.map(function (r) { return Number(r.views)           || 0; });
+    var clicks = feat.map(function (v, i) { return v + list[i]; });
+
+    var totFeat  = feat.reduce(sumNum, 0);
+    var totList  = list.reduce(sumNum, 0);
+    var totViews = views.reduce(sumNum, 0);
+    var totClicks = totFeat + totList;
+
+    var winLabel = 'Last ' + STATS_WINDOW_DAYS + ' days';
+    return ''
+      + '<div class="ev-stats-wrap">'
+      +   '<div class="ev-stats-grid">'
+      +     evStatCard('Card clicks', totClicks, winLabel + ' · ' + totFeat + ' featured / ' + totList + ' list')
+      +     evStatCard('Detail views', totViews, winLabel)
+      +     evStatCard('Slug', slug, '&nbsp;')
+      +   '</div>'
+      +   '<div class="ev-stats-spark-wrap">'
+      +     '<div class="ev-stats-spark"><div class="spark-label">Card clicks (featured + list)</div>' + sparkline(clicks, '#5b7bd5') + '</div>'
+      +     '<div class="ev-stats-spark"><div class="spark-label">Detail views</div>' + sparkline(views, '#27ae60') + '</div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function evStatCard(label, num, sub) {
+    return '<div class="ev-stats-card"><div class="label">' + esc(label) + '</div>'
+         + '<div class="num">' + esc(String(num)) + '<small>' + sub + '</small></div></div>';
+  }
+  function sumNum(a, b) { return a + b; }
+
+  // Inline-SVG sparkline. Mirrors the one used on the analytics + banners
+  // pages so all charts in the admin look identical.
+  function sparkline(data, color) {
+    var w = 280, h = 60, padX = 4, padY = 6;
+    var max = Math.max.apply(null, data); if (max === 0) max = 1;
+    var step = (w - padX * 2) / Math.max(data.length - 1, 1);
+    var dotR = step >= 14 ? 2.2 : (step >= 7 ? 1.8 : (step >= 4 ? 1.3 : 0));
+    var pts = data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var path = 'M ' + pts.join(' L ');
+    var dots = dotR > 0 ? data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + dotR + '" fill="' + color + '" />';
+    }).join('') : '';
+    return ''
+      + '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+      +   '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
+      +   dots
+      + '</svg>';
+  }
+
   // ---- Table click handlers ----
   $tbody.addEventListener('click', function(e) {
+    // Stats button (round-13) — toggles the per-event analytics drawer.
+    var statsBtn = e.target.closest('.stats-btn');
+    if (statsBtn) {
+      e.stopPropagation();
+      var trS = statsBtn.closest('tr');
+      var idS = trS.getAttribute('data-id');
+      var slugS = trS.getAttribute('data-slug') || '';
+      if (expandedEventId === idS) {
+        expandedEventId = null;
+      } else {
+        expandedEventId = idS;
+        if (slugS) loadEventStats(slugS);
+      }
+      renderTable();
+      return;
+    }
     // Edit button
     if (e.target.classList.contains('edit-btn')) {
       var tr = e.target.closest('tr');

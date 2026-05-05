@@ -1041,6 +1041,130 @@
    ============================================= */
 (function () {
   'use strict';
+
+  /* ---------- analytics tracking (round-13) ----------
+     Posts page impressions, event clicks, and event detail views to the
+     /api/track-* endpoints. Session-deduped in sessionStorage so the
+     same browser session never double-counts. Bot UAs / prefetches are
+     filtered server-side; here we just decide WHEN to fire. */
+  var tbiTrack = (function () {
+    var SID_KEY = 'tbi_events_sid';
+    var PAGE_FIRED_KEY = 'tbi_events_page_fired';
+    var VIEW_FIRED_PREFIX = 'tbi_events_view_'; // + slug
+    var DWELL_MS = 1000; // IAB Tier 2: ≥1 second visible
+
+    function getSessionId() {
+      try {
+        var sid = sessionStorage.getItem(SID_KEY);
+        if (sid) return sid;
+        sid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+        sessionStorage.setItem(SID_KEY, sid);
+        return sid;
+      } catch (e) {
+        // Private mode or sessionStorage blocked — fall back to in-memory id.
+        if (!window.__tbi_mem_sid) {
+          window.__tbi_mem_sid = (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+        }
+        return window.__tbi_mem_sid;
+      }
+    }
+
+    function alreadyFired(key) {
+      try { return sessionStorage.getItem(key) === '1'; } catch (e) { return false; }
+    }
+    function markFired(key) {
+      try { sessionStorage.setItem(key, '1'); } catch (e) { /* swallow */ }
+    }
+
+    function postJSON(path, payload) {
+      // Prefer sendBeacon when available — it survives navigation, which
+      // matters for click tracking just before pushState / external nav.
+      var body = JSON.stringify(payload);
+      try {
+        if (navigator.sendBeacon) {
+          var blob = new Blob([body], { type: 'application/json' });
+          if (navigator.sendBeacon(path, blob)) return;
+        }
+      } catch (e) { /* fall through to fetch */ }
+      try {
+        fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body,
+          keepalive: true
+        }).catch(function () { /* swallow */ });
+      } catch (e) { /* swallow */ }
+    }
+
+    function fireWithDwell(fn) {
+      // Wait DWELL_MS, only fire if the tab was visible the whole time.
+      // Cheap visibility check — good enough for filtering background tabs.
+      if (document.visibilityState === 'hidden') {
+        document.addEventListener('visibilitychange', function once() {
+          if (document.visibilityState === 'visible') {
+            document.removeEventListener('visibilitychange', once);
+            fireWithDwell(fn);
+          }
+        });
+        return;
+      }
+      var startedHidden = false;
+      function onHide() { startedHidden = true; }
+      document.addEventListener('visibilitychange', onHide, { once: true });
+      setTimeout(function () {
+        document.removeEventListener('visibilitychange', onHide);
+        if (!startedHidden) fn();
+      }, DWELL_MS);
+    }
+
+    function trackPageImpression() {
+      if (alreadyFired(PAGE_FIRED_KEY)) return;
+      markFired(PAGE_FIRED_KEY);
+      fireWithDwell(function () {
+        postJSON('/api/track-page', {
+          session_id: getSessionId(),
+          page_url: location.href,
+          referrer: document.referrer || ''
+        });
+      });
+    }
+
+    function trackEventClick(slug, url, placement) {
+      if (!slug || (placement !== 'featured' && placement !== 'list')) return;
+      // Click events fire synchronously during navigation — sendBeacon
+      // handles that case; no dwell delay here (the click IS the signal).
+      postJSON('/api/track-event-click', {
+        event_slug: slug,
+        event_url: url || '',
+        placement: placement,
+        session_id: getSessionId(),
+        page_url: location.href
+      });
+    }
+
+    function trackEventView(slug, url) {
+      if (!slug) return;
+      var key = VIEW_FIRED_PREFIX + slug;
+      if (alreadyFired(key)) return;
+      markFired(key);
+      fireWithDwell(function () {
+        postJSON('/api/track-event-view', {
+          event_slug: slug,
+          event_url: url || location.href,
+          session_id: getSessionId(),
+          page_url: location.href,
+          referrer: document.referrer || ''
+        });
+      });
+    }
+
+    return {
+      trackPageImpression: trackPageImpression,
+      trackEventClick: trackEventClick,
+      trackEventView: trackEventView
+    };
+  })();
+
   /* ---------- config ---------- */
   var SUPABASE_URL = 'https://scawgrjcjgcmvsimvash.supabase.co';
   var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
@@ -2142,7 +2266,32 @@
   }
   /* ---------- SPA routing ---------- */
   function wireSPALinks() {
-    document.getElementById('tbi-events').addEventListener('click', function(e) {
+    var rootEl = document.getElementById('tbi-events');
+
+    /* Round-13: capture-phase click handler that fires the analytics
+       beacon for ALL event-card clicks — featured (.ev-fcard) and list
+       (a[data-slug] without that class) — including external Ghost-post
+       links that navigate the browser away. Runs before the SPA handler
+       below; sendBeacon survives the navigation. */
+    rootEl.addEventListener('click', function(e) {
+      var card = e.target.closest('a.ev-fcard, a[data-slug]');
+      if (!card) return;
+      var href = card.getAttribute('href') || '';
+      var slug = card.getAttribute('data-slug') || '';
+      // Featured Ghost-post cards may not carry data-slug; derive one
+      // from the URL path so the analytics row still groups consistently.
+      if (!slug && href) {
+        var m = href.match(/\/([^\/?#]+)\/?(?:[?#]|$)/);
+        if (m) slug = m[1];
+      }
+      if (!slug) return;
+      var placement = card.classList.contains('ev-fcard') ? 'featured' : 'list';
+      tbiTrack.trackEventClick(slug, href, placement);
+    }, true /* capture */);
+
+    /* Existing SPA handler — pushState for internal links, browser-default
+       navigation for external (http://) links. Unchanged from prior rounds. */
+    rootEl.addEventListener('click', function(e) {
       var link = e.target.closest('a[data-slug]');
       if (!link) return;
       /* Skip external links (e.g. Ghost featured posts) — let browser handle them */
@@ -2161,6 +2310,8 @@
       if (event) {
         document.title = event.title + ' — The Bold Italic';
         renderEventPage(event);
+        // Round-13: log a detail view (deduped per session per slug).
+        tbiTrack.trackEventView(slug, (event && event.url) || location.href);
       } else {
         root.innerHTML = '<div class="ev-post"><p>Event not found. <a href="/" class="ev-post-back">\u2190 Back to events</a></p></div>';
       }
@@ -2405,6 +2556,10 @@
   /* ---------- init ---------- */
   async function initListPage() {
     try {
+      // Round-13: log a page-level impression once per browser session,
+      // after a 1-second dwell while the tab is visible. Bot UAs and
+      // prefetches are filtered server-side in /api/track-page.
+      tbiTrack.trackPageImpression();
       renderSkeleton();
       var results = await Promise.all([
         fetchFeaturedSlots(),

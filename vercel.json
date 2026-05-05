@@ -3,6 +3,7 @@
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/queue", "destination": "/queue.html" },
     { "source": "/banners", "destination": "/banners.html" },
+    { "source": "/analytics", "destination": "/analytics.html" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBI Events Analytics</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #fff6e6;
+  --dark: #1E1B1B;
+  --gold: #FFD682;
+  --blue: #5b7bd5;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --border: #e0d8cc;
+  --bg-alt: #faf5eb;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --title-font: 'Georgia', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--cream); color: var(--dark); min-height: 100vh; }
+
+/* ---- Login Screen ---- */
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.login-box h1 { font-family: var(--title-font); font-size: 22px; margin-bottom: 6px; }
+.login-box p { color: #888; font-size: 13px; margin-bottom: 24px; }
+.login-box label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+.login-box input[type="email"], .login-box input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 16px; background: var(--bg-alt); }
+.login-box input:focus { outline: none; border-color: var(--blue); }
+
+/* ---- Buttons ---- */
+.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--dark); color: #fff; width: 100%; }
+.btn-gold { background: var(--gold); color: var(--dark); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+
+/* ---- Admin Shell ---- */
+#admin-app { display: none; }
+.admin-header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.admin-header-left { display: flex; align-items: center; gap: 20px; }
+.admin-header h1 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
+.admin-nav { display: flex; gap: 4px; }
+.admin-nav a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 4px; }
+.admin-nav a:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.06); }
+.admin-nav a.active { color: #fff; background: rgba(255,255,255,0.12); }
+.user-info { display: flex; align-items: center; gap: 14px; font-size: 13px; color: rgba(255,255,255,0.75); }
+
+/* ---- Page sections ---- */
+.page-wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.section-title { font-family: var(--title-font); font-size: 22px; margin: 0 0 6px; }
+.section-sub { color: #888; font-size: 13px; margin-bottom: 18px; }
+
+/* ---- Window selector ---- */
+.window-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.window-bar label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #888; font-weight: 600; }
+.window-bar select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 13px; font-family: inherit; }
+.window-bar .refreshed { color: #888; font-size: 12px; margin-left: auto; }
+
+/* ---- Stat cards ---- */
+.stats-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+.stats-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+.stats-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+.stats-card .num { font-size: 24px; font-weight: 700; }
+.stats-card .num small { font-size: 12px; color: #888; font-weight: 400; margin-left: 6px; }
+
+/* ---- Sparklines ---- */
+.spark-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+.spark-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.spark-card .spark-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 6px; }
+.spark-card .spark-total { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.spark-card svg { display: block; width: 100%; height: 60px; }
+
+/* ---- Top tables ---- */
+.top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.top-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.top-card h3 { font-family: var(--title-font); font-size: 16px; font-weight: 400; padding: 12px 14px; background: var(--bg-alt); border-bottom: 1px solid var(--border); }
+.top-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.top-card th, .top-card td { padding: 8px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+.top-card th { background: var(--bg-alt); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; }
+.top-card tr:last-child td { border-bottom: 0; }
+.top-card td.slug { color: var(--blue); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-card a.slug-link { color: var(--blue); text-decoration: none; }
+.top-card a.slug-link:hover { text-decoration: underline; }
+.top-card td.num { text-align: right; font-variant-numeric: tabular-nums; color: #555; }
+.top-card .placement-pill { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; margin-left: 6px; vertical-align: middle; }
+.placement-featured { background: rgba(255,214,130,0.4); color: #8a6d1f; }
+.placement-list { background: rgba(91,123,213,0.12); color: var(--blue); }
+.empty-row td { padding: 18px; color: #888; text-align: center; font-size: 13px; }
+
+/* ---- Loading state ---- */
+.loading-msg { padding: 18px; text-align: center; color: #888; font-size: 13px; }
+
+@media (max-width: 880px) {
+  .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .spark-grid   { grid-template-columns: 1fr; }
+  .top-grid     { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Analytics</h1>
+    <p>Sign in to view events page metrics.</p>
+    <div class="login-error" id="login-error"></div>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1>TBI Events Admin</h1>
+      <nav class="admin-nav">
+        <a href="/admin">Events</a>
+        <a href="/queue">Manual Queue</a>
+        <a href="/banners">Banners</a>
+        <a href="/analytics" class="active">Analytics</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <h2 class="section-title">Events page analytics</h2>
+    <p class="section-sub">Activity on events.thebolditalic.com. One row per browser session — bots, link-preview unfurlers, and prefetches are filtered out before counting.</p>
+
+    <div class="window-bar">
+      <label for="window-select">Window</label>
+      <select id="window-select">
+        <option value="7">Last 7 days</option>
+        <option value="30" selected>Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <span class="refreshed" id="refreshed-stamp"></span>
+    </div>
+
+    <!-- Headline numbers -->
+    <div class="stats-grid-4" id="stat-cards">
+      <div class="stats-card"><div class="label">Page sessions</div><div class="num">—</div></div>
+      <div class="stats-card"><div class="label">Featured CTR</div><div class="num">—</div></div>
+      <div class="stats-card"><div class="label">List CTR</div><div class="num">—</div></div>
+      <div class="stats-card"><div class="label">Event detail views</div><div class="num">—</div></div>
+    </div>
+
+    <!-- Sparklines -->
+    <div class="spark-grid" id="spark-grid">
+      <div class="spark-card">
+        <div class="spark-label">Page sessions</div>
+        <div class="spark-total" id="spark-total-page">—</div>
+        <div id="spark-page"></div>
+      </div>
+      <div class="spark-card">
+        <div class="spark-label">Featured clicks</div>
+        <div class="spark-total" id="spark-total-feat">—</div>
+        <div id="spark-feat"></div>
+      </div>
+      <div class="spark-card">
+        <div class="spark-label">List clicks</div>
+        <div class="spark-total" id="spark-total-list">—</div>
+        <div id="spark-list"></div>
+      </div>
+    </div>
+
+    <!-- Top tables -->
+    <div class="top-grid">
+      <div class="top-card">
+        <h3>Top events by clicks</h3>
+        <table>
+          <thead><tr><th>Event</th><th style="text-align:right;">Clicks</th></tr></thead>
+          <tbody id="top-clicked-body">
+            <tr class="empty-row"><td colspan="2">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="top-card">
+        <h3>Top events by detail views</h3>
+        <table>
+          <thead><tr><th>Event</th><th style="text-align:right;">Views</th></tr></thead>
+          <tbody id="top-viewed-body">
+            <tr class="empty-row"><td colspan="2">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Config ----
+  var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  // ---- DOM refs ----
+  var $loginScreen = document.getElementById('login-screen');
+  var $adminApp    = document.getElementById('admin-app');
+  var $loginEmail  = document.getElementById('login-email');
+  var $loginPass   = document.getElementById('login-pass');
+  var $loginBtn    = document.getElementById('login-btn');
+  var $loginError  = document.getElementById('login-error');
+  var $logoutBtn   = document.getElementById('logout-btn');
+  var $userEmail   = document.getElementById('user-email');
+  var $windowSel   = document.getElementById('window-select');
+  var $refreshed   = document.getElementById('refreshed-stamp');
+
+  // ---- Auth ----
+  async function checkSession() {
+    var sess = await sb.auth.getSession();
+    if (sess.data && sess.data.session) showAdmin(sess.data.session.user);
+  }
+  function showAdmin(user) {
+    $loginScreen.style.display = 'none';
+    $adminApp.style.display = 'block';
+    $userEmail.textContent = user.email || '';
+    refresh();
+  }
+  $loginBtn.addEventListener('click', async function () {
+    $loginError.style.display = 'none';
+    var email = $loginEmail.value.trim();
+    var pass = $loginPass.value;
+    if (!email || !pass) {
+      $loginError.textContent = 'Enter email and password';
+      $loginError.style.display = 'block';
+      return;
+    }
+    $loginBtn.textContent = 'Signing in…';
+    $loginBtn.disabled = true;
+    var res = await sb.auth.signInWithPassword({ email: email, password: pass });
+    $loginBtn.textContent = 'Sign In';
+    $loginBtn.disabled = false;
+    if (res.error) {
+      $loginError.textContent = res.error.message;
+      $loginError.style.display = 'block';
+      return;
+    }
+    showAdmin(res.data.user);
+  });
+  $loginPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') $loginBtn.click(); });
+  $logoutBtn.addEventListener('click', async function () {
+    await sb.auth.signOut();
+    location.reload();
+  });
+  $windowSel.addEventListener('change', refresh);
+
+  // ---- Helpers ----
+  function escapeHTML(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s) { return escapeHTML(s); }
+  function fmtNum(n) {
+    n = Number(n) || 0;
+    return n.toLocaleString('en-US');
+  }
+  function fmtPct(num, den) {
+    if (!den || den === 0) return '—';
+    return ((num / den) * 100).toFixed(1) + '%';
+  }
+  function sum(a, b) { return a + b; }
+
+  // Inline-SVG sparkline. No library needed. Same shape as banner stats.
+  function sparkline(data, color) {
+    var w = 280, h = 60, padX = 4, padY = 6;
+    var max = Math.max.apply(null, data); if (max === 0) max = 1;
+    var step = (w - padX * 2) / Math.max(data.length - 1, 1);
+    var dotR = step >= 14 ? 2.2 : (step >= 7 ? 1.8 : (step >= 4 ? 1.3 : 0));
+    var pts = data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var path = 'M ' + pts.join(' L ');
+    var dots = dotR > 0 ? data.map(function (v, i) {
+      var x = padX + i * step;
+      var y = h - padY - (v / max) * (h - padY * 2);
+      return '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + dotR + '" fill="' + color + '" />';
+    }).join('') : '';
+    return ''
+      + '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">'
+      +   '<path d="' + path + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />'
+      +   dots
+      + '</svg>';
+  }
+
+  // ---- Data fetch ----
+  // Load all four widgets in parallel. Each RPC enforces RLS via SECURITY
+  // INVOKER, so an unauthenticated session would simply get empty arrays.
+  async function refresh() {
+    var days = parseInt($windowSel.value, 10) || 30;
+
+    setLoadingState(days);
+
+    var results = await Promise.all([
+      sb.rpc('events_page_daily_stats', { p_days: days }),
+      sb.rpc('events_top_clicked',      { p_days: days, p_limit: 10, p_placement: null }),
+      sb.rpc('events_top_viewed',       { p_days: days, p_limit: 10 }),
+      // Per-placement break-down so the badges in the Top Clicks table can
+      // tell you whether a click came from a featured card or the list.
+      sb.rpc('events_top_clicked',      { p_days: days, p_limit: 50, p_placement: 'featured' })
+    ]);
+
+    var dailyResp     = results[0];
+    var topClickedResp = results[1];
+    var topViewedResp  = results[2];
+    var topFeaturedResp = results[3];
+
+    if (dailyResp.error)      { console.warn('daily error', dailyResp.error); }
+    if (topClickedResp.error) { console.warn('top clicked error', topClickedResp.error); }
+    if (topViewedResp.error)  { console.warn('top viewed error', topViewedResp.error); }
+
+    var daily = (dailyResp.data || []).slice().reverse(); // RPC returns newest-first
+    var topClicked = topClickedResp.data || [];
+    var topViewed  = topViewedResp.data || [];
+
+    // Build a Set of slugs that scored a featured click — used to label rows.
+    var featuredSlugs = {};
+    (topFeaturedResp.data || []).forEach(function (r) { featuredSlugs[r.event_slug] = true; });
+
+    renderHeadline(daily, topViewed);
+    renderSparks(daily, days);
+    renderTopClicked(topClicked, featuredSlugs);
+    renderTopViewed(topViewed);
+
+    var now = new Date();
+    $refreshed.textContent = 'Last refreshed ' + now.toLocaleTimeString();
+  }
+
+  function setLoadingState(days) {
+    var winLabel = 'Last ' + days + ' days';
+    var grid = document.getElementById('stat-cards');
+    grid.innerHTML = ''
+      + statCard('Page sessions', '…', winLabel)
+      + statCard('Featured CTR', '…', winLabel)
+      + statCard('List CTR',     '…', winLabel)
+      + statCard('Event detail views', '…', winLabel);
+    document.getElementById('spark-page').innerHTML = '<div class="loading-msg">Loading…</div>';
+    document.getElementById('spark-feat').innerHTML = '<div class="loading-msg">Loading…</div>';
+    document.getElementById('spark-list').innerHTML = '<div class="loading-msg">Loading…</div>';
+    document.getElementById('top-clicked-body').innerHTML = '<tr class="empty-row"><td colspan="2">Loading…</td></tr>';
+    document.getElementById('top-viewed-body').innerHTML  = '<tr class="empty-row"><td colspan="2">Loading…</td></tr>';
+  }
+
+  function statCard(label, num, sub) {
+    return '<div class="stats-card"><div class="label">' + escapeHTML(label) + '</div>'
+         + '<div class="num">' + num + '<small>' + (sub ? escapeHTML(sub) : '&nbsp;') + '</small></div></div>';
+  }
+
+  function renderHeadline(daily, topViewed) {
+    var pageImp  = daily.reduce(function (s, r) { return s + (Number(r.page_impressions) || 0); }, 0);
+    var featClk  = daily.reduce(function (s, r) { return s + (Number(r.featured_clicks)  || 0); }, 0);
+    var listClk  = daily.reduce(function (s, r) { return s + (Number(r.list_clicks)      || 0); }, 0);
+    var totalViews = topViewed.reduce(function (s, r) { return s + (Number(r.views) || 0); }, 0);
+
+    var winLabel = 'Last ' + ($windowSel.value) + ' days';
+    var grid = document.getElementById('stat-cards');
+    grid.innerHTML = ''
+      + statCard('Page sessions',     fmtNum(pageImp), winLabel)
+      + statCard('Featured CTR',      fmtPct(featClk, pageImp), fmtNum(featClk) + ' clicks')
+      + statCard('List CTR',          fmtPct(listClk, pageImp), fmtNum(listClk) + ' clicks')
+      + statCard('Event detail views', fmtNum(totalViews), 'top 10 only');
+  }
+
+  function renderSparks(daily, days) {
+    var imp = daily.map(function (r) { return Number(r.page_impressions) || 0; });
+    var fc  = daily.map(function (r) { return Number(r.featured_clicks)  || 0; });
+    var lc  = daily.map(function (r) { return Number(r.list_clicks)      || 0; });
+
+    document.getElementById('spark-total-page').textContent = fmtNum(imp.reduce(sum, 0));
+    document.getElementById('spark-total-feat').textContent = fmtNum(fc.reduce(sum, 0));
+    document.getElementById('spark-total-list').textContent = fmtNum(lc.reduce(sum, 0));
+
+    document.getElementById('spark-page').innerHTML = sparkline(imp, '#5b7bd5');
+    document.getElementById('spark-feat').innerHTML = sparkline(fc,  '#FFD682');
+    document.getElementById('spark-list').innerHTML = sparkline(lc,  '#27ae60');
+  }
+
+  function renderTopClicked(rows, featuredSlugs) {
+    var $body = document.getElementById('top-clicked-body');
+    if (!rows || rows.length === 0) {
+      $body.innerHTML = '<tr class="empty-row"><td colspan="2">No clicks recorded yet in this window.</td></tr>';
+      return;
+    }
+    $body.innerHTML = rows.map(function (r) {
+      var url = r.event_url || ('/' + r.event_slug + '/');
+      var pill = featuredSlugs[r.event_slug]
+        ? '<span class="placement-pill placement-featured">Featured</span>'
+        : '<span class="placement-pill placement-list">List</span>';
+      return '<tr><td class="slug">'
+           +   '<a class="slug-link" href="' + escapeAttr(url) + '" target="_blank" rel="noopener noreferrer">' + escapeHTML(r.event_slug) + '</a>'
+           +   pill
+           + '</td><td class="num">' + fmtNum(r.clicks) + '</td></tr>';
+    }).join('');
+  }
+
+  function renderTopViewed(rows) {
+    var $body = document.getElementById('top-viewed-body');
+    if (!rows || rows.length === 0) {
+      $body.innerHTML = '<tr class="empty-row"><td colspan="2">No detail views recorded yet in this window.</td></tr>';
+      return;
+    }
+    $body.innerHTML = rows.map(function (r) {
+      var url = r.event_url || ('/' + r.event_slug + '/');
+      return '<tr><td class="slug">'
+           +   '<a class="slug-link" href="' + escapeAttr(url) + '" target="_blank" rel="noopener noreferrer">' + escapeHTML(r.event_slug) + '</a>'
+           + '</td><td class="num">' + fmtNum(r.views) + '</td></tr>';
+    }).join('');
+  }
+
+  // ---- Boot ----
+  checkSession();
+})();
+</script>
+
+</body>
+</html>
