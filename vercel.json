@@ -1,15 +1,5 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": "tbi.fyi" }],
-      "destination": "/api/r?slug=$1"
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": "www.tbi.fyi" }],
-      "destination": "/api/r?slug=$1"
-    },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/queue", "destination": "/queue.html" },
     { "source": "/banners", "destination": "/banners.html" },
