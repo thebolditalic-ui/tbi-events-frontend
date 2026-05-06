@@ -1,9 +1,20 @@
 {
   "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "tbi.fyi" }],
+      "destination": "/api/r?slug=$1"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.tbi.fyi" }],
+      "destination": "/api/r?slug=$1"
+    },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/queue", "destination": "/queue.html" },
     { "source": "/banners", "destination": "/banners.html" },
     { "source": "/analytics", "destination": "/analytics.html" },
+    { "source": "/links", "destination": "/links.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap.xml" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
