@@ -527,6 +527,31 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     return labels.length ? labels.join(' + ') + ' PT' : '';
   }
 
+  // ---- Slot-conflict helpers ----
+  // Returns the set of preset blocks during which the banner is configured
+  // to run. A banner with no tod_blocks is treated as running in all four.
+  // Used by the save-time conflict check.
+  var ALL_BLOCK_NAMES = ['morning', 'afternoon', 'evening', 'overnight'];
+  function bannerActiveBlocks(b) {
+    var blocks = (b && Array.isArray(b.tod_blocks)) ? b.tod_blocks : null;
+    if (!blocks || blocks.length === 0) return ALL_BLOCK_NAMES.slice();
+    return blocks.slice();
+  }
+  function blocksIntersection(a, b) {
+    var out = [];
+    for (var i = 0; i < a.length; i++) {
+      if (b.indexOf(a[i]) !== -1) out.push(a[i]);
+    }
+    return out;
+  }
+  function describeOverlap(overlap) {
+    if (overlap.length >= 4) return 'all day';
+    return overlap.map(function (n) {
+      var p = todPresetByName(n);
+      return p ? p.label : n;
+    }).join(' + ');
+  }
+
   // ---- Status / period helpers ----
   // "Off-hours" = enabled and within its date range, but currently outside
   // its time-of-day blocks. Off-hours banners don't render to readers.
@@ -1033,6 +1058,37 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       tod_blocks: todBlocks,
       updated_at: new Date().toISOString()
     };
+
+    // Slot conflict check: if any other live banner sits at the same
+    // placement_paragraph and shares any time-of-day block, only one of
+    // them can render in a given hour — the older one will be silently
+    // hidden. Surface that explicitly so it isn't a stealth override.
+    if (isActive) {
+      var newBlocks = bannerActiveBlocks({ tod_blocks: todBlocks });
+      var conflicts = [];
+      allBanners.forEach(function (b) {
+        if (b.id === editingId) return;
+        if (!b.is_active) return;
+        if ((b.placement_paragraph || 5) !== paragraph) return;
+        var existingBlocks = bannerActiveBlocks(b);
+        var overlap = blocksIntersection(newBlocks, existingBlocks);
+        if (overlap.length > 0) conflicts.push({ banner: b, overlap: overlap });
+      });
+      if (conflicts.length > 0) {
+        var phrases = conflicts.map(function (c) {
+          return '"' + c.banner.name + '" (overlaps during ' + describeOverlap(c.overlap) + ')';
+        });
+        var msg = 'This banner shares paragraph ' + paragraph + ' with: ' +
+          phrases.join('; ') + '. ' +
+          'Only one banner can render at a placement during a given hour — the newer one wins and the older is silently hidden during the overlap. Continue?';
+        var okSlot = await confirmDialog(
+          'Slot conflict at paragraph ' + paragraph,
+          msg,
+          'Save anyway', false
+        );
+        if (!okSlot) return;
+      }
+    }
 
     // The cap is "at most two banners on screen at once". With time-of-day
     // rotation, a banner with a tod_blocks restriction outside the current
