@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="robots" content="noindex, nofollow">
 <title>TBI Banners Admin</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -87,6 +86,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .status-scheduled { background: rgba(91,123,213,0.12); color: var(--blue); }
 .status-ended     { background: rgba(0,0,0,0.06);       color: #888; }
 .status-draft     { background: var(--bg-alt);          color: #888; }
+.status-offhours  { background: rgba(255,214,130,0.25); color: #8a6d1f; }
 
 /* ---- Stats drawer (per-row, expanded) ---- */
 .stats-row td { padding: 0; background: var(--bg-alt); }
@@ -187,8 +187,6 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <a href="/admin">Events</a>
         <a href="/queue">Manual Queue</a>
         <a href="/banners" class="active">Banners</a>
-        <a href="/links">Short Links</a>
-        <a href="/analytics">Analytics</a>
       </nav>
     </div>
     <div class="user-info">
@@ -319,10 +317,22 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         </div>
       </div>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bn-tod-start">Daily window start <span style="font-weight:400;color:#999;">(Pacific, optional)</span></label>
+          <input type="time" id="bn-tod-start">
+        </div>
+        <div class="form-group">
+          <label for="bn-tod-end">Daily window end <span style="font-weight:400;color:#999;">(Pacific, optional)</span></label>
+          <input type="time" id="bn-tod-end">
+          <div class="hint">Leave both blank to run 24/7. Set both to rotate this slot to a different banner outside the window. End before start = wraps midnight (e.g., 8 PM – 6 AM).</div>
+        </div>
+      </div>
+
       <div class="form-row single">
         <div class="form-group">
           <label class="form-check"><input type="checkbox" id="bn-active"> Set as the live banner</label>
-          <div class="hint">Up to two banners can be live at once. If two are already live and you save another, you'll be asked to confirm deactivating the oldest.</div>
+          <div class="hint">Up to two banners can be live at once per placement. Time-of-day windows let multiple banners share the same placement and rotate.</div>
         </div>
       </div>
     </div>
@@ -457,17 +467,75 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
   function clearStatus() { $formStatus.className = 'status-msg'; $formStatus.textContent = ''; }
 
+  // ---- Time-of-day helpers (mirrors the Ghost banner script) ----
+  // Pacific time is the canonical TZ for tod windows. We compute "now in
+  // Pacific" via Intl so the admin reflects the same logic readers see.
+  var TOD_TIMEZONE = 'America/Los_Angeles';
+
+  function nowMinutesInPacific() {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: TOD_TIMEZONE,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }).formatToParts(new Date());
+    var h = 0, m = 0;
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].type === 'hour')   h = parseInt(parts[i].value, 10) || 0;
+      if (parts[i].type === 'minute') m = parseInt(parts[i].value, 10) || 0;
+    }
+    if (h === 24) h = 0;
+    return h * 60 + m;
+  }
+  function timeStringToMinutes(s) {
+    if (!s || typeof s !== 'string') return -1;
+    var parts = s.split(':');
+    if (parts.length < 2) return -1;
+    var h = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    if (isNaN(h) || isNaN(m)) return -1;
+    return h * 60 + m;
+  }
+  function minutesToHHMM(min) {
+    var h = Math.floor(min / 60);
+    var m = min % 60;
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  }
+  function fmtTodLabel(b) {
+    var startMin = timeStringToMinutes(b.tod_start);
+    var endMin   = timeStringToMinutes(b.tod_end);
+    if (startMin < 0 && endMin < 0) return '';
+    if (startMin < 0 || endMin < 0) return '';
+    return minutesToHHMM(startMin) + '–' + minutesToHHMM(endMin) + ' PT';
+  }
+  function bannerInTodWindow(b) {
+    var startMin = timeStringToMinutes(b.tod_start);
+    var endMin   = timeStringToMinutes(b.tod_end);
+    if (startMin < 0 && endMin < 0) return true;
+    if (startMin < 0 || endMin < 0) return true;
+    if (startMin === endMin) return true;
+    var nowMin = nowMinutesInPacific();
+    if (startMin < endMin) return nowMin >= startMin && nowMin < endMin;
+    return nowMin >= startMin || nowMin < endMin; // wraps midnight
+  }
+
   // ---- Status / period helpers ----
+  // "Off-hours" = enabled and inside its date range, but currently outside
+  // its time-of-day window (e.g., a 6 PM – 6 AM banner viewed at noon).
+  // Off-hours banners don't render to readers; another banner at the same
+  // placement (with a complementary tod window) typically takes the slot.
   function bannerStatus(b) {
     var now = new Date();
     if (!b.is_active) return 'Draft';
     if (b.start_at && new Date(b.start_at) > now) return 'Scheduled';
     if (b.end_at && new Date(b.end_at) < now) return 'Ended';
+    if ((b.tod_start || b.tod_end) && !bannerInTodWindow(b)) return 'Off-hours';
     return 'Active';
   }
   function statusPill(s) {
-    var cls = 'status-' + s.toLowerCase();
-    return '<span class="status-pill ' + cls + '">' + s + '</span>';
+    // Map "Off-hours" to a class without the hyphen for cleaner CSS.
+    var key = s.toLowerCase().replace(/[^a-z]/g, '');
+    return '<span class="status-pill status-' + key + '">' + s + '</span>';
   }
   function fmtDate(iso) {
     if (!iso) return '—';
@@ -546,8 +614,13 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   // Up to two banners can be active at once. Sort by placement_paragraph
   // (lower number = higher in the article) so the top banner is shown first.
   function renderActiveCard() {
+    // Currently-live includes both "Active" right-now banners AND
+    // "Off-hours" banners (enabled, in their date range, but currently
+    // outside their tod window). Off-hours banners are flagged so you can
+    // see they exist; readers don't see them until their tod window opens.
     var liveList = allBanners.filter(function (b) {
-      return bannerStatus(b) === 'Active';
+      var st = bannerStatus(b);
+      return st === 'Active' || st === 'Off-hours';
     });
     liveList.sort(function (a, b) {
       var pa = a.placement_paragraph || 5;
@@ -564,17 +637,20 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var html = '';
     liveList.forEach(function (live) {
       var s = statsCache[live.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
+      var status = bannerStatus(live); // 'Active' or 'Off-hours' here
       var meta = [];
       meta.push('Started ' + fmtDate(live.start_at || live.created_at));
       if (live.end_at) meta.push('ends ' + fmtDate(live.end_at));
       meta.push('after ¶' + (live.placement_paragraph || 5));
+      var tod = fmtTodLabel(live);
+      if (tod) meta.push(tod);
       meta.push(s.impressionCount + ' impressions');
       meta.push(s.clickCount + ' clicks');
       html += ''
         + '<div class="active-card">'
         +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
         +   '<div class="info">'
-        +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill('Active') + '</div>'
+        +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill(status) + '</div>'
         +     '<div class="meta">' + meta.join(' · ') + '</div>'
         +   '</div>'
         +   '<div class="actions">'
@@ -766,13 +842,16 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       document.getElementById('bn-paragraph').value = b.placement_paragraph || 5;
       document.getElementById('bn-start').value = toLocalDtInput(b.start_at);
       document.getElementById('bn-end').value = toLocalDtInput(b.end_at);
+      // Postgres TIME values come back as 'HH:MM:SS'; the time input wants 'HH:MM'.
+      document.getElementById('bn-tod-start').value = (b.tod_start || '').slice(0, 5);
+      document.getElementById('bn-tod-end').value   = (b.tod_end   || '').slice(0, 5);
       document.getElementById('bn-active').checked = !!b.is_active;
       if (b.creative_url) showUploadedImage('desktop', b.creative_url, b.natural_width, b.natural_height);
       if (b.creative_url_mobile) showUploadedImage('mobile', b.creative_url_mobile, b.natural_width_mobile, b.natural_height_mobile);
       $formDelete.style.display = '';
     } else {
       $modalTitle.textContent = 'New banner';
-      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end'].forEach(function (id) { document.getElementById(id).value = ''; });
+      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end','bn-tod-start','bn-tod-end'].forEach(function (id) { document.getElementById(id).value = ''; });
       document.getElementById('bn-paragraph').value = 5;
       document.getElementById('bn-active').checked = false;
       $formDelete.style.display = 'none';
@@ -909,6 +988,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var paragraph = parseInt(document.getElementById('bn-paragraph').value, 10) || 5;
     var startAt = fromLocalDtInput(document.getElementById('bn-start').value);
     var endAt = fromLocalDtInput(document.getElementById('bn-end').value);
+    // Time inputs return 'HH:MM'. Postgres TIME accepts 'HH:MM:SS' or 'HH:MM'.
+    var todStartRaw = document.getElementById('bn-tod-start').value.trim();
+    var todEndRaw   = document.getElementById('bn-tod-end').value.trim();
+    var todStart = todStartRaw || null;
+    var todEnd   = todEndRaw   || null;
     var isActive = document.getElementById('bn-active').checked;
 
     if (!creativeUrl) { setStatus('Please upload a desktop creative.', 'err'); return; }
@@ -935,30 +1019,48 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       is_active: isActive,
       start_at: startAt,
       end_at: endAt,
+      tod_start: todStart,
+      tod_end: todEnd,
       updated_at: new Date().toISOString()
     };
 
-    // Up to two banners may be live at once. If activating would push us to
-    // three, deactivate the OLDEST currently-active banner so we stay capped.
+    // Up to two banners may be currently RENDERING at once. With time-of-day
+    // rotation, "is_active=true" no longer implies "rendering right now" — a
+    // banner with a tod window outside the current Pacific time is Off-hours
+    // (registered, but not on screen). The cap only applies to banners that
+    // would actually be rendering at the moment of save.
     if (isActive) {
-      var others = allBanners.filter(function (b) {
-        return b.id !== editingId && bannerStatus(b) === 'Active';
-      });
-      if (others.length >= 2) {
-        var oldest = others.slice().sort(function (a, b) {
-          return new Date(a.created_at) - new Date(b.created_at);
-        })[0];
-        var ok = await confirmDialog(
-          'Two banners are already live',
-          'Two banners are already running ("' + others[0].name + '" and "' + others[1].name + '"). ' +
-          'Saving this one as live will deactivate the oldest, "' + oldest.name + '", to keep the cap at two. Continue?',
-          'Continue', false
-        );
-        if (!ok) return;
-        var deact = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', oldest.id);
-        if (deact.error) { setStatus('Failed to deactivate oldest: ' + deact.error.message, 'err'); return; }
+      // Will the banner being saved actually render right now?
+      var simulatedNew = {
+        is_active: true,
+        start_at: startAt,
+        end_at: endAt,
+        tod_start: todStart,
+        tod_end: todEnd
+      };
+      var newWillRender = bannerStatus(simulatedNew) === 'Active';
+
+      if (newWillRender) {
+        var others = allBanners.filter(function (b) {
+          return b.id !== editingId && bannerStatus(b) === 'Active';
+        });
+        if (others.length >= 2) {
+          var oldest = others.slice().sort(function (a, b) {
+            return new Date(a.created_at) - new Date(b.created_at);
+          })[0];
+          var ok = await confirmDialog(
+            'Two banners are already on screen',
+            'Two banners are currently rendering ("' + others[0].name + '" and "' + others[1].name + '"). ' +
+            'Saving this one as live will deactivate the oldest, "' + oldest.name + '", to keep the on-screen cap at two. Continue?',
+            'Continue', false
+          );
+          if (!ok) return;
+          var deact = await sb.from('banners').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', oldest.id);
+          if (deact.error) { setStatus('Failed to deactivate oldest: ' + deact.error.message, 'err'); return; }
+        }
       }
-      // If 0 or 1 others are active, no prompt — just save and we'll have 1 or 2 active.
+      // If newWillRender is false (Off-hours due to tod or Scheduled due to
+      // start_at), it's not competing for slots right now, so no prompt.
     }
 
     $formSave.disabled = true;
