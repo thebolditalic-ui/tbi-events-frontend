@@ -623,7 +623,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           sb.rpc('banner_top_pages', {
             p_banner_id: b.id,
             p_days: STATS_WINDOW_DAYS,
-            p_limit: 10
+            p_limit: TOP_PAGES_LIMIT
           })
         ]);
         statsCache[b.id] = {
@@ -733,6 +733,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   // Display window for the daily sparkline, in days. Bump higher to look back
   // further; lifetime totals above the chart are unaffected by this number.
   var STATS_WINDOW_DAYS = 30;
+  // Number of top referring pages shown per banner.
+  var TOP_PAGES_LIMIT = 30;
 
   function renderStatsHTML(b) {
     var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
