@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
 <title>TBI Banners Admin</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -87,6 +88,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .status-ended     { background: rgba(0,0,0,0.06);       color: #888; }
 .status-draft     { background: var(--bg-alt);          color: #888; }
 .status-offhours  { background: rgba(255,214,130,0.25); color: #8a6d1f; }
+
+/* ---- TOD checkbox group ---- */
+.tod-blocks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 16px; padding: 8px 0 4px; }
+.tod-blocks label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.tod-blocks label input { accent-color: var(--gold); }
 
 /* ---- Stats drawer (per-row, expanded) ---- */
 .stats-row td { padding: 0; background: var(--bg-alt); }
@@ -187,6 +193,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <a href="/admin">Events</a>
         <a href="/queue">Manual Queue</a>
         <a href="/banners" class="active">Banners</a>
+        <a href="/links">Short Links</a>
+        <a href="/analytics">Analytics</a>
       </nav>
     </div>
     <div class="user-info">
@@ -197,7 +205,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   <div class="page-wrap">
     <h2 class="section-title">Currently live</h2>
-    <p class="section-sub">Up to two banners run at a time. When no banner is active, Mediavine has the slot.</p>
+    <p class="section-sub">Up to two banners run at a time per placement. Time-of-day windows let multiple banners share the same placement and rotate. When no banner is active, Mediavine has the slot.</p>
     <div id="active-card-wrap"></div>
 
     <div class="toolbar" style="margin-top:24px;">
@@ -317,22 +325,23 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         </div>
       </div>
 
-      <div class="form-row">
+      <div class="form-row single">
         <div class="form-group">
-          <label for="bn-tod-start">Daily window start <span style="font-weight:400;color:#999;">(Pacific, optional)</span></label>
-          <input type="time" id="bn-tod-start">
-        </div>
-        <div class="form-group">
-          <label for="bn-tod-end">Daily window end <span style="font-weight:400;color:#999;">(Pacific, optional)</span></label>
-          <input type="time" id="bn-tod-end">
-          <div class="hint">Leave both blank to run 24/7. Set both to rotate this slot to a different banner outside the window. End before start = wraps midnight (e.g., 8 PM – 6 AM).</div>
+          <label>Daily window <span style="font-weight:400;color:#999;">(Pacific, optional)</span></label>
+          <div class="tod-blocks">
+            <label><input type="checkbox" class="bn-tod-block" value="morning"  > Morning <span style="color:#999;font-weight:400;">(6 AM – noon)</span></label>
+            <label><input type="checkbox" class="bn-tod-block" value="afternoon"> Afternoon <span style="color:#999;font-weight:400;">(noon – 6 PM)</span></label>
+            <label><input type="checkbox" class="bn-tod-block" value="evening"  > Evening <span style="color:#999;font-weight:400;">(6 PM – midnight)</span></label>
+            <label><input type="checkbox" class="bn-tod-block" value="overnight"> Overnight <span style="color:#999;font-weight:400;">(midnight – 6 AM)</span></label>
+          </div>
+          <div class="hint">Leave all unchecked to run 24/7. Check one or more time blocks to limit when this banner shows. To rotate the same slot to another banner during off-hours, create a second banner at the same "Place after paragraph #" with complementary blocks checked.</div>
         </div>
       </div>
 
       <div class="form-row single">
         <div class="form-group">
           <label class="form-check"><input type="checkbox" id="bn-active"> Set as the live banner</label>
-          <div class="hint">Up to two banners can be live at once per placement. Time-of-day windows let multiple banners share the same placement and rotate.</div>
+          <div class="hint">Up to two banners can be on screen at once per placement. With time-of-day windows you can have several banners live simultaneously — they take turns based on the current Pacific time.</div>
         </div>
       </div>
     </div>
@@ -467,17 +476,24 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
   function clearStatus() { $formStatus.className = 'status-msg'; $formStatus.textContent = ''; }
 
-  // ---- Time-of-day helpers (mirrors the Ghost banner script) ----
-  // Pacific time is the canonical TZ for tod windows. We compute "now in
-  // Pacific" via Intl so the admin reflects the same logic readers see.
+  // ---- Time-of-day blocks (Pacific) ----
+  // Each preset name maps to a 6-hour window. Banners can be tagged with
+  // any subset; if any block matches the current Pacific time, the banner
+  // is "in window". An empty / null tod_blocks means 24/7.
   var TOD_TIMEZONE = 'America/Los_Angeles';
-
+  var TOD_PRESETS = [
+    { name: 'morning',   label: 'Morning',   short: '6 AM – 12 PM', startMin: 360,  endMin: 720  },
+    { name: 'afternoon', label: 'Afternoon', short: '12 – 6 PM',    startMin: 720,  endMin: 1080 },
+    { name: 'evening',   label: 'Evening',   short: '6 PM – 12 AM', startMin: 1080, endMin: 1440 },
+    { name: 'overnight', label: 'Overnight', short: '12 – 6 AM',    startMin: 0,    endMin: 360  }
+  ];
+  function todPresetByName(name) {
+    for (var i = 0; i < TOD_PRESETS.length; i++) if (TOD_PRESETS[i].name === name) return TOD_PRESETS[i];
+    return null;
+  }
   function nowMinutesInPacific() {
     var parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: TOD_TIMEZONE,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
+      timeZone: TOD_TIMEZONE, hour: '2-digit', minute: '2-digit', hour12: false
     }).formatToParts(new Date());
     var h = 0, m = 0;
     for (var i = 0; i < parts.length; i++) {
@@ -487,53 +503,43 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     if (h === 24) h = 0;
     return h * 60 + m;
   }
-  function timeStringToMinutes(s) {
-    if (!s || typeof s !== 'string') return -1;
-    var parts = s.split(':');
-    if (parts.length < 2) return -1;
-    var h = parseInt(parts[0], 10);
-    var m = parseInt(parts[1], 10);
-    if (isNaN(h) || isNaN(m)) return -1;
-    return h * 60 + m;
-  }
-  function minutesToHHMM(min) {
-    var h = Math.floor(min / 60);
-    var m = min % 60;
-    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+  function bannerInTodWindow(b) {
+    var blocks = Array.isArray(b.tod_blocks) ? b.tod_blocks : null;
+    if (!blocks || blocks.length === 0) return true; // 24/7
+    var nowMin = nowMinutesInPacific();
+    for (var i = 0; i < blocks.length; i++) {
+      var p = todPresetByName(blocks[i]);
+      if (!p) continue;
+      // endMin === 1440 means "up to but not including midnight (next day)";
+      // since nowMin is 0..1439 it can never be >= 1440, so the check works.
+      if (nowMin >= p.startMin && nowMin < p.endMin) return true;
+    }
+    return false;
   }
   function fmtTodLabel(b) {
-    var startMin = timeStringToMinutes(b.tod_start);
-    var endMin   = timeStringToMinutes(b.tod_end);
-    if (startMin < 0 && endMin < 0) return '';
-    if (startMin < 0 || endMin < 0) return '';
-    return minutesToHHMM(startMin) + '–' + minutesToHHMM(endMin) + ' PT';
-  }
-  function bannerInTodWindow(b) {
-    var startMin = timeStringToMinutes(b.tod_start);
-    var endMin   = timeStringToMinutes(b.tod_end);
-    if (startMin < 0 && endMin < 0) return true;
-    if (startMin < 0 || endMin < 0) return true;
-    if (startMin === endMin) return true;
-    var nowMin = nowMinutesInPacific();
-    if (startMin < endMin) return nowMin >= startMin && nowMin < endMin;
-    return nowMin >= startMin || nowMin < endMin; // wraps midnight
+    var blocks = Array.isArray(b.tod_blocks) ? b.tod_blocks : null;
+    if (!blocks || blocks.length === 0) return '';
+    var labels = [];
+    for (var i = 0; i < blocks.length; i++) {
+      var p = todPresetByName(blocks[i]);
+      if (p) labels.push(p.label);
+    }
+    return labels.length ? labels.join(' + ') + ' PT' : '';
   }
 
   // ---- Status / period helpers ----
-  // "Off-hours" = enabled and inside its date range, but currently outside
-  // its time-of-day window (e.g., a 6 PM – 6 AM banner viewed at noon).
-  // Off-hours banners don't render to readers; another banner at the same
-  // placement (with a complementary tod window) typically takes the slot.
+  // "Off-hours" = enabled and within its date range, but currently outside
+  // its time-of-day blocks. Off-hours banners don't render to readers.
   function bannerStatus(b) {
     var now = new Date();
     if (!b.is_active) return 'Draft';
     if (b.start_at && new Date(b.start_at) > now) return 'Scheduled';
     if (b.end_at && new Date(b.end_at) < now) return 'Ended';
-    if ((b.tod_start || b.tod_end) && !bannerInTodWindow(b)) return 'Off-hours';
+    if (Array.isArray(b.tod_blocks) && b.tod_blocks.length > 0 && !bannerInTodWindow(b)) return 'Off-hours';
     return 'Active';
   }
   function statusPill(s) {
-    // Map "Off-hours" to a class without the hyphen for cleaner CSS.
+    // "Off-hours" → "offhours" so the CSS class isn't broken by the hyphen.
     var key = s.toLowerCase().replace(/[^a-z]/g, '');
     return '<span class="status-pill status-' + key + '">' + s + '</span>';
   }
@@ -614,10 +620,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   // Up to two banners can be active at once. Sort by placement_paragraph
   // (lower number = higher in the article) so the top banner is shown first.
   function renderActiveCard() {
-    // Currently-live includes both "Active" right-now banners AND
-    // "Off-hours" banners (enabled, in their date range, but currently
-    // outside their tod window). Off-hours banners are flagged so you can
-    // see they exist; readers don't see them until their tod window opens.
+    // Currently-live includes Active right-now AND Off-hours (configured but
+    // outside their tod window). Off-hours show with their badge so you know
+    // they exist but aren't on screen yet.
     var liveList = allBanners.filter(function (b) {
       var st = bannerStatus(b);
       return st === 'Active' || st === 'Off-hours';
@@ -842,18 +847,22 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       document.getElementById('bn-paragraph').value = b.placement_paragraph || 5;
       document.getElementById('bn-start').value = toLocalDtInput(b.start_at);
       document.getElementById('bn-end').value = toLocalDtInput(b.end_at);
-      // Postgres TIME values come back as 'HH:MM:SS'; the time input wants 'HH:MM'.
-      document.getElementById('bn-tod-start').value = (b.tod_start || '').slice(0, 5);
-      document.getElementById('bn-tod-end').value   = (b.tod_end   || '').slice(0, 5);
+      // Tick the tod-block checkboxes that match this banner's saved blocks
+      var savedBlocks = Array.isArray(b.tod_blocks) ? b.tod_blocks : [];
+      document.querySelectorAll('.bn-tod-block').forEach(function (cb) {
+        cb.checked = savedBlocks.indexOf(cb.value) !== -1;
+      });
       document.getElementById('bn-active').checked = !!b.is_active;
       if (b.creative_url) showUploadedImage('desktop', b.creative_url, b.natural_width, b.natural_height);
       if (b.creative_url_mobile) showUploadedImage('mobile', b.creative_url_mobile, b.natural_width_mobile, b.natural_height_mobile);
       $formDelete.style.display = '';
     } else {
       $modalTitle.textContent = 'New banner';
-      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end','bn-tod-start','bn-tod-end'].forEach(function (id) { document.getElementById(id).value = ''; });
+      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end'].forEach(function (id) { document.getElementById(id).value = ''; });
       document.getElementById('bn-paragraph').value = 5;
       document.getElementById('bn-active').checked = false;
+      // Uncheck all tod-block boxes (default = 24/7)
+      document.querySelectorAll('.bn-tod-block').forEach(function (cb) { cb.checked = false; });
       $formDelete.style.display = 'none';
     }
     $modal.classList.add('show');
@@ -988,11 +997,13 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var paragraph = parseInt(document.getElementById('bn-paragraph').value, 10) || 5;
     var startAt = fromLocalDtInput(document.getElementById('bn-start').value);
     var endAt = fromLocalDtInput(document.getElementById('bn-end').value);
-    // Time inputs return 'HH:MM'. Postgres TIME accepts 'HH:MM:SS' or 'HH:MM'.
-    var todStartRaw = document.getElementById('bn-tod-start').value.trim();
-    var todEndRaw   = document.getElementById('bn-tod-end').value.trim();
-    var todStart = todStartRaw || null;
-    var todEnd   = todEndRaw   || null;
+    // Collect ticked tod-block presets. Empty array → 24/7. Pass null when
+    // empty so Postgres stores NULL rather than '{}'.
+    var todBlocks = [];
+    document.querySelectorAll('.bn-tod-block').forEach(function (cb) {
+      if (cb.checked) todBlocks.push(cb.value);
+    });
+    if (todBlocks.length === 0) todBlocks = null;
     var isActive = document.getElementById('bn-active').checked;
 
     if (!creativeUrl) { setStatus('Please upload a desktop creative.', 'err'); return; }
@@ -1019,24 +1030,20 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       is_active: isActive,
       start_at: startAt,
       end_at: endAt,
-      tod_start: todStart,
-      tod_end: todEnd,
+      tod_blocks: todBlocks,
       updated_at: new Date().toISOString()
     };
 
-    // Up to two banners may be currently RENDERING at once. With time-of-day
-    // rotation, "is_active=true" no longer implies "rendering right now" — a
-    // banner with a tod window outside the current Pacific time is Off-hours
-    // (registered, but not on screen). The cap only applies to banners that
-    // would actually be rendering at the moment of save.
+    // The cap is "at most two banners on screen at once". With time-of-day
+    // rotation, a banner with a tod_blocks restriction outside the current
+    // hour is Off-hours (registered, not on screen). Don't count it toward
+    // the cap, and don't prompt if the new banner would itself be Off-hours.
     if (isActive) {
-      // Will the banner being saved actually render right now?
       var simulatedNew = {
         is_active: true,
         start_at: startAt,
         end_at: endAt,
-        tod_start: todStart,
-        tod_end: todEnd
+        tod_blocks: todBlocks
       };
       var newWillRender = bannerStatus(simulatedNew) === 'Active';
 
@@ -1059,8 +1066,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           if (deact.error) { setStatus('Failed to deactivate oldest: ' + deact.error.message, 'err'); return; }
         }
       }
-      // If newWillRender is false (Off-hours due to tod or Scheduled due to
-      // start_at), it's not competing for slots right now, so no prompt.
+      // If newWillRender is false (Off-hours / Scheduled), it's not competing
+      // for slots right now, so no prompt.
     }
 
     $formSave.disabled = true;
