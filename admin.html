@@ -200,6 +200,100 @@ body {
   gap: 10px;
 }
 
+/* ---- Crawler trigger cluster ---- */
+.crawl-cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 12px;
+  background: rgba(0,0,0,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.crawl-status {
+  font-size: 12px;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crawl-status.ok { color: #0a7a3a; }
+.crawl-status.warn { color: #a86a00; }
+.crawl-status.err { color: #b22; }
+.crawl-status.busy { color: #555; font-style: italic; }
+.crawl-cog {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #888;
+  font-size: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.crawl-cog:hover { color: #222; border-color: var(--border); background: #fff; }
+#run-crawl-btn { white-space: nowrap; }
+#run-crawl-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+.crawl-btn-label.spin::before {
+  content: '⟳';
+  display: inline-block;
+  animation: crawlspin 1s linear infinite;
+  margin-right: 4px;
+}
+@keyframes crawlspin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+.crawl-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20,20,30,0.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.crawl-modal-inner {
+  background: #fff;
+  padding: 24px;
+  border-radius: 10px;
+  width: min(480px, 92vw);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+.crawl-modal-inner h2 { margin: 0 0 6px; font-size: 18px; }
+.crawl-modal-hint { font-size: 12px; color: #666; margin: 0 0 16px; line-height: 1.4; }
+.crawl-modal-hint code { background: #f3f3f3; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+.crawl-modal-inner label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.crawl-modal-inner input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-sizing: border-box;
+}
+.crawl-modal-inner input:focus { outline: none; border-color: var(--blue); }
+.crawl-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
 /* ---- Events Table ---- */
 .table-wrap {
   max-width: 1200px;
@@ -898,7 +992,30 @@ body {
       <label style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
         <input type="checkbox" id="show-past" style="accent-color:var(--gold)"> Show past
       </label>
+      <div class="crawl-cluster">
+        <span class="crawl-status" id="crawl-status" title="Last sync status">Crawler: —</span>
+        <button class="btn btn-outline btn-sm" id="run-crawl-btn" title="Trigger the Render content engine to fetch new events now">
+          <span class="crawl-btn-label">⟳ Run crawl now</span>
+        </button>
+        <button class="crawl-cog" id="crawl-settings-btn" title="Crawler settings (Render URL &amp; refresh secret)">⚙</button>
+      </div>
       <button class="btn btn-gold btn-sm" id="add-event-btn">+ Add Event</button>
+    </div>
+  </div>
+
+  <!-- Crawler settings modal -->
+  <div id="crawl-settings-modal" class="crawl-modal" style="display:none;">
+    <div class="crawl-modal-inner">
+      <h2>Crawler Settings</h2>
+      <p class="crawl-modal-hint">These are stored locally in your browser only. They're used to call the Render content engine's <code>/api/refresh</code> endpoint.</p>
+      <label for="crawl-url-input">Render service URL</label>
+      <input type="text" id="crawl-url-input" placeholder="https://tbi-content-engine.onrender.com" autocomplete="off">
+      <label for="crawl-secret-input">Refresh secret (REFRESH_SECRET on Render)</label>
+      <input type="password" id="crawl-secret-input" placeholder="The value of REFRESH_SECRET" autocomplete="off">
+      <div class="crawl-modal-actions">
+        <button class="btn btn-outline btn-sm" id="crawl-settings-cancel">Cancel</button>
+        <button class="btn btn-gold btn-sm" id="crawl-settings-save">Save</button>
+      </div>
     </div>
   </div>
 
@@ -2243,6 +2360,176 @@ body {
     $relatedSearchInput.value = '';
     $relatedDropdown.style.display = 'none';
   }
+
+  // =================================================================
+  // Crawler trigger — calls the Render content engine /api/refresh
+  // and polls /api/health for status. No new Vercel serverless function
+  // needed (we're at the 12-function cap).
+  // =================================================================
+  var CRAWL_LS_URL = 'tbi_crawl_render_url';
+  var CRAWL_LS_SECRET = 'tbi_crawl_refresh_secret';
+  var $crawlBtn = document.getElementById('run-crawl-btn');
+  var $crawlStatus = document.getElementById('crawl-status');
+  var $crawlSettingsBtn = document.getElementById('crawl-settings-btn');
+  var $crawlModal = document.getElementById('crawl-settings-modal');
+  var $crawlUrlInput = document.getElementById('crawl-url-input');
+  var $crawlSecretInput = document.getElementById('crawl-secret-input');
+  var $crawlSaveBtn = document.getElementById('crawl-settings-save');
+  var $crawlCancelBtn = document.getElementById('crawl-settings-cancel');
+  var crawlPollTimer = null;
+
+  function getCrawlConfig() {
+    return {
+      url: (localStorage.getItem(CRAWL_LS_URL) || '').trim().replace(/\/+$/, ''),
+      secret: (localStorage.getItem(CRAWL_LS_SECRET) || '').trim()
+    };
+  }
+
+  function openCrawlSettings() {
+    var cfg = getCrawlConfig();
+    $crawlUrlInput.value = cfg.url;
+    $crawlSecretInput.value = cfg.secret;
+    $crawlModal.style.display = 'flex';
+    setTimeout(function() { $crawlUrlInput.focus(); }, 50);
+  }
+  function closeCrawlSettings() { $crawlModal.style.display = 'none'; }
+
+  $crawlSettingsBtn && $crawlSettingsBtn.addEventListener('click', openCrawlSettings);
+  $crawlCancelBtn && $crawlCancelBtn.addEventListener('click', closeCrawlSettings);
+  $crawlModal && $crawlModal.addEventListener('click', function(e) {
+    if (e.target === $crawlModal) closeCrawlSettings();
+  });
+  $crawlSaveBtn && $crawlSaveBtn.addEventListener('click', function() {
+    var url = ($crawlUrlInput.value || '').trim().replace(/\/+$/, '');
+    var secret = ($crawlSecretInput.value || '').trim();
+    if (!/^https?:\/\//.test(url)) {
+      alert('Please enter a full URL starting with https://');
+      return;
+    }
+    localStorage.setItem(CRAWL_LS_URL, url);
+    localStorage.setItem(CRAWL_LS_SECRET, secret);
+    closeCrawlSettings();
+    refreshCrawlHealth();
+  });
+
+  function setStatus(text, cls) {
+    if (!$crawlStatus) return;
+    $crawlStatus.textContent = text;
+    $crawlStatus.classList.remove('ok', 'warn', 'err', 'busy');
+    if (cls) $crawlStatus.classList.add(cls);
+  }
+
+  function setBtnBusy(busy) {
+    if (!$crawlBtn) return;
+    $crawlBtn.disabled = !!busy;
+    var label = $crawlBtn.querySelector('.crawl-btn-label');
+    if (label) {
+      if (busy) {
+        label.textContent = 'Crawling...';
+        label.classList.add('spin');
+      } else {
+        label.textContent = '⟳ Run crawl now';
+        label.classList.remove('spin');
+      }
+    }
+  }
+
+  function relTime(iso) {
+    if (!iso) return 'never';
+    var then = new Date(iso).getTime();
+    if (isNaN(then)) return 'never';
+    var secs = Math.max(0, Math.round((Date.now() - then) / 1000));
+    if (secs < 60) return secs + 's ago';
+    if (secs < 3600) return Math.round(secs / 60) + 'm ago';
+    if (secs < 86400) return Math.round(secs / 3600) + 'h ago';
+    return Math.round(secs / 86400) + 'd ago';
+  }
+
+  function describeHealth(health) {
+    var last = health.lastSync || {};
+    if (last.inProgress) return { text: 'Crawling now (started ' + relTime(last.startedAt) + ')', cls: 'busy' };
+    if (last.error) return { text: 'Last run errored: ' + last.error + ' (' + relTime(last.finishedAt) + ')', cls: 'err' };
+    if (last.upserted > 0) {
+      return {
+        text: 'Last run: ' + last.upserted + ' upserted, ' + (last.skippedNoImage || 0) + ' no-image (' + relTime(last.finishedAt) + ')',
+        cls: 'ok'
+      };
+    }
+    if (last.finishedAt) {
+      return { text: 'Last run: 0 events upserted (' + relTime(last.finishedAt) + ')', cls: 'warn' };
+    }
+    return { text: 'Crawler: ' + (health.eventCount || 0) + ' cached, last data ' + relTime(health.lastUpdated), cls: '' };
+  }
+
+  function refreshCrawlHealth() {
+    var cfg = getCrawlConfig();
+    if (!cfg.url) {
+      setStatus('Crawler: not configured — click ⚙', 'warn');
+      return Promise.resolve(null);
+    }
+    return fetch(cfg.url + '/api/health', { cache: 'no-store' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(health) {
+        var d = describeHealth(health);
+        setStatus(d.text, d.cls);
+        // If the server says inProgress, keep polling
+        if (health.lastSync && health.lastSync.inProgress) {
+          setBtnBusy(true);
+          schedulePoll(4000);
+        } else {
+          setBtnBusy(false);
+        }
+        return health;
+      })
+      .catch(function(err) {
+        // If the service was asleep, the first request usually fails or
+        // takes 30+ seconds. Surface a useful hint.
+        setStatus('Crawler unreachable (' + err.message + ') — Render may be asleep', 'err');
+        setBtnBusy(false);
+        return null;
+      });
+  }
+
+  function schedulePoll(delay) {
+    if (crawlPollTimer) clearTimeout(crawlPollTimer);
+    crawlPollTimer = setTimeout(refreshCrawlHealth, delay || 4000);
+  }
+
+  $crawlBtn && $crawlBtn.addEventListener('click', function() {
+    var cfg = getCrawlConfig();
+    if (!cfg.url || !cfg.secret) {
+      openCrawlSettings();
+      return;
+    }
+    setBtnBusy(true);
+    setStatus('Waking Render and starting crawl...', 'busy');
+    var refreshUrl = cfg.url + '/api/refresh?secret=' + encodeURIComponent(cfg.secret);
+    fetch(refreshUrl, { cache: 'no-store' })
+      .then(function(r) {
+        if (r.status === 403) throw new Error('403 — refresh secret rejected');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        if (data.message === 'Sync already in progress') {
+          setStatus('Sync already running — polling for status...', 'busy');
+        } else {
+          setStatus('Sync started — polling for status...', 'busy');
+        }
+        schedulePoll(5000);
+      })
+      .catch(function(err) {
+        setStatus('Trigger failed: ' + err.message, 'err');
+        setBtnBusy(false);
+      });
+  });
+
+  // Initial status read + a slow background refresh
+  refreshCrawlHealth();
+  setInterval(refreshCrawlHealth, 60000);
 
   // ---- Init ----
   checkSession();
