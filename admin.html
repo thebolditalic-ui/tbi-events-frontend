@@ -294,6 +294,82 @@ body {
   margin-top: 20px;
 }
 
+/* ---- Advanced crawl modal ---- */
+.crawl-advanced-link {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #555;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.crawl-advanced-link:hover {
+  color: #222;
+  border-color: var(--border);
+  background: #fff;
+}
+.crawl-modal-wide {
+  width: min(560px, 92vw);
+}
+.crawl-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.crawl-section:first-of-type { border-top: 0; padding-top: 4px; }
+.crawl-section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.crawl-check,
+.crawl-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #222;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.crawl-check input,
+.crawl-radio input { margin: 0; }
+.crawl-hint-inline {
+  color: #888;
+  font-size: 11px;
+  font-style: italic;
+  margin-left: 4px;
+}
+#adv-custom-row {
+  margin-top: 8px;
+  padding-left: 24px;
+  display: flex;
+  align-items: center;
+}
+#adv-custom-row input[type="date"] {
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.crawl-preview {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  background: #f7f7f7;
+  padding: 8px 10px;
+  border-radius: 5px;
+  color: #444;
+  word-break: break-all;
+  border: 1px solid var(--border);
+}
+
 /* ---- Events Table ---- */
 .table-wrap {
   max-width: 1200px;
@@ -997,6 +1073,7 @@ body {
         <button class="btn btn-outline btn-sm" id="run-crawl-btn" title="Trigger the Render content engine to fetch new events now">
           <span class="crawl-btn-label">⟳ Run crawl now</span>
         </button>
+        <button class="crawl-advanced-link" id="crawl-advanced-btn" title="Run a crawl scoped to specific sources or dates">Advanced…</button>
         <button class="crawl-cog" id="crawl-settings-btn" title="Crawler settings (Render URL &amp; refresh secret)">⚙</button>
       </div>
       <button class="btn btn-gold btn-sm" id="add-event-btn">+ Add Event</button>
@@ -1015,6 +1092,45 @@ body {
       <div class="crawl-modal-actions">
         <button class="btn btn-outline btn-sm" id="crawl-settings-cancel">Cancel</button>
         <button class="btn btn-gold btn-sm" id="crawl-settings-save">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Advanced crawl modal -->
+  <div id="crawl-advanced-modal" class="crawl-modal" style="display:none;">
+    <div class="crawl-modal-inner crawl-modal-wide">
+      <h2>Advanced Crawl</h2>
+      <p class="crawl-modal-hint">Run a one-off crawl scoped to specific sources and/or a custom date range. The scheduled cron is unaffected.</p>
+
+      <div class="crawl-section">
+        <div class="crawl-section-label">Sources</div>
+        <label class="crawl-check"><input type="checkbox" id="adv-src-funcheap" checked> SF Funcheap</label>
+        <label class="crawl-check"><input type="checkbox" id="adv-src-dothebay" checked> DoTheBay</label>
+        <label class="crawl-check"><input type="checkbox" id="adv-src-eventbrite"> Eventbrite <span class="crawl-hint-inline">(needs EVENTBRITE_API_KEY on Render or falls back to fragile web scrape)</span></label>
+      </div>
+
+      <div class="crawl-section">
+        <div class="crawl-section-label">Date range</div>
+        <label class="crawl-radio"><input type="radio" name="adv-range" value="default" checked> Default (next 60 days)</label>
+        <label class="crawl-radio"><input type="radio" name="adv-range" value="today"> Today only</label>
+        <label class="crawl-radio"><input type="radio" name="adv-range" value="weekend"> This weekend (Sat–Sun)</label>
+        <label class="crawl-radio"><input type="radio" name="adv-range" value="next7"> Next 7 days</label>
+        <label class="crawl-radio"><input type="radio" name="adv-range" value="custom"> Custom range</label>
+        <div id="adv-custom-row" style="display:none;">
+          <input type="date" id="adv-custom-start">
+          <span style="margin:0 8px;color:#666;">to</span>
+          <input type="date" id="adv-custom-end">
+        </div>
+      </div>
+
+      <div class="crawl-section">
+        <div class="crawl-section-label">Will fire:</div>
+        <code id="adv-preview" class="crawl-preview">—</code>
+      </div>
+
+      <div class="crawl-modal-actions">
+        <button class="btn btn-outline btn-sm" id="crawl-advanced-cancel">Cancel</button>
+        <button class="btn btn-gold btn-sm" id="crawl-advanced-run">⟳ Run scoped crawl</button>
       </div>
     </div>
   </div>
@@ -2530,6 +2646,174 @@ body {
   // Initial status read + a slow background refresh
   refreshCrawlHealth();
   setInterval(refreshCrawlHealth, 60000);
+
+  // =================================================================
+  // Advanced crawl — scope a manual crawl by source and date range
+  // =================================================================
+  var $crawlAdvancedBtn = document.getElementById('crawl-advanced-btn');
+  var $crawlAdvancedModal = document.getElementById('crawl-advanced-modal');
+  var $crawlAdvancedCancel = document.getElementById('crawl-advanced-cancel');
+  var $crawlAdvancedRun = document.getElementById('crawl-advanced-run');
+  var $advCustomRow = document.getElementById('adv-custom-row');
+  var $advCustomStart = document.getElementById('adv-custom-start');
+  var $advCustomEnd = document.getElementById('adv-custom-end');
+  var $advPreview = document.getElementById('adv-preview');
+
+  function ymd(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + dd;
+  }
+
+  // Returns { start: 'YYYY-MM-DD', end: 'YYYY-MM-DD' } or null for "default"
+  function computeAdvRange() {
+    var sel = (document.querySelector('input[name="adv-range"]:checked') || {}).value;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    if (sel === 'today') {
+      return { start: ymd(today), end: ymd(today) };
+    }
+    if (sel === 'weekend') {
+      // Find the upcoming Saturday and Sunday. If today is Sat, use today+tomorrow.
+      // If today is Sun, use yesterday+today.
+      var dow = today.getDay(); // 0=Sun, 6=Sat
+      var sat = new Date(today);
+      var sun = new Date(today);
+      if (dow === 0) { sat.setDate(sat.getDate() - 1); sun = today; }
+      else if (dow === 6) { sun.setDate(sun.getDate() + 1); }
+      else { sat.setDate(sat.getDate() + (6 - dow)); sun = new Date(sat); sun.setDate(sun.getDate() + 1); }
+      return { start: ymd(sat), end: ymd(sun) };
+    }
+    if (sel === 'next7') {
+      var end7 = new Date(today);
+      end7.setDate(end7.getDate() + 6);
+      return { start: ymd(today), end: ymd(end7) };
+    }
+    if (sel === 'custom') {
+      var s = $advCustomStart.value;
+      var e = $advCustomEnd.value;
+      if (!s || !e) return { _error: 'Pick a start and end date.' };
+      if (e < s) return { _error: 'End date is before start date.' };
+      return { start: s, end: e };
+    }
+    return null; // default — no range
+  }
+
+  function getAdvSources() {
+    var srcs = [];
+    if (document.getElementById('adv-src-funcheap').checked) srcs.push('funcheap');
+    if (document.getElementById('adv-src-dothebay').checked) srcs.push('dothebay');
+    if (document.getElementById('adv-src-eventbrite').checked) srcs.push('eventbrite');
+    return srcs;
+  }
+
+  function updateAdvPreview() {
+    var cfg = getCrawlConfig();
+    var srcs = getAdvSources();
+    var range = computeAdvRange();
+    if (range && range._error) {
+      $advPreview.textContent = '(' + range._error + ')';
+      return;
+    }
+    if (srcs.length === 0) {
+      $advPreview.textContent = '(pick at least one source)';
+      return;
+    }
+    var params = ['secret=***'];
+    // sources only sent if user changed the default set
+    var defaultSet = ['funcheap','dothebay'];
+    var isDefaultSet = srcs.length === defaultSet.length &&
+      srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
+    if (!isDefaultSet) params.push('sources=' + srcs.join(','));
+    if (range) { params.push('start=' + range.start); params.push('end=' + range.end); }
+    var host = cfg.url || 'https://<render-url>';
+    $advPreview.textContent = host + '/api/refresh?' + params.join('&');
+  }
+
+  function openAdvancedModal() {
+    // Reset to default-ish state on each open
+    document.getElementById('adv-src-funcheap').checked = true;
+    document.getElementById('adv-src-dothebay').checked = true;
+    document.getElementById('adv-src-eventbrite').checked = false;
+    var rd = document.querySelector('input[name="adv-range"][value="default"]');
+    if (rd) rd.checked = true;
+    $advCustomRow.style.display = 'none';
+    $advCustomStart.value = '';
+    $advCustomEnd.value = '';
+    updateAdvPreview();
+    $crawlAdvancedModal.style.display = 'flex';
+  }
+  function closeAdvancedModal() { $crawlAdvancedModal.style.display = 'none'; }
+
+  $crawlAdvancedBtn && $crawlAdvancedBtn.addEventListener('click', openAdvancedModal);
+  $crawlAdvancedCancel && $crawlAdvancedCancel.addEventListener('click', closeAdvancedModal);
+  $crawlAdvancedModal && $crawlAdvancedModal.addEventListener('click', function(e) {
+    if (e.target === $crawlAdvancedModal) closeAdvancedModal();
+  });
+
+  // Show/hide custom date row when its radio is selected; refresh preview on any change.
+  document.querySelectorAll('input[name="adv-range"]').forEach(function(r) {
+    r.addEventListener('change', function() {
+      $advCustomRow.style.display = (r.value === 'custom' && r.checked) ? 'flex' : 'none';
+      updateAdvPreview();
+    });
+  });
+  ['adv-src-funcheap','adv-src-dothebay','adv-src-eventbrite'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el && el.addEventListener('change', updateAdvPreview);
+  });
+  $advCustomStart && $advCustomStart.addEventListener('change', updateAdvPreview);
+  $advCustomEnd && $advCustomEnd.addEventListener('change', updateAdvPreview);
+
+  $crawlAdvancedRun && $crawlAdvancedRun.addEventListener('click', function() {
+    var cfg = getCrawlConfig();
+    if (!cfg.url || !cfg.secret) {
+      closeAdvancedModal();
+      openCrawlSettings();
+      return;
+    }
+    var srcs = getAdvSources();
+    if (srcs.length === 0) {
+      alert('Pick at least one source.');
+      return;
+    }
+    var range = computeAdvRange();
+    if (range && range._error) {
+      alert(range._error);
+      return;
+    }
+    var params = ['secret=' + encodeURIComponent(cfg.secret)];
+    var defaultSet = ['funcheap','dothebay'];
+    var isDefaultSet = srcs.length === defaultSet.length &&
+      srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
+    if (!isDefaultSet) params.push('sources=' + encodeURIComponent(srcs.join(',')));
+    if (range) {
+      params.push('start=' + encodeURIComponent(range.start));
+      params.push('end=' + encodeURIComponent(range.end));
+    }
+    var url = cfg.url + '/api/refresh?' + params.join('&');
+
+    closeAdvancedModal();
+    setBtnBusy(true);
+    setStatus('Starting scoped crawl...', 'busy');
+    fetch(url, { cache: 'no-store' })
+      .then(function(r) {
+        if (r.status === 400) return r.json().then(function(j) { throw new Error('400 — ' + (j.error || 'bad params')); });
+        if (r.status === 403) throw new Error('403 — refresh secret rejected');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        var scope = data.scope || '(scoped)';
+        setStatus('Scoped sync started (' + scope + ') — polling...', 'busy');
+        schedulePoll(5000);
+      })
+      .catch(function(err) {
+        setStatus('Scoped trigger failed: ' + err.message, 'err');
+        setBtnBusy(false);
+      });
+  });
 
   // ---- Init ----
   checkSession();
