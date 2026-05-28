@@ -1107,7 +1107,6 @@ body {
         <label class="crawl-check"><input type="checkbox" id="adv-src-funcheap" checked> SF Funcheap</label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-dothebay" checked> DoTheBay</label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-eventbrite"> Eventbrite <span class="crawl-hint-inline">(needs EVENTBRITE_API_KEY on Render or falls back to fragile web scrape)</span></label>
-        <label class="crawl-check"><input type="checkbox" id="adv-src-meetup"> Meetup <span class="crawl-hint-inline">(needs MEETUP_ACCESS_TOKEN, or MEETUP_CLIENT_KEY + MEETUP_MEMBER_ID + MEETUP_SIGNING_KEY_ID + MEETUP_PRIVATE_KEY on Render)</span></label>
       </div>
 
       <div class="crawl-section">
@@ -2706,7 +2705,6 @@ body {
     if (document.getElementById('adv-src-funcheap').checked) srcs.push('funcheap');
     if (document.getElementById('adv-src-dothebay').checked) srcs.push('dothebay');
     if (document.getElementById('adv-src-eventbrite').checked) srcs.push('eventbrite');
-    if (document.getElementById('adv-src-meetup').checked) srcs.push('meetup');
     return srcs;
   }
 
@@ -2738,7 +2736,6 @@ body {
     document.getElementById('adv-src-funcheap').checked = true;
     document.getElementById('adv-src-dothebay').checked = true;
     document.getElementById('adv-src-eventbrite').checked = false;
-    document.getElementById('adv-src-meetup').checked = false;
     var rd = document.querySelector('input[name="adv-range"][value="default"]');
     if (rd) rd.checked = true;
     $advCustomRow.style.display = 'none';
@@ -2762,7 +2759,7 @@ body {
       updateAdvPreview();
     });
   });
-  ['adv-src-funcheap','adv-src-dothebay','adv-src-eventbrite','adv-src-meetup'].forEach(function(id) {
+  ['adv-src-funcheap','adv-src-dothebay','adv-src-eventbrite'].forEach(function(id) {
     var el = document.getElementById(id);
     el && el.addEventListener('change', updateAdvPreview);
   });
