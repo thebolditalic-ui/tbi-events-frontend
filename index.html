@@ -2455,12 +2455,13 @@
       html += '</div>';
     }
 
-    /* Source */
-    if (event.source_name && event.source_name.toLowerCase() === 'manual') {
-      html += '<div class="ev-post-source">Details may change \u2014 check the venue for latest info.</div>';
-    } else if (event.source_name || event.source_url) {
+    /* Source + attribution — TBI not-for-profit disclaimer shows on every event page */
+    var tbiNote = ' The Bold Italic is a not-for-profit media company that’s fiscally sponsored by a 501(c)(3). This event has been shared to build community in San Francisco and the greater Bay Area, and we are not collecting ad revenue from this page. <a href="https://thebolditalic.com/about/" target="_blank" rel="noopener">Learn more about us</a>.';
+    var isManualSrc = event.source_name && event.source_name.toLowerCase() === 'manual';
+    html += '<div class="ev-post-source">';
+    if (!isManualSrc && (event.source_name || event.source_url)) {
       var srcUrl = getSourceUrl(event);
-      html += '<div class="ev-post-source">See this event also on ';
+      html += 'See this event also on ';
       if (srcUrl && event.source_name) {
         html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="noopener nofollow">' + esc(event.source_name) + '</a>';
       } else if (srcUrl) {
@@ -2468,8 +2469,9 @@
       } else {
         html += esc(event.source_name);
       }
-      html += '.\n      Details may change \u2014 check the venue for latest info.</div>';
+      html += '. ';
     }
+    html += 'Details may change — check the venue for latest info.' + tbiNote + '</div>';
 
     /* Share buttons */
     var shareUrl = window.location.origin + '/' + event.slug + '/';
