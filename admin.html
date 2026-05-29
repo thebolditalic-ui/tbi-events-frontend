@@ -1107,6 +1107,7 @@ body {
         <label class="crawl-check"><input type="checkbox" id="adv-src-funcheap" checked> SF Funcheap</label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-dothebay" checked> DoTheBay</label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-eventbrite"> Eventbrite <span class="crawl-hint-inline">(needs EVENTBRITE_API_KEY on Render or falls back to fragile web scrape)</span></label>
+        <label class="crawl-check"><input type="checkbox" id="adv-src-partiful" checked> Partiful <span class="crawl-hint-inline">(nightlife/parties; in the default cron)</span></label>
       </div>
 
       <div class="crawl-section">
@@ -2705,6 +2706,7 @@ body {
     if (document.getElementById('adv-src-funcheap').checked) srcs.push('funcheap');
     if (document.getElementById('adv-src-dothebay').checked) srcs.push('dothebay');
     if (document.getElementById('adv-src-eventbrite').checked) srcs.push('eventbrite');
+    if (document.getElementById('adv-src-partiful').checked) srcs.push('partiful');
     return srcs;
   }
 
@@ -2722,7 +2724,7 @@ body {
     }
     var params = ['secret=***'];
     // sources only sent if user changed the default set
-    var defaultSet = ['funcheap','dothebay'];
+    var defaultSet = ['funcheap','dothebay','partiful'];
     var isDefaultSet = srcs.length === defaultSet.length &&
       srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
     if (!isDefaultSet) params.push('sources=' + srcs.join(','));
@@ -2736,6 +2738,7 @@ body {
     document.getElementById('adv-src-funcheap').checked = true;
     document.getElementById('adv-src-dothebay').checked = true;
     document.getElementById('adv-src-eventbrite').checked = false;
+    document.getElementById('adv-src-partiful').checked = true;
     var rd = document.querySelector('input[name="adv-range"][value="default"]');
     if (rd) rd.checked = true;
     $advCustomRow.style.display = 'none';
@@ -2759,7 +2762,7 @@ body {
       updateAdvPreview();
     });
   });
-  ['adv-src-funcheap','adv-src-dothebay','adv-src-eventbrite'].forEach(function(id) {
+  ['adv-src-funcheap','adv-src-dothebay','adv-src-eventbrite','adv-src-partiful'].forEach(function(id) {
     var el = document.getElementById(id);
     el && el.addEventListener('change', updateAdvPreview);
   });
@@ -2784,7 +2787,7 @@ body {
       return;
     }
     var params = ['secret=' + encodeURIComponent(cfg.secret)];
-    var defaultSet = ['funcheap','dothebay'];
+    var defaultSet = ['funcheap','dothebay','partiful'];
     var isDefaultSet = srcs.length === defaultSet.length &&
       srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
     if (!isDefaultSet) params.push('sources=' + encodeURIComponent(srcs.join(',')));
