@@ -1619,17 +1619,32 @@
     var today = new Date().toISOString().slice(0, 10);
     query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
 
-    if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
-      query += '&category=eq.' + encodeURIComponent(filters.category);
+    /* GLOBAL search: anything matching, across all cities + all future months */
+    if (filters.search && filters.search.trim()) {
+      var term = encodeURIComponent(filters.search.trim());
+      query += '&or=(title.ilike.*' + term + '*,venue.ilike.*' + term + '*,description.ilike.*' + term + '*)';
+      return query;
     }
+
+    /* GLOBAL Editor's Picks: all future picks, all cities/months */
     if (filters.editorsPick) {
       query += '&editors_pick=eq.true';
+      return query;
     }
+
+    /* GLOBAL category: match the primary category OR the categories[] jsonb array */
+    if (filters.category && filters.category !== 'all' && filters.category !== 'editors-pick') {
+      var catEq = encodeURIComponent(filters.category);
+      var catArr = encodeURIComponent('["' + filters.category + '"]');
+      query += '&or=(category.eq.' + catEq + ',categories.cs.' + catArr + ')';
+      return query;
+    }
+
+    /* BROWSE mode: city + month/date work together */
     if (filters.city && filters.city !== 'all') {
       query += '&city=eq.' + filters.city;
     }
     if (filters.date && filters.date !== 'all') {
-      /* Specific date overrides month filter */
       var dateStart = filters.date;
       var dateParts = filters.date.split('-');
       if (dateParts.length === 3) {
@@ -1638,7 +1653,6 @@
         query += '&event_date=gte.' + dateStart + '&event_date=lt.' + dateEnd;
       }
     } else if (filters.month && filters.month !== 'all') {
-      /* Month filter — only applies when no specific date is set */
       var parts = filters.month.split('-');
       if (parts.length === 2) {
         var monthStart = filters.month + '-01';
@@ -1649,13 +1663,8 @@
         query += '&event_date=gte.' + monthStart + '&event_date=lt.' + monthEnd;
       }
     }
-    if (filters.search && filters.search.trim()) {
-      var term = encodeURIComponent(filters.search.trim());
-      query += '&or=(title.ilike.*' + term + '*,venue.ilike.*' + term + '*,description.ilike.*' + term + '*)';
-    }
     return query;
   }
-
   async function fetchEvents(filters, page) {
     if (!filters) filters = {};
     if (!page) page = 1;
@@ -1720,7 +1729,7 @@
   async function fetchCategoryCounts() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=category,editors_pick&sold_out=eq.false&event_date=gte.' + today;
+      var url = SUPABASE_URL + '/rest/v1/events?select=category,categories,editors_pick&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1728,18 +1737,23 @@
       var counts = {};
       var edPickCount = 0;
       rows.forEach(function(r) {
-        var cat = r.category || 'Events';
-        counts[cat] = (counts[cat] || 0) + 1;
+        /* Count toward every category an event carries — primary column AND categories[] array, deduped */
+        var set = {};
+        set[r.category || 'Events'] = true;
+        if (Array.isArray(r.categories)) {
+          r.categories.forEach(function(c) { if (c) set[c] = true; });
+        }
+        Object.keys(set).forEach(function(c) { counts[c] = (counts[c] || 0) + 1; });
         if (r.editors_pick) edPickCount++;
       });
       counts['__editorsPick'] = edPickCount;
+      counts['__all'] = rows.length;
       return counts;
     } catch (err) {
       console.warn('Failed to fetch category counts:', err);
       return {};
     }
   }
-
   async function fetchAvailableMonths() {
     try {
       var today = new Date().toISOString().slice(0, 10);
@@ -1857,11 +1871,11 @@
     var filterRowHtml = '<div class="ev-filter-row">';
     filterRowHtml += '<span class="ev-filter-label">Events by category</span>';
     filterRowHtml += '<div class="ev-cattab-wrap">';
-    var allCount = Object.values(categoryCounts).reduce(function(sum, val) { return sum + val; }, 0);
+    var allCount = categoryCounts['__all'] || 0;
     filterRowHtml += '<button class="ev-cattab active" data-cat="all" style="background:#cdd6f4;">All <span class="ev-date-count">' + allCount + '</span></button>';
     var catOrder = Object.keys(categoryCounts).sort();
     catOrder.forEach(function(cat) {
-      if (cat === 'Events' || cat === '__editorsPick') return;
+      if (cat === 'Events' || cat === '__editorsPick' || cat === '__all') return;
       var pillColor = CATEGORY_COLORS[cat] || '#cdd6f4';
       filterRowHtml += '<button class="ev-cattab" data-cat="' + esc(cat) + '" style="background:' + pillColor + ';">' + esc(cat) + ' <span class="ev-date-count">' + categoryCounts[cat] + '</span></button>';
     });
@@ -2070,6 +2084,64 @@
       if (picks) picks.style.display = show ? '' : 'none';
     }
 
+    /* ---- Mode coordination: keep pill/tab highlights honest ----
+       Browse mode = "All" category + city tabs + month pills (scoped, ANDed).
+       Global mode = a specific category / Editor's Pick / a search: everything
+       matching, across all cities + all future months, grouped by date. */
+    function clearMonthPillsUI() {
+      document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
+      activeMonth = 'all';
+    }
+    function activateFirstMonthUI() {
+      document.querySelectorAll('.ev-month-pill').forEach(function(p) { p.classList.remove('active'); });
+      var fp = document.querySelector('.ev-month-pill');
+      if (fp) { fp.classList.add('active'); activeMonth = fp.getAttribute('data-month'); } else { activeMonth = 'all'; }
+    }
+    function setLocTabUI(loc) {
+      document.querySelectorAll('.ev-loc-tab').forEach(function(t) {
+        if (t.getAttribute('data-loc') === loc) t.classList.remove('ev-loc-inactive');
+        else t.classList.add('ev-loc-inactive');
+      });
+      activeLoc = loc;
+    }
+    function setCatPillUI(cat) {
+      document.querySelectorAll('.ev-cattab').forEach(function(b) {
+        if (b.getAttribute('data-cat') === cat) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+    }
+    function clearSearchUI() {
+      var si = document.getElementById('ev-search-input');
+      if (si) si.value = '';
+      searchTerm = '';
+    }
+    function resetDatePickerUI() {
+      var pm = document.getElementById('ev-pick-month');
+      var pd = document.getElementById('ev-pick-day');
+      var pc = document.getElementById('ev-pick-clear');
+      if (pm) pm.value = '';
+      if (pd) { pd.innerHTML = '<option value="">Day</option>'; pd.disabled = true; }
+      if (pc) pc.style.display = 'none';
+      activeDate = '';
+    }
+    /* A specific category / Editor's Pick -> global: drop the browse controls */
+    function enterGlobalBrowseReset() {
+      clearSearchUI();
+      clearMonthPillsUI();
+      resetDatePickerUI();
+      setLocTabUI('all');
+      toggleEditorsPicks(false);
+    }
+    /* Back to the default browse landing: All category, SF, soonest month */
+    function enterBrowseDefault() {
+      clearSearchUI();
+      activeCat = 'all'; setCatPillUI('all');
+      setLocTabUI('sf');
+      activateFirstMonthUI();
+      resetDatePickerUI();
+      toggleEditorsPicks(true);
+    }
+
     async function applyFilters() {
       /* Show loading indicator */
       var listEl = document.getElementById('ev-list');
@@ -2140,6 +2212,12 @@
         document.querySelectorAll('.ev-cattab').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         activeCat = btn.getAttribute('data-cat');
+        if (activeCat === 'all') {
+          enterBrowseDefault();
+        } else {
+          /* specific category or Editor's Pick -> global across all cities/months */
+          enterGlobalBrowseReset();
+        }
         resetPageAndFilter();
       });
     });
@@ -2151,6 +2229,10 @@
         tab.classList.remove('ev-loc-inactive');
         activeLoc = tab.getAttribute('data-loc');
         locTabClicked = true;
+        /* snap back to Browse mode */
+        activeCat = 'all'; setCatPillUI('all');
+        clearSearchUI();
+        if (activeMonth === 'all') activateFirstMonthUI();
         toggleEditorsPicks(false);
         resetPageAndFilter();
       });
@@ -2169,6 +2251,9 @@
           activeMonth = clickedMonth;
         }
         monthPillClicked = true;
+        /* snap back to Browse mode */
+        activeCat = 'all'; setCatPillUI('all');
+        clearSearchUI();
         toggleEditorsPicks(false);
         activeDate = '';
         var pickMonth = document.getElementById('ev-pick-month');
@@ -2189,6 +2274,17 @@
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(function() {
           currentPage = 1;
+          if (searchTerm.trim()) {
+            /* global search: deactivate category + browse highlights */
+            document.querySelectorAll('.ev-cattab').forEach(function(b) { b.classList.remove('active'); });
+            activeCat = 'all';
+            clearMonthPillsUI();
+            resetDatePickerUI();
+            setLocTabUI('all');
+            toggleEditorsPicks(false);
+          } else {
+            enterBrowseDefault();
+          }
           applyFilters();
         }, 300);
       });
