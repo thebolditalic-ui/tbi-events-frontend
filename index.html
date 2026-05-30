@@ -2461,11 +2461,12 @@
     html += '<div class="ev-post-source">';
     if (!isManualSrc && (event.source_name || event.source_url)) {
       var srcUrl = getSourceUrl(event);
+      var srcRel = (event.source_name && event.source_name.toLowerCase() === 'eventbrite') ? 'noopener' : 'noopener nofollow';
       html += 'See this event also on ';
       if (srcUrl && event.source_name) {
-        html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="noopener nofollow">' + esc(event.source_name) + '</a>';
+        html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="' + srcRel + '">' + esc(event.source_name) + '</a>';
       } else if (srcUrl) {
-        html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="noopener nofollow">' + esc(srcUrl) + '</a>';
+        html += '<a href="' + esc(srcUrl) + '" target="_blank" rel="' + srcRel + '">' + esc(srcUrl) + '</a>';
       } else {
         html += esc(event.source_name);
       }
