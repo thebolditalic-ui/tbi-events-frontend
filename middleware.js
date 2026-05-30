@@ -45,6 +45,10 @@ const SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const ADMIN_PATH_PREFIXES = ['/api', '/admin', '/queue', '/banners', '/analytics', '/links'];
 const ADMIN_EXACT_PATHS = new Set(['/robots.txt', '/sitemap.xml']);
 
+// Standalone static pages (served by vercel.json rewrites) that are NOT event
+// slugs — must skip the OG bot rewrite so crawlers get the real page.
+const STATIC_PAGE_PATHS = new Set(['/disclosures', '/disclosures/']);
+
 // Bot/crawler UA patterns. Used by both surfaces.
 const BOT_PATTERNS = [
   'facebookexternalhit', 'facebot', 'twitterbot', 'linkedinbot', 'slackbot',
@@ -210,6 +214,7 @@ function handleEventsHost(request, url) {
     if (path === pre || path.startsWith(pre + '/')) return;
   }
   if (ADMIN_EXACT_PATHS.has(path)) return;
+  if (STATIC_PAGE_PATHS.has(path)) return;
   if (path === '/' || path === '') return;
 
   const match = path.match(EVENT_SLUG_RE);
