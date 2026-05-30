@@ -1824,7 +1824,7 @@
 
     var headerHtml = '<div class="ev-header">';
     headerHtml += '<h1>What\u2019s Happening in SF <span class="ev-star ev-star-lg">\u2726</span></h1>';
-    headerHtml += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area.<br><a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a> \u2022 <a class="ev-header-link" href="https://events.thebolditalic.com/disclosures">Read our events page disclosures</a></p>';
+    headerHtml += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area. <a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a></p>';
     headerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', headerHtml);
 
@@ -1941,7 +1941,7 @@
     /* Empty event list container and pagination */
     root.insertAdjacentHTML('beforeend', '<div class="ev-list" id="ev-list"></div>');
     root.insertAdjacentHTML('beforeend', '<div class="ev-pagination" id="ev-pagination"></div>');
-    root.insertAdjacentHTML('beforeend', '<div class="ev-footer"><p>Events are updated daily. Details may change\u2014check the venue for latest info.</p></div>');
+    root.insertAdjacentHTML('beforeend', '<div class="ev-footer"><p>Events are updated daily. Details may change\u2014check the venue for latest info. <a class="ev-header-link" href="https://events.thebolditalic.com/disclosures">Read our events page disclosures</a>.</p></div>');
 
     wireFilters(monthData.availableDates || {});
     wireSPALinks();
@@ -2537,7 +2537,7 @@
     var html = '';
     html += '<div class="ev-header">';
     html += '<h1>What\u2019s Happening in SF <span class="ev-star ev-star-lg">\u2726</span></h1>';
-    html += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area.<br><a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a> \u2022 <a class="ev-header-link" href="https://events.thebolditalic.com/disclosures">Read our events page disclosures</a></p>';
+    html += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area. <a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a></p>';
     html += '</div>';
     html += '<div class="ev-skeleton-featured" style="padding:36px 60px 32px;max-width:1050px;margin:0 auto 12px;background:#ede3d5;border:1px solid #1E1B1B;border-radius:16px;box-sizing:border-box;position:relative;">';
     html += '<span class="ev-featured-label" style="grid-column:1/-1;">Featured Bay Area Events, Reviews & Guides</span>';
