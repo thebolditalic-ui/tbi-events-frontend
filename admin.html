@@ -1108,7 +1108,7 @@ body {
         <label class="crawl-check"><input type="checkbox" id="adv-src-dothebay" checked> DoTheBay</label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-eventbrite"> Eventbrite <span class="crawl-hint-inline">(needs EVENTBRITE_API_KEY on Render or falls back to fragile web scrape)</span></label>
         <label class="crawl-check"><input type="checkbox" id="adv-src-partiful" checked> Partiful <span class="crawl-hint-inline">(nightlife/parties; in the default cron)</span></label>
-        <label class="crawl-check"><input type="checkbox" id="adv-src-meetup" checked> Meetup <span class="crawl-hint-inline">(social activities; in the default cron)</span></label>
+        <label class="crawl-check"><input type="checkbox" id="adv-src-meetup" checked> Meetup <span class="crawl-hint-inline">(social activities; in the default cron)</span></label><label class="crawl-check"><input type="checkbox" id="adv-src-baylgbt" checked> bay.lgbt <span class="crawl-hint-inline">(LGBTQ+ venues; in the default cron)</span></label>
       </div>
 
       <div class="crawl-section">
@@ -2708,7 +2708,7 @@ body {
     if (document.getElementById('adv-src-dothebay').checked) srcs.push('dothebay');
     if (document.getElementById('adv-src-eventbrite').checked) srcs.push('eventbrite');
     if (document.getElementById('adv-src-partiful').checked) srcs.push('partiful');
-    if (document.getElementById('adv-src-meetup').checked) srcs.push('meetup');
+    if (document.getElementById('adv-src-meetup').checked) srcs.push('meetup'); if (document.getElementById('adv-src-baylgbt').checked) srcs.push('baylgbt');
     return srcs;
   }
 
@@ -2726,7 +2726,7 @@ body {
     }
     var params = ['secret=***'];
     // sources only sent if user changed the default set
-    var defaultSet = ['funcheap','dothebay','partiful','meetup'];
+    var defaultSet = ['funcheap','dothebay','partiful','meetup','baylgbt'];
     var isDefaultSet = srcs.length === defaultSet.length &&
       srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
     if (!isDefaultSet) params.push('sources=' + srcs.join(','));
@@ -2790,7 +2790,7 @@ body {
       return;
     }
     var params = ['secret=' + encodeURIComponent(cfg.secret)];
-    var defaultSet = ['funcheap','dothebay','partiful','meetup'];
+    var defaultSet = ['funcheap','dothebay','partiful','meetup','baylgbt'];
     var isDefaultSet = srcs.length === defaultSet.length &&
       srcs.every(function(s){ return defaultSet.indexOf(s) >= 0; });
     if (!isDefaultSet) params.push('sources=' + encodeURIComponent(srcs.join(',')));
