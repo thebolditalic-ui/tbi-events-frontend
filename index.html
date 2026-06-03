@@ -1193,6 +1193,11 @@
     'Film & Media': 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&h=600&fit=crop',
     'Events': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop',
   };
+  /* Category <-> URL-slug maps for shareable filter links (e.g. /lgbtq). */
+  var CATEGORY_SLUGS = { 'Music':'music','Comedy':'comedy','Art & Culture':'art-culture','Art':'art','Food & Drink':'food-drink','Festivals':'festivals','Sports & Recreation':'sports-recreation','Nightlife':'nightlife','Community':'community','Film & Media':'film-media','LGBTQ+':'lgbtq','Events':'events' };
+  var SLUG_TO_CATEGORY = (function(){ var m = {}; for (var k in CATEGORY_SLUGS) { m[CATEGORY_SLUGS[k]] = k; } m['editors-pick'] = 'editors-pick'; return m; })();
+  function catToSlug(cat){ if (!cat || cat === 'all') return ''; if (cat === 'editors-pick') return 'editors-pick'; if (CATEGORY_SLUGS[cat]) return CATEGORY_SLUGS[cat]; return String(cat).toLowerCase().replace(/\+/g,'').replace(/&/g,' ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  var pendingCat = null;
   var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   var MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var SOURCE_URLS = {
@@ -2212,6 +2217,8 @@
         document.querySelectorAll('.ev-cattab').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         activeCat = btn.getAttribute('data-cat');
+        var _cslug = catToSlug(activeCat);
+        history.pushState({ cat: activeCat }, '', '/' + (_cslug ? _cslug + '/' : ''));
         if (activeCat === 'all') {
           enterBrowseDefault();
         } else {
@@ -2363,6 +2370,11 @@
     }
 
     /* Initial filter/fetch — loads the first page of events */
+    if (pendingCat && pendingCat !== 'all') {
+      activeCat = pendingCat;
+      setCatPillUI(pendingCat);
+      enterGlobalBrowseReset();
+    }
     applyFilters();
   }
   /* ---------- SPA routing ---------- */
@@ -2700,9 +2712,16 @@
   function route() {
     var path = location.pathname.replace(/^\/+|\/+$/g, '');
     if (!path || path === 'index.html') {
+      pendingCat = null;
       document.title = 'What\u2019s Happening in SF \u2014 The Bold Italic';
       initListPage();
+    } else if (SLUG_TO_CATEGORY[path.toLowerCase()]) {
+      pendingCat = SLUG_TO_CATEGORY[path.toLowerCase()];
+      var _lbl = (pendingCat === 'editors-pick') ? 'Editor\u2019s Pick' : pendingCat;
+      document.title = _lbl + ' Events in SF \u2014 The Bold Italic';
+      initListPage();
     } else {
+      pendingCat = null;
       loadDetailPage(path);
     }
   }
