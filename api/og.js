@@ -6,6 +6,16 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 const SITE_URL = 'https://events.thebolditalic.com';
 const DEFAULT_IMAGE = 'https://www.thebolditalic.com/content/images/size/w1200/2025/04/TBILogo-copy.png';
 
+// Category-filter slugs (events.thebolditalic.com/<slug>) are list views,
+// not events. A bot crawling one should get a real category share card,
+// not the 'event not found' 404. slug -> display name.
+const CATEGORY_OG = {
+  'music': 'Music', 'comedy': 'Comedy', 'art-culture': 'Art & Culture', 'art': 'Art',
+  'food-drink': 'Food & Drink', 'festivals': 'Festivals', 'sports-recreation': 'Sports & Recreation',
+  'nightlife': 'Nightlife', 'community': 'Community', 'film-media': 'Film & Media',
+  'lgbtq': 'LGBTQ+', 'events': 'Events', 'editors-pick': 'Editor\u2019s Pick'
+};
+
 function stripHTML(s) {
   if (!s) return '';
   return s.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
@@ -34,6 +44,13 @@ module.exports = async function handler(req, res) {
 
   if (!slug) {
     return res.status(400).send('Missing slug');
+  }
+
+  // Category-filter URL (e.g. /lgbtq) -> serve a category share card
+  // instead of an event lookup (which would 404).
+  var catName = CATEGORY_OG[String(slug).toLowerCase()];
+  if (catName) {
+    return serveCategoryCard(res, slug, catName);
   }
 
   try {
@@ -136,6 +153,50 @@ module.exports = async function handler(req, res) {
     return res.status(503).send('Service temporarily unavailable');
   }
 };
+
+// Round-19: share card for a category-filter URL (e.g. /lgbtq). Returns 200
+// so the social preview renders, but noindex,follow to match the list-page
+// SEO posture — filter views aren't indexed, only per-event pages are.
+function serveCategoryCard(res, slug, catName) {
+  var slugLc = String(slug).toLowerCase();
+  var isPick = (slugLc === 'editors-pick');
+  var title = isPick
+    ? 'Editor\u2019s Picks \u2014 SF Events from The Bold Italic'
+    : catName + ' Events in SF \u2014 The Bold Italic';
+  var desc = isPick
+    ? 'Our editors\u2019 picks for the best upcoming events in San Francisco and the Bay Area.'
+    : 'Upcoming ' + catName + ' events in San Francisco and the Bay Area, curated by The Bold Italic.';
+  var canonicalUrl = SITE_URL + '/' + slugLc + '/';
+  var html = '<!DOCTYPE html>\n'
+    + '<html lang="en">\n<head>\n'
+    + '<meta charset="UTF-8">\n'
+    + '<title>' + escapeHTML(title) + '</title>\n'
+    + '<meta name="description" content="' + escapeHTML(desc) + '">\n'
+    + '<meta name="robots" content="noindex, follow">\n'
+    + '<link rel="canonical" href="' + escapeHTML(canonicalUrl) + '">\n'
+    + '\n<!-- Open Graph -->\n'
+    + '<meta property="og:type" content="website">\n'
+    + '<meta property="og:title" content="' + escapeHTML(title) + '">\n'
+    + '<meta property="og:description" content="' + escapeHTML(desc) + '">\n'
+    + '<meta property="og:image" content="' + escapeHTML(DEFAULT_IMAGE) + '">\n'
+    + '<meta property="og:url" content="' + escapeHTML(canonicalUrl) + '">\n'
+    + '<meta property="og:site_name" content="The Bold Italic">\n'
+    + '\n<!-- Twitter Card -->\n'
+    + '<meta name="twitter:card" content="summary_large_image">\n'
+    + '<meta name="twitter:title" content="' + escapeHTML(title) + '">\n'
+    + '<meta name="twitter:description" content="' + escapeHTML(desc) + '">\n'
+    + '<meta name="twitter:image" content="' + escapeHTML(DEFAULT_IMAGE) + '">\n'
+    + '</head>\n'
+    + '<body>\n'
+    + '<h1>' + escapeHTML(title) + '</h1>\n'
+    + '<p>' + escapeHTML(desc) + '</p>\n'
+    + '<p><a href="' + escapeHTML(canonicalUrl) + '">Browse events</a></p>\n'
+    + '</body>\n</html>';
+  res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('X-Robots-Tag', 'noindex, follow');
+  return res.status(200).send(html);
+}
 
 // Round-14: when a crawler asks for a slug that doesn't exist, return a
 // real 404 with noindex headers. Previously this returned 200 with a
