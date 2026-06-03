@@ -1,9 +1,11 @@
 name: Render keep-alive (tbi-content-engine)
 
-# Pings the backend's /api/health every ~5 minutes so Render's free tier
-# never sleeps the service. While the service is awake, its in-process
-# node-cron fires the 8-hour event sync reliably. A failed ping turns this
-# run red and GitHub emails the repo owner -- so an outage is visible, not silent.
+# Best-effort ping of the backend's /api/health to nudge Render's free tier.
+# NOTE: GitHub throttles high-frequency scheduled workflows heavily — in practice
+# this runs every few HOURS, not every 5 min, so it is not a reliable keep-alive.
+# A missed ping (usually a Render cold-start timeout) is logged as a warning and
+# does NOT fail the run, so it never emails the repo owner. For true uptime use an
+# external pinger (e.g. cron-job.org / UptimeRobot).
 on:
   schedule:
     - cron: '*/5 * * * *'
@@ -15,14 +17,15 @@ permissions:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 5
     steps:
-      - name: Ping /api/health
+      - name: Ping /api/health (best-effort, never fails the run)
         run: |
-          code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 60 https://tbi-content-engine.onrender.com/api/health)
-          echo "HTTP $code"
-          cat /tmp/body.txt; echo
-          if [ "$code" != "200" ]; then
-            echo "::error::health check returned $code"
-            exit 1
-          fi
+          for i in 1 2 3; do
+            code=$(curl -sS -o /tmp/body.txt -w '%{http_code}' --max-time 60 https://tbi-content-engine.onrender.com/api/health || echo 000)
+            echo "attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then cat /tmp/body.txt; echo; echo "service awake"; exit 0; fi
+            sleep 20
+          done
+          echo "::warning::keep-alive ping did not return 200 after 3 tries (likely a Render cold start). Not failing the run."
+          exit 0
