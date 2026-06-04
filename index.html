@@ -1855,6 +1855,35 @@
       return rows.map(function(r){ var category = r.category || 'Events'; return { title: r.title, slug: r.slug, url: '/' + r.slug + '/', image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'], category: category, catColor: CATEGORY_COLORS[category] || '#cdd6f4', excerpt: '', date: isoToHumanDate(r.event_date), venue: r.venue || '' }; });
     } catch (e) { console.warn('fetchCategoryFeatured failed:', e); return []; }
   }
+  var defaultFeatured = [];
+  function paintFeatured(items, label) {
+    var host = document.getElementById('ev-featured-host');
+    if (!host) return;
+    if (!items || !items.length) { host.innerHTML = ''; return; }
+    var featHtml = '<div class="ev-featured-wrap"><span class="ev-featured-label">' + esc(label) + '</span><div class="ev-featured-grid">';
+    items.forEach(function(ev) {
+      var isExternal = ev.url && ev.url.indexOf('http') === 0;
+      featHtml += '<a href="' + esc(ev.url) + '" class="ev-fcard"' + (isExternal ? ' target="_blank" rel="noopener"' : ' data-slug="' + esc(ev.slug) + '"') + '>';
+      var featFallback = CATEGORY_IMAGES[ev.category] || CATEGORY_IMAGES['Events'];
+      featHtml += '<div class="ev-fimg"><img src="' + esc(ev.image) + '" alt="' + esc(ev.title) + '" onerror="this.onerror=null;this.src=\'' + esc(featFallback) + '\';"></div>';
+      featHtml += '<div class="ev-foverlay">';
+      if (ev.category !== 'Events') { featHtml += '<span class="ev-badge" style="background:' + ev.catColor + '; color: #1E1B1B;">' + esc(ev.category) + '</span>'; }
+      featHtml += '<h2>' + esc(ev.title) + '</h2>';
+      var featExcerpt = stripHTML(ev.excerpt);
+      if (!featExcerpt && ev.date) featExcerpt = ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '');
+      if (featExcerpt) featHtml += '<p>' + esc(featExcerpt) + '</p>';
+      featHtml += '</div></a>';
+    });
+    featHtml += '</div></div>';
+    host.innerHTML = featHtml;
+  }
+  function applyCategoryChrome(cat) {
+    pendingCat = (cat && cat !== 'all') ? cat : null;
+    var h1 = document.querySelector('#tbi-events .ev-header h1');
+    if (h1) h1.innerHTML = esc(catHeadline(pendingCat)) + ' <span class="ev-star ev-star-lg">\u2726</span>';
+    if (pendingCat) { fetchCategoryFeatured(pendingCat).then(function(items) { paintFeatured(items, featuredLabel(pendingCat)); }); }
+    else { paintFeatured(defaultFeatured, featuredLabel(null)); }
+  }
   function renderPageStructure(featured, editorsPicks, categoryCounts, monthData) {
     var root = document.getElementById('tbi-events');
     if (!root) return;
@@ -1866,30 +1895,10 @@
     headerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', headerHtml);
 
-    /* Featured section */
+    /* Featured section — painted into a stable host so it can repaint on category change */
     if (!featured) featured = [];
-    if (featured.length > 0) {
-      var featHtml = '<div class="ev-featured-wrap">';
-      featHtml += '<span class="ev-featured-label">' + esc(featuredLabel(pendingCat)) + '</span>';
-      featHtml += '<div class="ev-featured-grid">';
-      featured.forEach(function(ev) {
-        var isExternal = ev.url && ev.url.indexOf('http') === 0;
-        featHtml += '<a href="' + esc(ev.url) + '" class="ev-fcard"' + (isExternal ? ' target="_blank" rel="noopener"' : ' data-slug="' + esc(ev.slug) + '"') + '>';
-        var featFallback = CATEGORY_IMAGES[ev.category] || CATEGORY_IMAGES['Events'];
-        featHtml += '<div class="ev-fimg"><img src="' + esc(ev.image) + '" alt="' + esc(ev.title) + '" onerror="this.onerror=null;this.src=\'' + esc(featFallback) + '\';"></div>';
-        featHtml += '<div class="ev-foverlay">';
-        if (ev.category !== 'Events') {
-          featHtml += '<span class="ev-badge" style="background:' + ev.catColor + '; color: #1E1B1B;">' + esc(ev.category) + '</span>';
-        }
-        featHtml += '<h2>' + esc(ev.title) + '</h2>';
-        var featExcerpt = stripHTML(ev.excerpt);
-        if (!featExcerpt && ev.date) featExcerpt = ev.date + (ev.venue ? ' \u00b7 ' + ev.venue : '');
-        if (featExcerpt) featHtml += '<p>' + esc(featExcerpt) + '</p>';
-        featHtml += '</div></a>';
-      });
-      featHtml += '</div></div>';
-      root.insertAdjacentHTML('beforeend', featHtml);
-    }
+    root.insertAdjacentHTML('beforeend', '<div id="ev-featured-host"></div>');
+    paintFeatured(featured, featuredLabel(pendingCat));
 
     /* Category pills + search */
     var filterRowHtml = '<div class="ev-filter-row">';
@@ -2159,7 +2168,7 @@
     /* Back to the default browse landing: All category, SF, soonest month */
     function enterBrowseDefault() {
       clearSearchUI();
-      activeCat = 'all'; setCatPillUI('all');
+      activeCat = 'all'; setCatPillUI('all'); applyCategoryChrome('all');
       setLocTabUI('sf');
       activateFirstMonthUI();
       resetDatePickerUI();
@@ -2238,6 +2247,7 @@
         activeCat = btn.getAttribute('data-cat');
         var _cslug = catToSlug(activeCat);
         history.pushState({ cat: activeCat }, '', '/' + (_cslug ? _cslug + '/' : ''));
+        applyCategoryChrome(activeCat);
         if (activeCat === 'all') {
           enterBrowseDefault();
         } else {
@@ -2256,7 +2266,7 @@
         activeLoc = tab.getAttribute('data-loc');
         locTabClicked = true;
         /* snap back to Browse mode */
-        activeCat = 'all'; setCatPillUI('all');
+        activeCat = 'all'; setCatPillUI('all'); applyCategoryChrome('all');
         clearSearchUI();
         if (activeMonth === 'all') activateFirstMonthUI();
         toggleEditorsPicks(false);
@@ -2278,7 +2288,7 @@
         }
         monthPillClicked = true;
         /* snap back to Browse mode */
-        activeCat = 'all'; setCatPillUI('all');
+        activeCat = 'all'; setCatPillUI('all'); applyCategoryChrome('all');
         clearSearchUI();
         toggleEditorsPicks(false);
         activeDate = '';
@@ -2303,7 +2313,7 @@
           if (searchTerm.trim()) {
             /* global search: deactivate category + browse highlights */
             document.querySelectorAll('.ev-cattab').forEach(function(b) { b.classList.remove('active'); });
-            activeCat = 'all';
+            activeCat = 'all'; applyCategoryChrome('all');
             clearMonthPillsUI();
             resetDatePickerUI();
             setLocTabUI('all');
@@ -2717,6 +2727,7 @@
       } else {
         featured = ghostFeatured;
       }
+      defaultFeatured = featured;
       /* Fresh category-URL landing: replace featured with the soonest upcoming events in that category */
       if (pendingCat && pendingCat !== 'all') {
         featured = await fetchCategoryFeatured(pendingCat);
