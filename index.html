@@ -1836,13 +1836,32 @@
     };
   }
   /* ---------- render (split into structure + data update) ---------- */
+  /* Category landing chrome: headline + featured come from pendingCat, which is set
+     ONLY by route() on a fresh category-URL landing (e.g. /lgbtq/). In-page pill
+     clicks do NOT change pendingCat, so the hero stays put while the list filters. */
+  function catHeadline(cat){ if (cat && cat !== 'all') { return (cat === 'editors-pick' ? 'Editor\u2019s Pick' : cat) + ' Events in SF'; } return 'What\u2019s Happening in SF'; }
+  function featuredLabel(cat){ if (cat && cat !== 'all') { return 'Upcoming ' + (cat === 'editors-pick' ? 'Editor\u2019s Pick' : cat) + ' Events'; } return 'Featured Bay Area Events, Reviews & Guides'; }
+  async function fetchCategoryFeatured(cat){
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var query = '?select=title,slug,event_date,image_url,category,categories,venue,description&sold_out=eq.false';
+      query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+      if (cat === 'editors-pick') { query += '&editors_pick=eq.true'; }
+      else { var catEq = encodeURIComponent(cat); var catArr = encodeURIComponent('["' + cat + '"]'); query += '&or=(category.eq.' + catEq + ',categories.cs.' + catArr + ')'; }
+      query += '&order=event_date.asc&limit=3';
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/events' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
+      var rows = await resp.json();
+      if (!Array.isArray(rows)) return [];
+      return rows.map(function(r){ var category = r.category || 'Events'; return { title: r.title, slug: r.slug, url: '/' + r.slug + '/', image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'], category: category, catColor: CATEGORY_COLORS[category] || '#cdd6f4', excerpt: '', date: isoToHumanDate(r.event_date), venue: r.venue || '' }; });
+    } catch (e) { console.warn('fetchCategoryFeatured failed:', e); return []; }
+  }
   function renderPageStructure(featured, editorsPicks, categoryCounts, monthData) {
     var root = document.getElementById('tbi-events');
     if (!root) return;
     root.innerHTML = '';
 
     var headerHtml = '<div class="ev-header">';
-    headerHtml += '<h1>What\u2019s Happening in SF <span class="ev-star ev-star-lg">\u2726</span></h1>';
+    headerHtml += '<h1>' + esc(catHeadline(pendingCat)) + ' <span class="ev-star ev-star-lg">\u2726</span></h1>';
     headerHtml += '<p><span class="ev-star ev-star-sm">\u2726</span> <em>The Bold Italic</em>\u2019s guide to the greatest events in San Francisco and the Bay Area. <a class="ev-header-link" href="https://www.thebolditalic.com/tag/events/">Read our latest event reviews</a></p>';
     headerHtml += '</div>';
     root.insertAdjacentHTML('beforeend', headerHtml);
@@ -1851,7 +1870,7 @@
     if (!featured) featured = [];
     if (featured.length > 0) {
       var featHtml = '<div class="ev-featured-wrap">';
-      featHtml += '<span class="ev-featured-label">Featured Bay Area Events, Reviews &amp; Guides</span>';
+      featHtml += '<span class="ev-featured-label">' + esc(featuredLabel(pendingCat)) + '</span>';
       featHtml += '<div class="ev-featured-grid">';
       featured.forEach(function(ev) {
         var isExternal = ev.url && ev.url.indexOf('http') === 0;
@@ -2633,6 +2652,7 @@
       link.addEventListener('click', function(e) {
         e.preventDefault();
         history.pushState({}, '', '/');
+        pendingCat = null;
         document.title = 'What\u2019s Happening in SF \u2014 The Bold Italic';
         initListPage();
       });
@@ -2696,6 +2716,10 @@
         featured = slotsFeatured;
       } else {
         featured = ghostFeatured;
+      }
+      /* Fresh category-URL landing: replace featured with the soonest upcoming events in that category */
+      if (pendingCat && pendingCat !== 'all') {
+        featured = await fetchCategoryFeatured(pendingCat);
       }
 
       // Render page structure (featured, pills, month tabs, etc.)
