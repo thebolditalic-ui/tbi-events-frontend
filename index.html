@@ -1841,6 +1841,18 @@
      clicks do NOT change pendingCat, so the hero stays put while the list filters. */
   function catHeadline(cat){ if (cat && cat !== 'all') { return (cat === 'editors-pick' ? 'Editor\u2019s Pick' : cat) + ' Events in SF'; } return 'What\u2019s Happening in SF'; }
   function featuredLabel(cat){ if (cat && cat !== 'all') { return 'Upcoming ' + (cat === 'editors-pick' ? 'Editor\u2019s Pick' : cat) + ' Events'; } return 'Featured Bay Area Events, Reviews & Guides'; }
+  async function fetchSoonestFeatured(limit){
+    try {
+      var today = new Date().toISOString().slice(0, 10);
+      var query = '?select=title,slug,event_date,image_url,category,categories,venue,description&sold_out=eq.false';
+      query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+      query += '&order=event_date.asc&limit=' + (limit || 3);
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/events' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
+      var rows = await resp.json();
+      if (!Array.isArray(rows)) return [];
+      return rows.map(function(r){ var category = r.category || 'Events'; return { title: r.title, slug: r.slug, url: '/' + r.slug + '/', image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'], category: category, catColor: CATEGORY_COLORS[category] || '#cdd6f4', excerpt: '', date: isoToHumanDate(r.event_date), venue: r.venue || '' }; });
+    } catch (e) { console.warn('fetchSoonestFeatured failed:', e); return []; }
+  }
   async function fetchCategoryFeatured(cat){
     try {
       var today = new Date().toISOString().slice(0, 10);
@@ -2720,12 +2732,21 @@
       var categoryCounts = results[3];
       var monthData = results[4];
 
-      // Use featured_slots table as primary source; Ghost #featuredevent as fallback
+      // Featured slots: admin picks first; if none, fall back to editor's picks (soonest),
+      // topped up with the soonest upcoming events; if no picks at all, just soonest events.
       var featured;
       if (slotsFeatured.length > 0) {
         featured = slotsFeatured;
       } else {
-        featured = ghostFeatured;
+        featured = (editorsPicks || []).slice(0, 3);
+        if (featured.length < 3) {
+          var soonestFill = await fetchSoonestFeatured(featured.length + 3);
+          var haveSlugs = {};
+          featured.forEach(function(f) { if (f && f.slug) haveSlugs[f.slug] = true; });
+          for (var si = 0; si < soonestFill.length && featured.length < 3; si++) {
+            if (!haveSlugs[soonestFill[si].slug]) { featured.push(soonestFill[si]); haveSlugs[soonestFill[si].slug] = true; }
+          }
+        }
       }
       defaultFeatured = featured;
       /* Fresh category-URL landing: replace featured with the soonest upcoming events in that category */
