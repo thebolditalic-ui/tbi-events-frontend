@@ -11,7 +11,7 @@ const ALLOWED_FIELDS = [
   'title', 'date', 'event_date', 'end_date', 'time', 'time_notes',
   'venue', 'address', 'neighborhood', 'city', 'category', 'categories',
   'price', 'image_url', 'description', 'source_url', 'source_name',
-  'ticket_url', 'performers', 'sold_out', 'editors_pick', 'featured',
+  'ticket_url', 'performers', 'sold_out', 'editors_pick', 'featured', 'sponsored',
   'related_articles', 'updated_at'
 ];
 
