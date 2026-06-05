@@ -1317,6 +1317,10 @@ body {
           <label for="ev-editors-pick">Editor's Pick</label>
         </div>
         <div class="form-check">
+          <input type="checkbox" id="ev-sponsored">
+          <label for="ev-sponsored" style="font-weight:600;">Sponsored <span style="font-weight:400;opacity:0.7;">(switches the page's revenue disclaimer)</span></label>
+        </div>
+        <div class="form-check">
           <input type="checkbox" id="ev-featured-candidate">
           <label for="ev-featured-candidate" style="color:var(--gold);font-weight:600;">Feature Candidate</label>
         </div>
@@ -1745,6 +1749,7 @@ body {
       performers: document.getElementById('ev-performers').value,
       description: document.getElementById('ev-description').innerHTML,
       editorsPick: document.getElementById('ev-editors-pick').checked,
+      sponsored: document.getElementById('ev-sponsored').checked,
       featured: document.getElementById('ev-featured-candidate').checked,
       soldOut: document.getElementById('ev-sold-out').checked
     };
@@ -1784,6 +1789,7 @@ body {
     document.getElementById('ev-performers').value = ev ? ev.performers || '' : '';
     document.getElementById('ev-description').innerHTML = ev ? ev.description || '' : '';
     document.getElementById('ev-editors-pick').checked = ev ? !!ev.editors_pick : false;
+    document.getElementById('ev-sponsored').checked = ev ? !!ev.sponsored : false;
     document.getElementById('ev-featured-candidate').checked = ev ? !!ev.featured : false;
     document.getElementById('ev-sold-out').checked = ev ? !!ev.sold_out : false;
 
@@ -1868,6 +1874,7 @@ body {
       description: document.getElementById('ev-description').innerHTML.trim() || null,
       related_articles: getRelatedArticles().length > 0 ? getRelatedArticles() : null,
       editors_pick: document.getElementById('ev-editors-pick').checked,
+      sponsored: document.getElementById('ev-sponsored').checked,
       featured: document.getElementById('ev-featured-candidate').checked,
       sold_out: document.getElementById('ev-sold-out').checked,
       updated_at: new Date().toISOString()
