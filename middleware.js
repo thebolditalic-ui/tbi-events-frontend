@@ -58,7 +58,9 @@ const BOT_PATTERNS = [
   'redditbot', 'rogerbot', 'summarlybot', 'skypeuripreview',
   'bot', 'crawler', 'spider', 'slurp', 'curl', 'wget',
   'python-requests', 'python-urllib', 'java/', 'go-http-client',
-  'duckduckbot', 'headlesschrome', 'phantomjs', 'puppeteer', 'playwright'
+  'duckduckbot', 'headlesschrome', 'phantomjs', 'puppeteer', 'playwright',
+  'iframely', 'node-fetch', 'undici', 'okhttp', 'axios', 'python-httpx',
+  'ghost', 'signal', 'metainspector', 'opengraph', 'http-link-preview', 'guzzlehttp'
 ];
 
 // Used by the OG bot rewrite (event-slug-shaped paths only).
