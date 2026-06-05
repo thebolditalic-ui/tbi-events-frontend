@@ -1057,6 +1057,13 @@ body {
   .ev-table tr.expanded td[colspan] { display: block; }
   .ev-table tr.expanded td[colspan]::before { display: none; }
 }
+/* ===== Mobile: kill sideways scroll; wrap crawl controls (phone only) ===== */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .crawl-cluster { flex-wrap: wrap; }
+  .crawl-status { flex: 1 1 100%; white-space: normal; min-width: 0; }
+}
+
 </style>
 </head>
 <body>
