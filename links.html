@@ -147,6 +147,32 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 /* ---- Tiny copy toast ---- */
 #copy-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--dark); color: #fff; padding: 10px 18px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 80; }
 #copy-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* ===== Mobile responsive (phone only) ===== */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .admin-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+  .admin-header-left { flex-direction: column; align-items: stretch; gap: 8px; }
+  .admin-header h1 { font-size: 17px; }
+  .admin-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 2px; }
+  .admin-nav a { white-space: nowrap; flex: 0 0 auto; }
+  .admin-header .user-info { width: 100%; justify-content: space-between; }
+  .ln-table-wrap { overflow: visible; border: none; background: transparent; }
+  .ln-table, .ln-table tbody { display: block; }
+  .ln-table thead { display: none; }
+  .ln-table tr { display: block; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; padding: 8px 12px 10px; background: #fff; }
+  .ln-table tbody tr:hover { background: #fff; }
+  .ln-table td { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; border: none !important; padding: 5px 0; text-align: right; font-size: 13px; }
+  .ln-table td::before { content: attr(data-label); font-weight: 700; color: var(--dark); text-align: left; flex-shrink: 0; }
+  .ln-table td.slug-cell { display: block; text-align: left; font-size: 16px; font-weight: 700; padding: 2px 0 4px; }
+  .ln-table td.slug-cell::before { display: none; }
+  .ln-table td.slug-cell .full-url { display: block; font-size: 12px; font-weight: 400; color: #888; }
+  .ln-table td.dest-cell { display: block; text-align: left; padding: 6px 0; }
+  .ln-table td.dest-cell::before { content: 'Destination'; display: block; font-weight: 700; color: var(--dark); margin-bottom: 2px; }
+  .ln-table td.dest-cell a { word-break: break-all; }
+  .ln-table td.actions-cell { justify-content: flex-end; padding-top: 8px; }
+  .ln-table td.actions-cell::before { display: none; }
+}
+
 </style>
 </head>
 <body>
@@ -462,9 +488,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         +     '<span class="full-url">' + escapeHTML(fullShort) + '</span>'
         +   '</td>'
         +   '<td class="dest-cell"><a href="' + escapeAttr(ln.destination_url) + '" target="_blank" rel="noopener">' + escapeHTML(ln.destination_url) + '</a></td>'
-        +   '<td><span class="status-pill ' + statusCls + '">' + status + '</span></td>'
-        +   '<td class="num-cell">' + clicks + '</td>'
-        +   '<td>' + fmtDate(ln.updated_at || ln.created_at) + '</td>'
+        +   '<td data-label="Status"><span class="status-pill ' + statusCls + '">' + status + '</span></td>'
+        +   '<td class="num-cell" data-label="Clicks">' + clicks + '</td>'
+        +   '<td data-label="Updated">' + fmtDate(ln.updated_at || ln.created_at) + '</td>'
         +   '<td class="actions-cell">'
         +     '<button class="copy-btn" title="Copy short URL">Copy</button>'
         +     '<button class="edit-btn" title="Edit">Edit</button>'
