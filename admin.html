@@ -1019,11 +1019,43 @@ body {
 
 /* ---- Responsive ---- */
 @media (max-width: 768px) {
-  .admin-toolbar { flex-direction: column; align-items: stretch; }
-  .admin-toolbar .search-box { max-width: 100%; }
+  /* Header: wrap the brand row and let the nav scroll instead of cramming one line */
+  .admin-header { flex-wrap: wrap; padding: 10px 14px; gap: 8px 12px; }
+  .admin-header-left { flex: 1 1 100%; flex-wrap: wrap; gap: 8px 14px; }
+  .admin-header h1 { font-size: 16px; }
+  .admin-nav { flex: 1 1 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .admin-nav a { white-space: nowrap; }
+  .admin-header .user-info { font-size: 12px; }
+  /* Toolbar: stack everything full-width */
+  .admin-toolbar { flex-direction: column; align-items: stretch; padding: 14px; }
+  .admin-toolbar .search-box { max-width: 100%; min-width: 0; }
+  .toolbar-right { flex-wrap: wrap; }
+  /* Featured slots stack to one column; candidate rows wrap their controls */
+  .feat-slots { grid-template-columns: 1fr; }
+  .feat-cand-row { flex-wrap: wrap; }
+  .feat-cand-actions { width: 100%; justify-content: flex-end; margin-top: 6px; }
+  /* Form: single column */
   .form-row { grid-template-columns: 1fr; }
-  .ev-table { font-size: 12px; }
-  .ev-table .thumb-cell { display: none; }
+  /* Modal: near full-screen on a phone */
+  .modal { max-width: 100%; max-height: 100%; height: 100%; border-radius: 0; display: flex; flex-direction: column; }
+  .modal-head { padding: 14px 16px; }
+  .modal-body { flex: 1; overflow-y: auto; padding: 16px; }
+  /* Events table -> stacked cards */
+  .ev-table thead { display: none; }
+  .ev-table, .ev-table tbody { display: block; }
+  .ev-table tr { display: block; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; padding: 6px 12px 10px; background: #fff; }
+  .ev-table tr:hover td { background: transparent; }
+  .ev-table td { display: flex; justify-content: space-between; align-items: center; gap: 14px; border: none !important; padding: 5px 0; text-align: right; font-size: 13px; }
+  .ev-table td::before { content: attr(data-label); font-weight: 700; color: var(--dark); text-align: left; flex-shrink: 0; }
+  .ev-table td.thumb-cell { display: block; padding: 6px 0; }
+  .ev-table td.thumb-cell::before { display: none; }
+  .ev-table td.thumb-cell img { width: 100%; max-width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
+  .ev-table td.title-cell { display: block; text-align: left; font-size: 16px; font-weight: 700; padding: 2px 0 6px; }
+  .ev-table td.title-cell::before { display: none; }
+  .ev-table td.actions-cell { justify-content: flex-end; padding-top: 8px; }
+  .ev-table td.actions-cell::before { display: none; }
+  .ev-table tr.expanded td[colspan] { display: block; }
+  .ev-table tr.expanded td[colspan]::before { display: none; }
 }
 </style>
 </head>
@@ -1546,13 +1578,13 @@ body {
         var isExpanded = expandedEventId === ev.id;
         var rowHtml = '<tr data-id="' + ev.id + '"' + slugAttr + (isExpanded ? ' class="expanded"' : '') + '>'
           + '<td class="thumb-cell">' + imgHtml + '</td>'
-          + '<td>' + esc(dateStr) + '</td>'
+          + '<td data-label="Date">' + esc(dateStr) + '</td>'
           + '<td class="title-cell">' + esc(ev.title) + '</td>'
-          + '<td>' + esc(ev.venue || '') + '</td>'
-          + '<td>' + esc(ev.category || 'Events') + '</td>'
-          + '<td><span class="source-badge ' + srcClass + '">' + esc(src) + '</span></td>'
-          + '<td><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
-          + '<td>' + (ev.featured ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9733;</span>' : '') + '</td>'
+          + '<td data-label="Venue">' + esc(ev.venue || '') + '</td>'
+          + '<td data-label="Category">' + esc(ev.category || 'Events') + '</td>'
+          + '<td data-label="Source"><span class="source-badge ' + srcClass + '">' + esc(src) + '</span></td>'
+          + '<td data-label="Pick"><input type="checkbox" class="pick-toggle" ' + (ev.editors_pick ? 'checked' : '') + ' data-id="' + ev.id + '"></td>'
+          + '<td data-label="Feat">' + (ev.featured ? '<span style="display:inline-block;background:var(--gold);color:var(--dark);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9733;</span>' : '') + '</td>'
           + '<td class="actions-cell">'
           + (ev.slug ? '<button class="stats-btn" title="View 30-day stats">📊</button>' : '')
           + '<button class="edit-btn" title="Edit">✏️</button>'
