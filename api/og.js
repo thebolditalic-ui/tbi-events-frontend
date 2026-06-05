@@ -6,6 +6,15 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIs
 const SITE_URL = 'https://events.thebolditalic.com';
 const DEFAULT_IMAGE = 'https://www.thebolditalic.com/content/images/size/w1200/2025/04/TBILogo-copy.png';
 
+// Ghost-hosted images can be large PNGs; rewrite og:image to a resized JPEG so size-limited
+// link-preview fetchers (Signal, etc.) actually render the preview. Non-Ghost URLs pass through.
+function ogImage(url) {
+  if (url && url.indexOf('/content/images/') !== -1 && url.indexOf('/content/images/size/') === -1) {
+    return url.replace('/content/images/', '/content/images/size/w1200/format/jpeg/');
+  }
+  return url;
+}
+
 // Category-filter slugs (events.thebolditalic.com/<slug>) are list views,
 // not events. A bot crawling one should get a real category share card,
 // not the 'event not found' 404. slug -> display name.
@@ -76,7 +85,7 @@ module.exports = async function handler(req, res) {
     // Build meta content
     var title = event.title || 'Event';
     var ogTitle = title + ' — The Bold Italic Events';
-    var image = event.image_url || DEFAULT_IMAGE;
+    var image = ogImage(event.image_url || DEFAULT_IMAGE);
     var dateStr = formatDate(event.event_date);
     if (event.end_date && event.end_date > event.event_date) {
       dateStr += ' – ' + formatDate(event.end_date);
