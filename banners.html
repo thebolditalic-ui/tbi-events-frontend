@@ -166,6 +166,21 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   .bn-table th:nth-child(4), .bn-table td:nth-child(4),
   .bn-table th:nth-child(5), .bn-table td:nth-child(5) { display: none; }
 }
+/* ===== Mobile responsive (phone only) ===== */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .admin-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
+  .admin-header-left { flex-direction: column; align-items: stretch; gap: 8px; }
+  .admin-header h1 { font-size: 17px; }
+  .admin-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 2px; }
+  .admin-nav a { white-space: nowrap; flex: 0 0 auto; }
+  .admin-header .user-info { width: 100%; justify-content: space-between; }
+  .active-card { flex-direction: column; align-items: stretch; gap: 12px; }
+  .active-card .thumb { width: 100%; height: auto; }
+  .active-card .actions { width: 100%; }
+  .bn-table-wrap { overflow-x: auto; }
+}
+
 </style>
 </head>
 <body>
