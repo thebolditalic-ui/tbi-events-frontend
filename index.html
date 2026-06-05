@@ -2732,17 +2732,17 @@
       var categoryCounts = results[3];
       var monthData = results[4];
 
-      // Featured slots: admin picks first; if none, fall back to editor's picks (soonest),
-      // topped up with the soonest upcoming events; if no picks at all, just soonest events.
-      var featured;
-      if (slotsFeatured.length > 0) {
-        featured = slotsFeatured;
-      } else {
-        featured = (editorsPicks || []).slice(0, 3);
+      // Featured slots: start with the admin picks, then top up to 3 -- first with editor's
+      // picks (soonest), then the soonest upcoming events. Deduped by slug.
+      var featured = (slotsFeatured || []).slice(0, 3);
+      if (featured.length < 3) {
+        var haveSlugs = {};
+        featured.forEach(function(f) { if (f && f.slug) haveSlugs[f.slug] = true; });
+        (editorsPicks || []).forEach(function(p) {
+          if (featured.length < 3 && p && p.slug && !haveSlugs[p.slug]) { featured.push(p); haveSlugs[p.slug] = true; }
+        });
         if (featured.length < 3) {
-          var soonestFill = await fetchSoonestFeatured(featured.length + 3);
-          var haveSlugs = {};
-          featured.forEach(function(f) { if (f && f.slug) haveSlugs[f.slug] = true; });
+          var soonestFill = await fetchSoonestFeatured(featured.length + 5);
           for (var si = 0; si < soonestFill.length && featured.length < 3; si++) {
             if (!haveSlugs[soonestFill[si].slug]) { featured.push(soonestFill[si]); haveSlugs[soonestFill[si].slug] = true; }
           }
