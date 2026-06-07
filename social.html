@@ -250,13 +250,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="set-group"><h3>2 &middot; Headline</h3><div class="ig-body">
             <textarea id="ig-headline">WE NEVER LIKED PHILZ ANYWAY.</textarea>
             <div class="ig-toggle" style="margin-top:10px">Auto-fit size<span class="switch"><input type="checkbox" id="ig-autofit" checked><span class="slider-sw"></span></span></div>
-            <div class="ig-fld" id="ig-sizeWrap" style="display:none">Manual size <span class="val" id="ig-sizeVal">120</span><input type="range" id="ig-size" min="40" max="220" value="120"></div>
+            <div class="ig-fld">Size <span class="val" id="ig-sizeVal">auto</span><input type="range" id="ig-size" min="40" max="320" value="120"></div>
+            <div class="ig-fld">Move horizontal <span class="val" id="ig-hxVal">center</span><input type="range" id="ig-hx" min="-100" max="100" value="0"></div>
+            <div class="ig-fld">Move vertical <span class="val" id="ig-hyVal">middle</span><input type="range" id="ig-hy" min="-100" max="100" value="0"></div>
             <div class="ig-fld">Headline color<div class="ig-seg" id="ig-hcolor"><button data-hcolor="#ffffff" class="on">White</button><button data-hcolor="#000000">Black</button></div></div>
           </div></div>
           <div class="set-group"><h3>3 &middot; Headline font</h3><div class="ig-body">
             <div class="ig-drop" id="ig-fontdrop"><b>Load your font</b> (.ttf / .otf / .woff)</div>
             <input type="file" id="ig-fontfile" accept=".ttf,.otf,.woff,.woff2,font/*" hidden>
-            <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Permanent Marker (placeholder for Ed's Market Regular Slant)</span></div>
+            <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Drop Ed's Market here once (saves in this browser)</span></div>
           </div></div>
           <div class="set-group"><h3>4 &middot; Format &amp; layout</h3><div class="ig-body">
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440" class="on">3:4</button><button data-w="1080" data-h="1350">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
@@ -696,7 +698,7 @@ function initIG(){ if(igReady) return; igReady=true; igBoot(); }
 function igBoot(){
   var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
   var NL=String.fromCharCode(10);
-  var state={ img:null, W:1080, H:1440, blackFrac:0.38, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:true, manualSize:120, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#e02329', font:'Permanent Marker' };
+  var state={ img:null, W:1080, H:1440, blackFrac:0.38, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:true, manualSize:120, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:0 };
   var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
   function drawCover(img,x,y,w,h,zoom,posY){
     var scale=Math.max(w/img.width,h/img.height)*zoom;
@@ -741,8 +743,8 @@ function igBoot(){
       if(state.autofit){ f=fitHeadline(text,maxW,maxH); }
       else { ctx.font='400 '+state.manualSize+'px "'+state.font+'"'; f={size:state.manualSize,lines:wrap(text,maxW),lineH:state.manualSize*1.06}; }
       ctx.font='400 '+f.size+'px "'+state.font+'"'; ctx.fillStyle=state.hcolor; ctx.textAlign='center'; ctx.textBaseline='middle';
-      var blockH=f.lines.length*f.lineH, cy=photoH+headTopPad+(blackH-headTopPad-blockH)/2+f.lineH/2;
-      for(var i=0;i<f.lines.length;i++){ ctx.fillText(f.lines[i],W/2,cy); cy+=f.lineH; }
+      var blockH=f.lines.length*f.lineH, hcx=W/2+(state.headOffX||0)*(W*0.30), cy=photoH+headTopPad+(blackH-headTopPad-blockH)/2+f.lineH/2+(state.headOffY||0)*(blackH*0.50);
+      for(var i=0;i<f.lines.length;i++){ ctx.fillText(f.lines[i],hcx,cy); cy+=f.lineH; }
     }
     if(state.badge && state.badgeText.trim()){
       var bsize=Math.round(W*0.030);
@@ -757,8 +759,8 @@ function igBoot(){
       var D=W*0.115, M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
       if(state.tbiCirclePos==='tl'){cx=left;cyc=top;} else if(state.tbiCirclePos==='bl'){cx=left;cyc=bot;} else if(state.tbiCirclePos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;}
       ctx.beginPath(); ctx.arc(cx,cyc,rr,0,Math.PI*2); ctx.fillStyle=state.tbiCircleColor; ctx.fill();
-      ctx.fillStyle='#fff'; ctx.font='800 '+Math.round(D*0.34)+'px Arial, "Helvetica Neue", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('TBI',cx,cyc+D*0.02);
+      ctx.fillStyle='#fff'; ctx.font='400 '+Math.round(D*0.40)+'px "'+state.font+'", Arial, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('TBI',cx,cyc+D*0.04);
     }
     var ex=$('#ig-export'); if(ex) ex.disabled=false;
   }
@@ -772,8 +774,10 @@ function igBoot(){
   $('#ig-pos').oninput=function(e){ state.posY=e.target.value/100; $('#ig-posVal').textContent=state.posY===0?'center':(state.posY<0?'higher':'lower'); render(); };
   $('#ig-zoom').oninput=function(e){ state.zoom=e.target.value/100; $('#ig-zoomVal').textContent=e.target.value+'%'; render(); };
   $('#ig-headline').oninput=function(e){ state.headline=e.target.value; render(); };
-  $('#ig-autofit').onchange=function(e){ state.autofit=e.target.checked; $('#ig-sizeWrap').style.display=e.target.checked?'none':'flex'; render(); };
-  $('#ig-size').oninput=function(e){ state.manualSize=+e.target.value; $('#ig-sizeVal').textContent=e.target.value; render(); };
+  $('#ig-autofit').onchange=function(e){ state.autofit=e.target.checked; $('#ig-sizeVal').textContent=e.target.checked?'auto':state.manualSize; render(); };
+  $('#ig-size').oninput=function(e){ state.manualSize=+e.target.value; state.autofit=false; var af=$('#ig-autofit'); if(af) af.checked=false; $('#ig-sizeVal').textContent=e.target.value; render(); };
+  $('#ig-hx').oninput=function(e){ state.headOffX=e.target.value/100; $('#ig-hxVal').textContent=state.headOffX===0?'center':(state.headOffX<0?'left':'right'); render(); };
+  $('#ig-hy').oninput=function(e){ state.headOffY=e.target.value/100; $('#ig-hyVal').textContent=state.headOffY===0?'middle':(state.headOffY<0?'up':'down'); render(); };
   $('#ig-black').oninput=function(e){ state.blackFrac=e.target.value/100; $('#ig-blackVal').textContent=e.target.value+'%'; render(); };
   $('#ig-badge').onchange=function(e){ state.badge=e.target.checked; render(); };
   $('#ig-badgetext').oninput=function(e){ state.badgeText=e.target.value; render(); };
@@ -789,7 +793,9 @@ function igBoot(){
   ['dragenter','dragover'].forEach(function(ev){ fontdrop.addEventListener(ev,function(e){ e.preventDefault(); fontdrop.classList.add('hot'); }); });
   ['dragleave','drop'].forEach(function(ev){ fontdrop.addEventListener(ev,function(e){ e.preventDefault(); fontdrop.classList.remove('hot'); }); });
   fontdrop.addEventListener('drop',function(e){ loadFont(e.dataTransfer.files[0]); });
-  async function loadFont(file){ if(!file) return; try{ var buf=await file.arrayBuffer(); var fam='IGHead_'+Date.now(); var face=new FontFace(fam,buf); await face.load(); document.fonts.add(face); state.font=fam; $('#ig-fontname').textContent=file.name; render(); }catch(err){ $('#ig-fontname').textContent='Could not load that file - try .ttf or .otf'; } }
+  async function loadFontBuf(buf,label){ try{ var face=new FontFace('EdsMarket',buf); await face.load(); document.fonts.add(face); state.font='EdsMarket'; if(label) $('#ig-fontname').textContent=label; render(); return true; }catch(err){ $('#ig-fontname').textContent='Could not load that font file'; return false; } }
+  async function loadFont(file){ if(!file) return; var buf=await file.arrayBuffer(); var ok=await loadFontBuf(buf, file.name+' (saved in this browser)'); if(ok){ try{ var by=new Uint8Array(buf), bin=''; for(var i=0;i<by.length;i++) bin+=String.fromCharCode(by[i]); localStorage.setItem('ig_font_b64', btoa(bin)); localStorage.setItem('ig_font_name', file.name); }catch(e){} } }
+  try{ var _fb=localStorage.getItem('ig_font_b64'); if(_fb){ var _bs=atob(_fb), _u=new Uint8Array(_bs.length); for(var _i=0;_i<_bs.length;_i++) _u[_i]=_bs.charCodeAt(_i); loadFontBuf(_u.buffer, (localStorage.getItem('ig_font_name')||"Ed's Market")+' (saved)'); } }catch(e){}
   function slug(){ return (state.headline||'tbi-card').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48)||'tbi-card'; }
   $('#ig-export').onclick=function(){ canvas.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slug()+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
   $('#ig-copy').onclick=async function(){ try{ var blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); }); await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); var b=$('#ig-copy'), t=b.textContent; b.textContent='Copied '+CK; setTimeout(function(){ b.textContent=t; },1400); }catch(e){ var b2=$('#ig-copy'); b2.textContent='Use Download'; setTimeout(function(){ b2.textContent='Copy image'; },1600); } };
