@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>TBI Social Admin</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --cream:#fff6e6; --dark:#1E1B1B; --gold:#FFD682; --blue:#5b7bd5;
+  --red:#e74c3c; --green:#27ae60; --border:#e0d8cc; --bg-alt:#faf5eb;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --title-font:'Georgia',serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font);background:var(--cream);color:var(--dark);min-height:100vh}
+
+/* ---- Login ---- */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;width:100%;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.login-box h1{font-family:var(--title-font);font-size:26px;margin:0 0 6px}
+.login-box p{color:#897;font-size:14px;margin:0 0 20px;color:#8a8178}
+.login-box label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin:12px 0 4px}
+.login-box input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--bg-alt)}
+.login-box input:focus{outline:none;border-color:var(--blue)}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;min-height:16px}
+
+/* ---- Buttons ---- */
+.btn{display:inline-block;border:none;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#fff;background:var(--dark)}
+.btn:hover{opacity:.85}
+.btn-gold{background:var(--gold);color:var(--dark)}
+.btn-danger{background:var(--red)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--dark)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+/* ---- Header / nav ---- */
+.admin-header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.admin-header-left{display:flex;align-items:center;gap:20px}
+.admin-header h1{font-family:var(--title-font);font-size:20px;margin:0;font-weight:400}
+.admin-nav{display:flex;gap:4px}
+.admin-nav a{color:rgba(255,255,255,.5);text-decoration:none;font-size:13px;font-weight:500;padding:5px 12px;border-radius:6px;transition:all .15s}
+.admin-nav a:hover{background:rgba(255,255,255,.1)}
+.admin-nav a.active{color:var(--gold);background:rgba(255,214,130,.12)}
+.admin-header .user-info{display:flex;align-items:center;gap:12px;font-size:13px;color:#ccc}
+
+#social-app{display:none}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 60px}
+
+/* ---- Sub-tabs ---- */
+.subtabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:22px;flex-wrap:wrap}
+.subtab{background:none;border:none;font-family:inherit;font-size:14px;font-weight:600;color:#8a8178;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.subtab:hover{color:var(--dark)}
+.subtab.active{color:var(--dark);border-bottom-color:var(--gold)}
+.panel{display:none}
+.panel.active{display:block}
+
+h2.section{font-family:var(--title-font);font-weight:400;font-size:22px;margin:0 0 4px}
+p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70ch}
+
+/* ---- Cards / feed ---- */
+.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.story-card{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.story-head{padding:12px 16px;background:var(--bg-alt);border-bottom:1px solid var(--border)}
+.story-head a{color:var(--dark);font-weight:700;font-size:15px;text-decoration:none}
+.story-head a:hover{color:var(--blue)}
+.story-head .meta{font-size:11px;color:#8a8178;margin-top:2px}
+.sugg{display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);align-items:flex-start}
+.sugg:last-child{border-bottom:none}
+.sugg .body{flex:1;min-width:0}
+.sugg .angle{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);background:rgba(91,123,213,.1);padding:2px 8px;border-radius:10px;margin-bottom:6px}
+.sugg .text{font-size:14px;line-height:1.45;white-space:pre-wrap}
+.sugg .acts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.empty{color:#8a8178;font-size:14px;padding:30px;text-align:center;border:1px dashed var(--border);border-radius:10px}
+.placeholder{color:#8a8178;font-size:14px;padding:40px;text-align:center;border:1px dashed var(--border);border-radius:10px;line-height:1.6}
+.run-status{font-size:13px;color:#8a8178}
+
+/* ---- Settings ---- */
+.set-group{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.set-group h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8a8178;margin:0;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-alt)}
+.set-body{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld.full{grid-column:1 / -1}
+.fld label{font-size:12px;font-weight:600;color:#444}
+.fld .hint{font-size:11px;color:#8a8178}
+.fld input[type=text],.fld input[type=number],.fld textarea,.fld select{
+  width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-alt);font-family:inherit}
+.fld textarea{min-height:120px;resize:vertical;line-height:1.4}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--blue)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.statuspill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px}
+.statuspill.ok{background:rgba(39,174,96,.12);color:var(--green)}
+.statuspill.no{background:rgba(231,76,60,.12);color:var(--red)}
+.savebar{position:sticky;bottom:0;background:var(--cream);padding:14px 0;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
+
+/* ---- Mobile ---- */
+@media (max-width:768px){
+  html,body{overflow-x:hidden}
+  .admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px}
+  .admin-header-left{flex-direction:column;align-items:stretch;gap:8px}
+  .admin-header h1{font-size:17px}
+  .admin-nav{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;padding-bottom:2px}
+  .admin-nav a{white-space:nowrap;flex:0 0 auto}
+  .admin-header .user-info{width:100%;justify-content:space-between}
+  .wrap{padding:16px}
+  .set-body{grid-template-columns:1fr}
+  .subtabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
+  .subtab{white-space:nowrap;flex:0 0 auto}
+  .sugg{flex-direction:column}
+  .sugg .acts{flex-direction:row;width:100%}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Social</h1>
+    <p>Sign in to manage social automation.</p>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:16px">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="social-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1>TBI Social Admin</h1>
+      <nav class="admin-nav">
+        <a href="/admin">Events</a>
+        <a href="/queue">Manual Queue</a>
+        <a href="/banners">Banners</a>
+        <a href="/links">Short Links</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/social" class="active">Social</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,.12);color:#ccc;border:1px solid rgba(255,255,255,.25)">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="subtabs">
+      <button class="subtab active" data-tab="feed">Feed / Suggestions</button>
+      <button class="subtab" data-tab="instagram">Instagram</button>
+      <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
+      <button class="subtab" data-tab="schedule">Schedule</button>
+      <button class="subtab" data-tab="settings">Settings</button>
+    </div>
+
+    <!-- FEED -->
+    <section class="panel active" id="panel-feed">
+      <h2 class="section">Story suggestions</h2>
+      <p class="sub">Drafts the engine wrote from recent stories. Phase 1: review them here. Scheduling to Buffer arrives in Phase 3.</p>
+      <div class="toolbar">
+        <button class="btn btn-gold" id="run-btn">⚡ Run crawl now</button>
+        <button class="btn btn-outline btn-sm" id="reload-btn">↻ Reload</button>
+        <span class="run-status" id="run-status"></span>
+      </div>
+      <div id="feed-list"></div>
+    </section>
+
+    <!-- INSTAGRAM -->
+    <section class="panel" id="panel-instagram">
+      <h2 class="section">Instagram cards</h2>
+      <div class="placeholder">The Instagram card builder lands in <b>Phase 4</b>.<br>It will port the card builder's render logic for a pixel-matched preview and server PNG.</div>
+    </section>
+
+    <!-- JOKES -->
+    <section class="panel" id="panel-jokes">
+      <h2 class="section">Jokes &amp; questions</h2>
+      <div class="placeholder">Series-based engagement prompts land in <b>Phase 5</b>.</div>
+    </section>
+
+    <!-- SCHEDULE -->
+    <section class="panel" id="panel-schedule">
+      <h2 class="section">Schedule</h2>
+      <div class="placeholder">The unified Buffer queue lands in <b>Phase 3</b>.</div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="panel" id="panel-settings">
+      <h2 class="section">Settings</h2>
+      <p class="sub">Every adjustable knob. Saved to <code>social_config</code>. The voice prompt is the stable system prompt the engine uses (prompt-cached).</p>
+
+      <div class="set-group">
+        <h3>Connections</h3>
+        <div class="set-body" id="conn-status">
+          <div class="toggle-row"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
+          <div class="toggle-row"><span>Ghost content API</span><span class="statuspill no" id="st-ghost">checking…</span></div>
+          <div class="fld full"><div class="hint">Secrets are set in Supabase (Edge Function secrets), never shown here. This only reports whether they're present.</div></div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Engine</h3>
+        <div class="set-body">
+          <div class="fld">
+            <label>Model</label>
+            <select data-cfg="model">
+              <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (default)</option>
+              <option value="claude-opus-4-8">Claude Opus 4.8</option>
+            </select>
+          </div>
+          <div class="fld"></div>
+          <div class="fld full">
+            <label>Voice prompt (system)</label>
+            <textarea data-cfg="voice_prompt"></textarea>
+            <div class="hint">Stable across calls so it stays prompt-cached. Tune the voice here, not in code.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Automation switches</h3>
+        <div class="set-body">
+          <div class="fld"><div class="toggle-row"><label>Story crawl enabled</label><input type="checkbox" data-rt="crawl_enabled"></div><div class="hint">Master switch / cold-start. Cron wiring arrives in Phase 2.</div></div>
+          <div class="fld"><div class="toggle-row"><label>Instagram track enabled</label><input type="checkbox" data-rt="ig_enabled"></div></div>
+          <div class="fld"><div class="toggle-row"><label>Jokes &amp; questions enabled</label><input type="checkbox" data-rt="jokes_enabled"></div></div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Story crawl</h3>
+        <div class="set-body">
+          <div class="fld"><label>Window (days)</label><input type="number" data-cfg="crawl_window_days" min="1" max="60"></div>
+          <div class="fld"><label>Stories per day</label><input type="number" data-cfg="crawl_stories_per_day" min="1" max="50"></div>
+          <div class="fld"><label>Suggestions per story</label><input type="number" data-cfg="suggestions_per_story" min="1" max="30"></div>
+          <div class="fld"><label>Suggestion TTL (days)</label><input type="number" data-cfg="suggestion_ttl_days" min="1" max="120"></div>
+          <div class="fld"><label>Evergreen cooldown (days)</label><input type="number" data-cfg="evergreen_cooldown_days" min="1" max="365"></div>
+          <div class="fld"><label>Evergreen Ghost tag</label><input type="text" data-cfg="evergreen_tag"></div>
+          <div class="fld"><div class="toggle-row"><label>Scheduling resets window</label><input type="checkbox" data-cfg="schedule_resets_window"></div></div>
+          <div class="fld"><div class="toggle-row"><label>Editing also resets window</label><input type="checkbox" data-cfg="edit_also_resets_window"></div></div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Instagram</h3>
+        <div class="set-body">
+          <div class="fld"><label>Window (days)</label><input type="number" data-cfg="ig_window_days" min="1" max="60"></div>
+          <div class="fld"><label>Cards per day</label><input type="number" data-cfg="ig_cards_per_day" min="1" max="20"></div>
+          <div class="fld"><label>Alt headlines</label><input type="number" data-cfg="ig_alt_headlines" min="0" max="30"></div>
+          <div class="fld"><label>Caption options</label><input type="number" data-cfg="ig_caption_options" min="1" max="30"></div>
+          <div class="fld"><label>Image purge day of month</label><input type="number" data-cfg="ig_purge_day_of_month" min="1" max="28"></div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Jokes &amp; questions</h3>
+        <div class="set-body">
+          <div class="fld"><label>Cadence (days)</label><input type="number" data-cfg="jokes_cadence_days" min="1" max="60"></div>
+          <div class="fld"><label>Per batch</label><input type="number" data-cfg="jokes_per_batch" min="1" max="40"></div>
+        </div>
+      </div>
+
+      <div class="savebar">
+        <button class="btn btn-gold" id="save-settings">Save settings</button>
+        <span class="run-status" id="save-status"></span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://scawgrjcjgcmvsimvash.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---- auth gate ---- */
+const loginScreen=$('#login-screen'), app=$('#social-app');
+async function gate(){
+  const {data}=await sb.auth.getSession();
+  if(data.session){ showApp(data.session); } else { loginScreen.style.display='flex'; app.style.display='none'; }
+}
+function showApp(session){
+  loginScreen.style.display='none'; app.style.display='block';
+  $('#user-email').textContent=session.user.email||'';
+  loadSettings(); checkConnections(); loadFeed();
+}
+$('#login-btn').onclick=async()=>{
+  $('#login-error').textContent='';
+  const email=$('#login-email').value.trim(), pass=$('#login-pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){ $('#login-error').textContent=error.message; return; }
+  showApp(data.session);
+};
+$('#login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('#login-btn').click();});
+$('#logout-btn').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
+
+/* ---- sub-tabs ---- */
+document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); $('#panel-'+b.dataset.tab).classList.add('active');
+});
+
+/* ---- settings ---- */
+let CFG=null, RT=null;
+async function loadSettings(){
+  const [{data:cfg},{data:rt}]=await Promise.all([
+    sb.from('social_config').select('*').eq('id',1).single(),
+    sb.from('social_runtime').select('*').eq('id',1).single()
+  ]);
+  CFG=cfg||{}; RT=rt||{};
+  document.querySelectorAll('[data-cfg]').forEach(el=>{
+    const k=el.dataset.cfg, v=CFG[k];
+    if(el.type==='checkbox') el.checked=!!v; else if(v!=null) el.value=v;
+  });
+  document.querySelectorAll('[data-rt]').forEach(el=>{
+    const k=el.dataset.rt; if(el.type==='checkbox') el.checked=!!RT[k];
+  });
+}
+$('#save-settings').onclick=async()=>{
+  $('#save-status').textContent='Saving…';
+  const cfg={id:1,updated_at:new Date().toISOString()};
+  document.querySelectorAll('[data-cfg]').forEach(el=>{
+    const k=el.dataset.cfg;
+    if(el.type==='checkbox') cfg[k]=el.checked;
+    else if(el.type==='number') cfg[k]=el.value===''?null:Number(el.value);
+    else cfg[k]=el.value;
+  });
+  const rt={id:1};
+  document.querySelectorAll('[data-rt]').forEach(el=>{ rt[el.dataset.rt]=el.checked; });
+  // MANUAL_START: enabling a track sets its window expiry (Phase 2 cron reads this)
+  if(rt.crawl_enabled && !RT.crawl_enabled) rt.crawl_window_expires_at=new Date(Date.now()+(cfg.crawl_window_days||4)*864e5).toISOString();
+  if(rt.ig_enabled && !RT.ig_enabled) rt.ig_window_expires_at=new Date(Date.now()+(cfg.ig_window_days||4)*864e5).toISOString();
+  const e1=(await sb.from('social_config').update(cfg).eq('id',1)).error;
+  const e2=(await sb.from('social_runtime').update(rt).eq('id',1)).error;
+  if(e1||e2){ $('#save-status').textContent='Error: '+((e1||e2).message); return; }
+  RT={...RT,...rt}; CFG={...CFG,...cfg};
+  $('#save-status').textContent='Saved ✓'; setTimeout(()=>$('#save-status').textContent='',2000);
+};
+
+/* ---- connection status ---- */
+async function checkConnections(){
+  try{
+    const {data,error}=await sb.functions.invoke('generate',{body:{check:true}});
+    if(error) throw error;
+    setPill('#st-anthropic',data.anthropic); setPill('#st-ghost',data.ghost);
+  }catch(e){ setPill('#st-anthropic',false,'function not deployed'); setPill('#st-ghost',false,'function not deployed'); }
+}
+function setPill(sel,ok,noText){
+  const el=$(sel); el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':(noText||'not set');
+}
+
+/* ---- feed ---- */
+$('#reload-btn').onclick=loadFeed;
+$('#run-btn').onclick=async()=>{
+  const btn=$('#run-btn'); btn.disabled=true;
+  $('#run-status').textContent='Generating… (this calls the engine, ~10–30s)';
+  try{
+    const {data,error}=await sb.functions.invoke('generate',{body:{}});
+    if(error) throw error;
+    if(data.error) throw new Error(data.error);
+    $('#run-status').textContent=`Done — ${data.suggestions} suggestions from ${data.stories} stories.`;
+    loadFeed();
+  }catch(e){ $('#run-status').textContent='Error: '+(e.message||e); }
+  btn.disabled=false;
+};
+async function loadFeed(){
+  const {data,error}=await sb.from('social_suggestions')
+    .select('*').eq('kind','story_post').neq('status','discarded')
+    .order('created_at',{ascending:false}).limit(300);
+  const host=$('#feed-list');
+  if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
+  if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
+  // group by batch_id (one story = one batch)
+  const groups={};
+  data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,when:r.created_at,items:[]}).items.push(r); });
+  host.innerHTML=Object.values(groups).map(g=>`
+    <div class="story-card">
+      <div class="story-head">
+        <a href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.title||'(untitled)')}</a>
+        <div class="meta">${g.items.length} drafts · ${new Date(g.when).toLocaleString()}</div>
+      </div>
+      ${g.items.map(it=>`
+        <div class="sugg" data-id="${it.id}">
+          <div class="body">
+            ${it.angle?`<span class="angle">${esc(it.angle)}</span><br>`:''}
+            <span class="text">${esc(it.content)}</span>
+          </div>
+          <div class="acts">
+            <button class="btn btn-outline btn-sm copy">Copy</button>
+            <button class="btn btn-outline btn-sm discard">Discard</button>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+  host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
+    const t=e.target.closest('.sugg').querySelector('.text').textContent;
+    navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
+  });
+  host.querySelectorAll('.discard').forEach(b=>b.onclick=async e=>{
+    const id=e.target.closest('.sugg').dataset.id;
+    await sb.from('social_suggestions').update({status:'discarded'}).eq('id',id);
+    e.target.closest('.sugg').remove();
+  });
+}
+
+gate();
+</script>
+</body>
+</html>
