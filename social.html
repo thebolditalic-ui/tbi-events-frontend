@@ -111,6 +111,9 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .sched-result{font-size:12px;margin-top:6px;line-height:1.4}
 .sched-result.ok{color:var(--green)}
 .sched-result.err{color:var(--red)}
+.when-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.when-row input[type=datetime-local]{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--bg-alt);color:var(--dark)}
+.when-hint{font-size:11px;color:#8a8178}
 
 /* ---- Mobile ---- */
 @media (max-width:768px){
@@ -514,6 +517,8 @@ async function loadSchedule(force){
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
       '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
+      ((it.buffer_post_ids&&Object.keys(it.buffer_post_ids).length)?'<div class="meta" style="font-size:11px;color:var(--green);margin-top:4px">Already in Buffer: '+esc(chNames(Object.keys(it.buffer_post_ids)))+'</div>':'')+
+      '<div class="when-row"><input type="datetime-local" class="when"><span class="when-hint">leave blank = next open slot in Buffer</span></div>'+
       '<div class="sched-result" data-res></div></div>'+
       '<div class="acts">'+
         '<button class="btn btn-gold btn-sm send">Add to Buffer queue</button>'+
@@ -542,14 +547,17 @@ function wireSchedHandlers(host){
     const row=e.target.closest('.sugg'), id=row.dataset.id, res=row.querySelector('[data-res]'), btn=e.target;
     const chans=selectedChannels();
     if(!chans.length){ res.className='sched-result err'; res.textContent='Pick at least one channel above first.'; return; }
-    btn.disabled=true; btn.textContent='Sending...'; res.className='sched-result'; res.textContent='';
+    const whenEl=row.querySelector('.when'); let due=null;
+    if(whenEl && whenEl.value){ const d=new Date(whenEl.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That date/time is not valid.'; return; } due=d.toISOString(); }
+    btn.disabled=true; btn.textContent='Sending...'; res.className='sched-result'; res.innerHTML='';
     try{
-      const {data,error}=await sb.functions.invoke('buffer',{body:{action:'schedule',suggestion_id:id,channel_ids:chans}});
+      const payload={action:'schedule',suggestion_id:id,channel_ids:chans}; if(due) payload.due_at=due;
+      const {data,error}=await sb.functions.invoke('buffer',{body:payload});
       if(error) throw error;
-      if(!data.ok){ const m=(data.results&&data.results.map(r=>r.error).filter(Boolean).join('; '))||data.error||'failed'; throw new Error(m); }
-      res.className='sched-result ok'; res.textContent=CK+' Added to Buffer queue: '+chNames(chans);
-      btn.textContent='Queued '+CK;
-      setTimeout(loadSchedule,1100);
+      const results=(data&&data.results)||[];
+      res.innerHTML=results.map(r=>{ const nm=esc(chNames([r.channel])||r.channel); if(r.ok){ const tag=r.skipped?'already queued':(due?'scheduled':'queued'); return '<span style="color:var(--green)">'+CK+' '+nm+' - '+tag+'</span>'; } return '<span style="color:var(--red)">x '+nm+': '+esc(r.error||'failed')+'</span>'; }).join('<br>');
+      if(data && data.all_done){ btn.textContent='Queued '+CK; setTimeout(()=>loadSchedule(),1500); }
+      else { btn.disabled=false; btn.textContent='Retry remaining'; }
     }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Add to Buffer queue'; }
   });
 }
