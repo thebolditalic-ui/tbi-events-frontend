@@ -141,7 +141,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .ig-sw{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);cursor:pointer}
 .ig-sw.on{outline:2px solid var(--blue);outline-offset:1px}
 .ig-hint{font-size:11px;color:#8a8178;line-height:1.5}
-.switch{position:relative;width:42px;height:24px;flex:0 0 auto}
+.switch{position:relative;display:inline-block;width:42px;height:24px;flex:0 0 auto}
 .switch input{opacity:0;width:0;height:0}
 .slider-sw{position:absolute;inset:0;background:#cfc7bb;border-radius:24px;transition:.18s;cursor:pointer}
 .slider-sw:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s}
@@ -249,10 +249,10 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           </div></div>
           <div class="set-group"><h3>2 &middot; Headline</h3><div class="ig-body">
             <textarea id="ig-headline">WE NEVER LIKED PHILZ ANYWAY.</textarea>
-            <div class="ig-toggle" style="margin-top:10px">Auto-fit size<span class="switch"><input type="checkbox" id="ig-autofit" checked><span class="slider-sw"></span></span></div>
-            <div class="ig-fld">Size <span class="val" id="ig-sizeVal">auto</span><input type="range" id="ig-size" min="40" max="320" value="120"></div>
+            <div class="ig-toggle" style="margin-top:10px">Auto-fit size<label class="switch"><input type="checkbox" id="ig-autofit"><span class="slider-sw"></span></label></div>
+            <div class="ig-fld">Size <span class="val" id="ig-sizeVal">79</span><input type="range" id="ig-size" min="40" max="320" value="79"></div>
             <div class="ig-fld">Move horizontal <span class="val" id="ig-hxVal">center</span><input type="range" id="ig-hx" min="-100" max="100" value="0"></div>
-            <div class="ig-fld">Move vertical <span class="val" id="ig-hyVal">middle</span><input type="range" id="ig-hy" min="-100" max="100" value="0"></div>
+            <div class="ig-fld">Move vertical <span class="val" id="ig-hyVal">up</span><input type="range" id="ig-hy" min="-100" max="100" value="-30"></div>
             <div class="ig-fld">Headline color<div class="ig-seg" id="ig-hcolor"><button data-hcolor="#ffffff" class="on">White</button><button data-hcolor="#000000">Black</button></div></div>
           </div></div>
           <div class="set-group"><h3>3 &middot; Headline font</h3><div class="ig-body">
@@ -262,11 +262,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           </div></div>
           <div class="set-group"><h3>4 &middot; Format &amp; layout</h3><div class="ig-body">
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440" class="on">3:4</button><button data-w="1080" data-h="1350">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
-            <div class="ig-fld">Black panel height <span class="val" id="ig-blackVal">38%</span><input type="range" id="ig-black" min="20" max="55" value="38"></div>
-            <div class="ig-toggle">"The Bold Italic" badge<span class="switch"><input type="checkbox" id="ig-badge" checked><span class="slider-sw"></span></span></div>
+            <div class="ig-fld">Black panel height <span class="val" id="ig-blackVal">33%</span><input type="range" id="ig-black" min="20" max="55" value="33"></div>
+            <div class="ig-toggle">White hairline at top of black box<label class="switch"><input type="checkbox" id="ig-hairline"><span class="slider-sw"></span></label></div>
+            <div class="ig-toggle">"The Bold Italic" badge<label class="switch"><input type="checkbox" id="ig-badge" checked><span class="slider-sw"></span></label></div>
             <input type="text" id="ig-badgetext" value="The Bold Italic" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);margin-bottom:10px">
-            <div class="ig-toggle">Red "TBI" circle<span class="switch"><input type="checkbox" id="ig-tbi" checked><span class="slider-sw"></span></span></div>
+            <div class="ig-toggle">Red "TBI" circle<label class="switch"><input type="checkbox" id="ig-tbi" checked><span class="slider-sw"></span></label></div>
             <div class="ig-fld">Circle corner<div class="ig-seg" id="ig-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
+            <div class="ig-fld">Circle size <span class="val" id="ig-tbiscaleVal">100%</span><input type="range" id="ig-tbiscale" min="40" max="220" value="100"></div>
+            <div class="ig-drop" id="ig-icondrop"><b>Load TBI icon</b> (PNG) &mdash; replaces the drawn circle</div>
+            <input type="file" id="ig-iconfile" accept="image/*" hidden>
           </div></div>
         </div>
       </div>
@@ -698,7 +702,7 @@ function initIG(){ if(igReady) return; igReady=true; igBoot(); }
 function igBoot(){
   var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
   var NL=String.fromCharCode(10);
-  var state={ img:null, W:1080, H:1440, blackFrac:0.38, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:true, manualSize:120, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:0 };
+  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:false, manualSize:79, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:-0.3, tbiScale:1, tbiImg:null, hairline:false };
   var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
   function drawCover(img,x,y,w,h,zoom,posY){
     var scale=Math.max(w/img.width,h/img.height)*zoom;
@@ -736,6 +740,7 @@ function igBoot(){
     if(state.img){ drawCover(state.img,0,0,W,photoH,state.zoom,state.posY); }
     else { ctx.fillStyle=state.bgColor; ctx.fillRect(0,0,W,photoH); }
     ctx.fillStyle='#000'; ctx.fillRect(0,photoH,W,H-photoH);
+    if(state.hairline){ ctx.fillStyle='#fff'; ctx.fillRect(0,photoH,W,2); }
     var padX=W*0.075, maxW=W-padX*2, blackH=H-photoH, headTopPad=blackH*0.16, maxH=blackH-headTopPad-blackH*0.10;
     var text=(state.headline||'').trim();
     if(text){
@@ -756,11 +761,11 @@ function igBoot(){
       ctx.fillStyle='#000'; ctx.fillText(state.badgeText,W/2,by+bh/2+bsize*0.04);
     }
     if(state.tbiCircle){
-      var D=W*0.115, M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
+      var D=W*0.115*(state.tbiScale||1), M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
       if(state.tbiCirclePos==='tl'){cx=left;cyc=top;} else if(state.tbiCirclePos==='bl'){cx=left;cyc=bot;} else if(state.tbiCirclePos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;}
-      ctx.beginPath(); ctx.arc(cx,cyc,rr,0,Math.PI*2); ctx.fillStyle=state.tbiCircleColor; ctx.fill();
+      if(state.tbiImg){ ctx.drawImage(state.tbiImg,cx-rr,cyc-rr,D,D); } else { ctx.beginPath(); ctx.arc(cx,cyc,rr,0,Math.PI*2); ctx.fillStyle=state.tbiCircleColor; ctx.fill();
       ctx.fillStyle='#fff'; ctx.font='400 '+Math.round(D*0.40)+'px "'+state.font+'", Arial, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('TBI',cx,cyc+D*0.04);
+      ctx.fillText('TBI',cx,cyc+D*0.04); }
     }
     var ex=$('#ig-export'); if(ex) ex.disabled=false;
   }
@@ -782,6 +787,8 @@ function igBoot(){
   $('#ig-badge').onchange=function(e){ state.badge=e.target.checked; render(); };
   $('#ig-badgetext').oninput=function(e){ state.badgeText=e.target.value; render(); };
   $('#ig-tbi').onchange=function(e){ state.tbiCircle=e.target.checked; render(); };
+  $('#ig-tbiscale').oninput=function(e){ state.tbiScale=e.target.value/100; $('#ig-tbiscaleVal').textContent=e.target.value+'%'; render(); };
+  $('#ig-hairline').onchange=function(e){ state.hairline=e.target.checked; render(); };
   document.querySelectorAll('#ig-tbipos button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-tbipos button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.tbiCirclePos=b.dataset.pos; render(); }; });
   document.querySelectorAll('#ig-hcolor button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-hcolor button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.hcolor=b.dataset.hcolor; render(); }; });
   document.querySelectorAll('#ig-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-aspect button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.W=+b.dataset.w; state.H=+b.dataset.h; render(); }; });
@@ -796,6 +803,14 @@ function igBoot(){
   async function loadFontBuf(buf,label){ try{ var face=new FontFace('EdsMarket',buf); await face.load(); document.fonts.add(face); state.font='EdsMarket'; if(label) $('#ig-fontname').textContent=label; render(); return true; }catch(err){ $('#ig-fontname').textContent='Could not load that font file'; return false; } }
   async function loadFont(file){ if(!file) return; var buf=await file.arrayBuffer(); var ok=await loadFontBuf(buf, file.name+' (saved in this browser)'); if(ok){ try{ var by=new Uint8Array(buf), bin=''; for(var i=0;i<by.length;i++) bin+=String.fromCharCode(by[i]); localStorage.setItem('ig_font_b64', btoa(bin)); localStorage.setItem('ig_font_name', file.name); }catch(e){} } }
   try{ var _fb=localStorage.getItem('ig_font_b64'); if(_fb){ var _bs=atob(_fb), _u=new Uint8Array(_bs.length); for(var _i=0;_i<_bs.length;_i++) _u[_i]=_bs.charCodeAt(_i); loadFontBuf(_u.buffer, (localStorage.getItem('ig_font_name')||"Ed's Market")+' (saved)'); } }catch(e){}
+  function loadIconFile(file){ if(!file||!file.type.startsWith('image/')) return; var url=URL.createObjectURL(file); var im=new Image(); im.onload=function(){ state.tbiImg=im; render(); URL.revokeObjectURL(url); }; im.src=url; var rd=new FileReader(); rd.onload=function(){ try{ localStorage.setItem('ig_tbi_b64', rd.result); }catch(e){} }; rd.readAsDataURL(file); }
+  var icondrop=$('#ig-icondrop'), iconfile=$('#ig-iconfile');
+  icondrop.onclick=function(){ iconfile.click(); };
+  iconfile.onchange=function(e){ loadIconFile(e.target.files[0]); };
+  ['dragenter','dragover'].forEach(function(ev){ icondrop.addEventListener(ev,function(e){ e.preventDefault(); icondrop.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(ev){ icondrop.addEventListener(ev,function(e){ e.preventDefault(); icondrop.classList.remove('hot'); }); });
+  icondrop.addEventListener('drop',function(e){ loadIconFile(e.dataTransfer.files[0]); });
+  try{ var _ib=localStorage.getItem('ig_tbi_b64'); if(_ib){ var _im=new Image(); _im.onload=function(){ state.tbiImg=_im; render(); }; _im.src=_ib; } }catch(e){}
   function slug(){ return (state.headline||'tbi-card').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48)||'tbi-card'; }
   $('#ig-export').onclick=function(){ canvas.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slug()+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
   $('#ig-copy').onclick=async function(){ try{ var blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); }); await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); var b=$('#ig-copy'), t=b.textContent; b.textContent='Copied '+CK; setTimeout(function(){ b.textContent=t; },1400); }catch(e){ var b2=$('#ig-copy'); b2.textContent='Use Download'; setTimeout(function(){ b2.textContent='Copy image'; },1600); } };
