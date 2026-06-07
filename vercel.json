@@ -33,6 +33,10 @@
       "destination": "/disclosures.html"
     },
     {
+      "source": "/social",
+      "destination": "/social.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
