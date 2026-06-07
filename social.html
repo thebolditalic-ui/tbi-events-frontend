@@ -22,7 +22,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
 .login-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;width:100%;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
 .login-box h1{font-family:var(--title-font);font-size:26px;margin:0 0 6px}
-.login-box p{color:#897;font-size:14px;margin:0 0 20px;color:#8a8178}
+.login-box p{font-size:14px;margin:0 0 20px;color:#8a8178}
 .login-box label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin:12px 0 4px}
 .login-box input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--bg-alt)}
 .login-box input:focus{outline:none;border-color:var(--blue)}
@@ -73,10 +73,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .sugg .body{flex:1;min-width:0}
 .sugg .angle{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);background:rgba(91,123,213,.1);padding:2px 8px;border-radius:10px;margin-bottom:6px}
 .sugg .text{font-size:14px;line-height:1.45;white-space:pre-wrap}
-.sugg .acts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.sugg textarea.editbox{width:100%;font-family:inherit;font-size:14px;line-height:1.45;border:1px solid var(--blue);border-radius:6px;padding:8px;background:var(--bg-alt);min-height:90px;resize:vertical}
+.sugg .acts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;width:150px}
+.sugg .acts .btn{width:100%;text-align:center}
+.staged-flag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--green);background:rgba(39,174,96,.12);padding:2px 8px;border-radius:10px;margin-left:6px}
 .empty{color:#8a8178;font-size:14px;padding:30px;text-align:center;border:1px dashed var(--border);border-radius:10px}
 .placeholder{color:#8a8178;font-size:14px;padding:40px;text-align:center;border:1px dashed var(--border);border-radius:10px;line-height:1.6}
 .run-status{font-size:13px;color:#8a8178}
+.spend-pill{font-size:12px;font-weight:700;color:var(--dark);background:rgba(39,174,96,.12);padding:5px 12px;border-radius:14px}
 
 /* ---- Settings ---- */
 .set-group{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
@@ -110,7 +114,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
   .subtabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .subtab{white-space:nowrap;flex:0 0 auto}
   .sugg{flex-direction:column}
-  .sugg .acts{flex-direction:row;width:100%}
+  .sugg .acts{flex-direction:row;flex-wrap:wrap;width:100%}
+  .sugg .acts .btn{width:auto;flex:1}
 }
 </style>
 </head>
@@ -162,11 +167,12 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- FEED -->
     <section class="panel active" id="panel-feed">
       <h2 class="section">Story suggestions</h2>
-      <p class="sub">Drafts the engine wrote from recent stories. Phase 1: review them here. Scheduling to Buffer arrives in Phase 3.</p>
+      <p class="sub">Drafts the engine wrote from recent stories. Edit any one in place, then <b>Send to Scheduling</b> to move it to the Schedule tab (Buffer wiring arrives in Phase 3). Discard the rest.</p>
       <div class="toolbar">
         <button class="btn btn-gold" id="run-btn">⚡ Run crawl now</button>
         <button class="btn btn-outline btn-sm" id="reload-btn">↻ Reload</button>
         <span class="run-status" id="run-status"></span>
+        <span class="spend-pill" id="spend-pill" style="margin-left:auto"></span>
       </div>
       <div id="feed-list"></div>
     </section>
@@ -186,7 +192,9 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- SCHEDULE -->
     <section class="panel" id="panel-schedule">
       <h2 class="section">Schedule</h2>
-      <div class="placeholder">The unified Buffer queue lands in <b>Phase 3</b>.</div>
+      <p class="sub">Drafts you sent here are staged for Buffer. The Buffer connection + one-click scheduling to your channels lands in <b>Phase 3</b> — for now this is your staging queue (copy-paste into Buffer manually in the meantime).</p>
+      <div class="toolbar"><button class="btn btn-outline btn-sm" id="reload-sched">↻ Reload</button></div>
+      <div id="schedule-list"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -199,7 +207,16 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <div class="set-body" id="conn-status">
           <div class="toggle-row"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
           <div class="toggle-row"><span>Ghost content API</span><span class="statuspill no" id="st-ghost">checking…</span></div>
-          <div class="fld full"><div class="hint">Secrets are set in Supabase (Edge Function secrets), never shown here. This only reports whether they're present.</div></div>
+          <div class="fld full"><div class="hint">Secrets live in Supabase (Edge Function secrets), never in this page. This only reports whether they're present. The engine only runs for a signed-in admin.</div></div>
+        </div>
+      </div>
+
+      <div class="set-group">
+        <h3>Spend (estimated)</h3>
+        <div class="set-body">
+          <div class="toggle-row"><span>This month</span><span class="statuspill ok" id="spend-month">—</span></div>
+          <div class="toggle-row"><span>All time</span><span class="statuspill ok" id="spend-all">—</span></div>
+          <div class="fld full"><div class="hint">Estimated from tokens logged per run — Sonnet 4.6 is $3/$15 per million in/out, Opus 4.8 $5/$25. The cached voice prompt makes repeat runs cheaper. Your real bill is in the Anthropic console.</div></div>
         </div>
       </div>
 
@@ -278,6 +295,7 @@ const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
 const $=s=>document.querySelector(s);
 const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const money=n=>'~$'+(Number(n)||0).toFixed(2);
 
 /* ---- auth gate ---- */
 const loginScreen=$('#login-screen'), app=$('#social-app');
@@ -288,7 +306,7 @@ async function gate(){
 function showApp(session){
   loginScreen.style.display='none'; app.style.display='block';
   $('#user-email').textContent=session.user.email||'';
-  loadSettings(); checkConnections(); loadFeed();
+  loadSettings(); checkConnections(); loadFeed(); loadSpend();
 }
 $('#login-btn').onclick=async()=>{
   $('#login-error').textContent='';
@@ -305,6 +323,8 @@ document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.subtab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); $('#panel-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='schedule') loadSchedule();
+  if(b.dataset.tab==='settings'){ loadSpend(); }
 });
 
 /* ---- settings ---- */
@@ -334,7 +354,6 @@ $('#save-settings').onclick=async()=>{
   });
   const rt={id:1};
   document.querySelectorAll('[data-rt]').forEach(el=>{ rt[el.dataset.rt]=el.checked; });
-  // MANUAL_START: enabling a track sets its window expiry (Phase 2 cron reads this)
   if(rt.crawl_enabled && !RT.crawl_enabled) rt.crawl_window_expires_at=new Date(Date.now()+(cfg.crawl_window_days||4)*864e5).toISOString();
   if(rt.ig_enabled && !RT.ig_enabled) rt.ig_window_expires_at=new Date(Date.now()+(cfg.ig_window_days||4)*864e5).toISOString();
   const e1=(await sb.from('social_config').update(cfg).eq('id',1)).error;
@@ -350,62 +369,116 @@ async function checkConnections(){
     const {data,error}=await sb.functions.invoke('generate',{body:{check:true}});
     if(error) throw error;
     setPill('#st-anthropic',data.anthropic); setPill('#st-ghost',data.ghost);
-  }catch(e){ setPill('#st-anthropic',false,'function not deployed'); setPill('#st-ghost',false,'function not deployed'); }
+  }catch(e){ setPill('#st-anthropic',false,'unavailable'); setPill('#st-ghost',false,'unavailable'); }
 }
 function setPill(sel,ok,noText){
   const el=$(sel); el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':(noText||'not set');
+}
+
+/* ---- spend ---- */
+async function loadSpend(){
+  const {data,error}=await sb.from('social_usage').select('est_cost_usd,created_at');
+  if(error||!data){ return; }
+  const m0=new Date(); m0.setDate(1); m0.setHours(0,0,0,0);
+  let month=0, all=0;
+  data.forEach(r=>{ const c=Number(r.est_cost_usd||0); all+=c; if(new Date(r.created_at)>=m0) month+=c; });
+  if($('#spend-month')) $('#spend-month').textContent=money(month);
+  if($('#spend-all')) $('#spend-all').textContent=money(all);
+  if($('#spend-pill')) $('#spend-pill').textContent='Spend this month: '+money(month);
 }
 
 /* ---- feed ---- */
 $('#reload-btn').onclick=loadFeed;
 $('#run-btn').onclick=async()=>{
   const btn=$('#run-btn'); btn.disabled=true;
-  $('#run-status').textContent='Generating… (this calls the engine, ~10–30s)';
+  $('#run-status').textContent='Generating… (calls the engine, ~10–30s)';
   try{
     const {data,error}=await sb.functions.invoke('generate',{body:{}});
     if(error) throw error;
     if(data.error) throw new Error(data.error);
-    $('#run-status').textContent=`Done — ${data.suggestions} suggestions from ${data.stories} stories.`;
-    loadFeed();
+    $('#run-status').textContent='Done — '+data.suggestions+' suggestions from '+data.stories+' stories · '+money(data.est_cost_usd)+' this run.';
+    loadFeed(); loadSpend();
   }catch(e){ $('#run-status').textContent='Error: '+(e.message||e); }
   btn.disabled=false;
 };
 async function loadFeed(){
   const {data,error}=await sb.from('social_suggestions')
-    .select('*').eq('kind','story_post').neq('status','discarded')
+    .select('*').eq('kind','story_post').in('status',['pending','staged'])
     .order('created_at',{ascending:false}).limit(300);
   const host=$('#feed-list');
   if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
   if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
-  // group by batch_id (one story = one batch)
   const groups={};
   data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,when:r.created_at,items:[]}).items.push(r); });
-  host.innerHTML=Object.values(groups).map(g=>`
-    <div class="story-card">
-      <div class="story-head">
-        <a href="${esc(g.url)}" target="_blank" rel="noopener">${esc(g.title||'(untitled)')}</a>
-        <div class="meta">${g.items.length} drafts · ${new Date(g.when).toLocaleString()}</div>
-      </div>
-      ${g.items.map(it=>`
-        <div class="sugg" data-id="${it.id}">
-          <div class="body">
-            ${it.angle?`<span class="angle">${esc(it.angle)}</span><br>`:''}
-            <span class="text">${esc(it.content)}</span>
-          </div>
-          <div class="acts">
-            <button class="btn btn-outline btn-sm copy">Copy</button>
-            <button class="btn btn-outline btn-sm discard">Discard</button>
-          </div>
-        </div>`).join('')}
-    </div>`).join('');
+  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+'</div></div>'+
+    g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+      (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
+      '<span class="text">'+esc(it.content)+'</span></div>'+
+      '<div class="acts">'+
+        '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged ✓':'Send to Scheduling')+'</button>'+
+        '<button class="btn btn-outline btn-sm edit">Edit</button>'+
+        '<button class="btn btn-outline btn-sm copy">Copy</button>'+
+        '<button class="btn btn-outline btn-sm discard">Discard</button>'+
+      '</div></div>').join('')+'</div>').join('');
+  wireSuggHandlers(host);
+}
+function wireSuggHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
     const t=e.target.closest('.sugg').querySelector('.text').textContent;
     navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
   });
   host.querySelectorAll('.discard').forEach(b=>b.onclick=async e=>{
-    const id=e.target.closest('.sugg').dataset.id;
-    await sb.from('social_suggestions').update({status:'discarded'}).eq('id',id);
-    e.target.closest('.sugg').remove();
+    const row=e.target.closest('.sugg');
+    await sb.from('social_suggestions').update({status:'discarded'}).eq('id',row.dataset.id);
+    row.remove();
+  });
+  host.querySelectorAll('.stage').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg');
+    await sb.from('social_suggestions').update({status:'staged'}).eq('id',row.dataset.id);
+    e.target.textContent='Staged ✓';
+    if(!row.querySelector('.staged-flag')){ const a=row.querySelector('.angle'); if(a) a.insertAdjacentHTML('afterend','<span class="staged-flag">staged</span>'); }
+  });
+  host.querySelectorAll('.edit').forEach(b=>b.onclick=e=>{
+    const row=e.target.closest('.sugg'), body=row.querySelector('.body'), span=row.querySelector('.text');
+    if(row.querySelector('.editbox')) return;
+    const ta=document.createElement('textarea'); ta.className='editbox'; ta.value=span.textContent;
+    span.style.display='none'; body.appendChild(ta); ta.focus();
+    const bar=document.createElement('div'); bar.style.marginTop='6px'; bar.style.display='flex'; bar.style.gap='6px';
+    bar.innerHTML='<button class="btn btn-gold btn-sm save">Save</button><button class="btn btn-outline btn-sm cancel">Cancel</button>';
+    body.appendChild(bar);
+    bar.querySelector('.cancel').onclick=()=>{ ta.remove(); bar.remove(); span.style.display=''; };
+    bar.querySelector('.save').onclick=async()=>{
+      const val=ta.value.trim();
+      await sb.from('social_suggestions').update({content:val}).eq('id',row.dataset.id);
+      span.textContent=val; ta.remove(); bar.remove(); span.style.display='';
+    };
+  });
+}
+
+/* ---- schedule (staged queue) ---- */
+$('#reload-sched').onclick=loadSchedule;
+async function loadSchedule(){
+  const {data,error}=await sb.from('social_suggestions')
+    .select('*').eq('status','staged').order('created_at',{ascending:false}).limit(300);
+  const host=$('#schedule-list');
+  if(error){ host.innerHTML='<div class="empty">Error: '+esc(error.message)+'</div>'; return; }
+  if(!data||!data.length){ host.innerHTML='<div class="empty">Nothing staged yet. On the Feed tab, click <b>Send to Scheduling</b> on a draft to queue it here.</div>'; return; }
+  host.innerHTML='<div class="story-card">'+data.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+    (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
+    '<span class="text">'+esc(it.content)+'</span>'+
+    '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div></div>'+
+    '<div class="acts">'+
+      '<button class="btn btn-outline btn-sm copy">Copy</button>'+
+      '<button class="btn btn-outline btn-sm unstage">Unstage</button>'+
+    '</div></div>').join('')+'</div>';
+  host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
+    const t=e.target.closest('.sugg').querySelector('.text').textContent;
+    navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
+  });
+  host.querySelectorAll('.unstage').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg');
+    await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id);
+    row.remove();
   });
 }
 
