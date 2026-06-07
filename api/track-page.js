@@ -1,21 +1,17 @@
-// /api/track-page.js — Vercel serverless function
-// Records a page-level impression for events.thebolditalic.com.
-// Public; no auth required. Called by the events page after the
-// IntersectionObserver fires (50% of <body> visible for ≥1 second).
-//
-// Body: { session_id, page_url, referrer }
-//
-// session_id is a random per-browser token kept in sessionStorage and
-// not tied to any user identity. The browser dedupes per session
-// before firing, so this endpoint just inserts what it gets — except
-// for bot UAs and prefetch requests, which we drop server-side.
+// /api/track-page.js -- Vercel serverless function (MERGED analytics endpoint)
+// One function now serves all three site-analytics writers, dispatched on ?t:
+//   t=page        (default) -- page-view impression   -> page_impressions
+//   t=event-click           -- event-card click       -> event_clicks
+//   t=event-view            -- event detail-page view  -> event_views
+// Original public paths are preserved via vercel.json rewrites:
+//   /api/track-event-click -> /api/track-page?t=event-click
+//   /api/track-event-view  -> /api/track-page?t=event-view
+//   /api/track-page        -> (no ?t) defaults to page
+// All three are POST, bot/prefetch-filtered, and insert via the anon key.
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://scawgrjcjgcmvsimvash.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
 
-// Same pattern list used by /api/banner-click. Anything matching these
-// substrings is dropped without inserting, since it doesn't represent a
-// human visit.
 var BOT_PATTERNS = [
   'bot', 'crawler', 'spider', 'slurp',
   'curl', 'wget', 'python-requests', 'python-urllib', 'java/', 'go-http-client',
@@ -43,7 +39,6 @@ function isPrefetchRequest(req) {
   return false;
 }
 
-// Vercel auto-parses JSON, but sendBeacon can deliver text/plain — handle both.
 function parseBody(req) {
   if (!req.body) return {};
   if (typeof req.body === 'object') return req.body;
@@ -51,6 +46,19 @@ function parseBody(req) {
     try { return JSON.parse(req.body); } catch (e) { return {}; }
   }
   return {};
+}
+
+async function insertRow(table, row) {
+  return fetch(SUPABASE_URL + '/rest/v1/' + table, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(row)
+  });
 }
 
 module.exports = async function handler(req, res) {
@@ -61,47 +69,69 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed. Use POST.' });
 
+  var t = (req.query && req.query.t) || 'page';
   var body = parseBody(req);
-  var sessionId = body.session_id;
-  var pageUrl = body.page_url || '';
-  var referrer = body.referrer || '';
-
-  if (!sessionId) {
-    return res.status(400).json({ error: 'Missing session_id' });
-  }
-
   var ua = req.headers['user-agent'] || '';
 
-  // Drop bots / prefetches silently. Returning 204 means the client
-  // doesn't retry, and the row never gets written.
-  if (isBotUA(ua) || isPrefetchRequest(req)) {
-    return res.status(204).end();
-  }
-
-  try {
-    var resp = await fetch(SUPABASE_URL + '/rest/v1/page_impressions', {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
+  // ---- t=page : page-level impression ----
+  if (t === 'page') {
+    var sessionId = body.session_id;
+    if (!sessionId) return res.status(400).json({ error: 'Missing session_id' });
+    if (isBotUA(ua) || isPrefetchRequest(req)) return res.status(204).end();
+    try {
+      var r1 = await insertRow('page_impressions', {
         session_id: sessionId,
-        page_url: pageUrl,
-        referrer: referrer,
+        page_url: body.page_url || '',
+        referrer: body.referrer || '',
         user_agent: ua
-      })
-    });
-
-    if (!resp.ok) {
-      var errText = await resp.text();
-      return res.status(500).json({ error: 'Insert failed', details: errText });
-    }
-
-    return res.status(204).end();
-  } catch (err) {
-    return res.status(500).json({ error: 'Server error: ' + err.message });
+      });
+      if (!r1.ok) { var e1 = await r1.text(); return res.status(500).json({ error: 'Insert failed', details: e1 }); }
+      return res.status(204).end();
+    } catch (err) { return res.status(500).json({ error: 'Server error: ' + err.message }); }
   }
+
+  // ---- t=event-click : click on an event card ----
+  if (t === 'event-click') {
+    var eventSlug = body.event_slug;
+    var placement = body.placement;
+    if (!eventSlug) return res.status(400).json({ error: 'Missing event_slug' });
+    if (placement !== 'featured' && placement !== 'list') {
+      return res.status(400).json({ error: "placement must be 'featured' or 'list'" });
+    }
+    if (isBotUA(ua) || isPrefetchRequest(req)) return res.status(204).end();
+    try {
+      var r2 = await insertRow('event_clicks', {
+        event_slug: eventSlug,
+        event_url: body.event_url || '',
+        placement: placement,
+        session_id: body.session_id || null,
+        page_url: body.page_url || '',
+        user_agent: ua
+      });
+      if (!r2.ok) { var e2 = await r2.text(); return res.status(500).json({ error: 'Insert failed', details: e2 }); }
+      return res.status(204).end();
+    } catch (err) { return res.status(500).json({ error: 'Server error: ' + err.message }); }
+  }
+
+  // ---- t=event-view : detail-page view of an individual event ----
+  if (t === 'event-view') {
+    var evSlug = body.event_slug;
+    var evSession = body.session_id;
+    if (!evSlug || !evSession) return res.status(400).json({ error: 'Missing event_slug or session_id' });
+    if (isBotUA(ua) || isPrefetchRequest(req)) return res.status(204).end();
+    try {
+      var r3 = await insertRow('event_views', {
+        event_slug: evSlug,
+        event_url: body.event_url || '',
+        session_id: evSession,
+        page_url: body.page_url || '',
+        referrer: body.referrer || '',
+        user_agent: ua
+      });
+      if (!r3.ok) { var e3 = await r3.text(); return res.status(500).json({ error: 'Insert failed', details: e3 }); }
+      return res.status(204).end();
+    } catch (err) { return res.status(500).json({ error: 'Server error: ' + err.message }); }
+  }
+
+  return res.status(400).json({ error: 'Unknown tracking type: ' + t });
 };
