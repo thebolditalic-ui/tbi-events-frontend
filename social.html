@@ -114,6 +114,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .when-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
 .when-row input[type=datetime-local]{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--bg-alt);color:var(--dark)}
 .when-hint{font-size:11px;color:#8a8178}
+.slots{margin:6px 0 2px}
+.slot{font-size:12px;color:var(--dark);line-height:1.55}
 
 /* ---- Mobile ---- */
 @media (max-width:768px){
@@ -478,7 +480,8 @@ function wireSuggHandlers(host){
 
 /* ---- schedule (Buffer) ---- */
 var CK=String.fromCharCode(10003);
-let CHANNELS=null, CHAN_ON={};
+var ARR=String.fromCharCode(8594);
+let CHANNELS=null, CHAN_ON={}, SCHED_MAP={};
 async function loadChannels(force){
   if(CHANNELS && !force) return CHANNELS;
   try{
@@ -501,6 +504,26 @@ function renderChips(){
   if(!CHANNELS||!CHANNELS.length){ host.innerHTML='<span class="run-status">No Buffer channels connected. Add them at publish.buffer.com, then Reload.</span>'; return; }
   host.innerHTML=CHANNELS.map(c=>'<span class="chan-chip '+(CHAN_ON[c.id]?'on':'')+'" data-ch="'+esc(c.id)+'">'+esc(c.name)+' <span class="svc">'+esc(svcLabel(c.service))+'</span></span>').join('');
   host.querySelectorAll('.chan-chip').forEach(ch=>ch.onclick=()=>{ const id=ch.dataset.ch; CHAN_ON[id]=!CHAN_ON[id]; ch.classList.toggle('on',!!CHAN_ON[id]); });
+}
+function fmtWhen(iso){ try{ return new Date(iso).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return iso; } }
+function toLocalInput(d){ const p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes()); }
+function slotLines(it){
+  const pids=it.buffer_post_ids||{}; const due=it.buffer_due||{}; const chs=Object.keys(pids);
+  if(!chs.length) return '';
+  return chs.map(ch=>'<div class="slot"><b>'+esc(chNames([ch]))+'</b> '+ARR+' '+esc(due[ch]?fmtWhen(due[ch]):'next open slot')+'</div>').join('');
+}
+function schedCard(it){
+  return '<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+    '<span class="text">'+esc(it.content)+'</span>'+
+    '<div class="slots">'+slotLines(it)+'</div>'+
+    '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:2px">'+esc(it.story_title||'')+'</div>'+
+    '<div class="sched-result" data-res></div></div>'+
+    '<div class="acts">'+
+      '<button class="btn btn-outline btn-sm editq">Edit</button>'+
+      '<button class="btn btn-outline btn-sm refreshq">Refresh time</button>'+
+      '<button class="btn btn-danger btn-sm removeq">Remove from queue</button>'+
+      '<a class="btn btn-outline btn-sm" href="https://publish.buffer.com" target="_blank" rel="noopener">Open Buffer</a>'+
+    '</div></div>';
 }
 async function loadSchedule(force){
   const host=$('#schedule-list');
@@ -528,10 +551,9 @@ async function loadSchedule(force){
   }
   wireSchedHandlers(host);
   const shost=$('#scheduled-list'); $('#scheduled-head').style.display=sched.length?'block':'none';
-  shost.innerHTML=sched.length?('<div class="story-card">'+sched.map(it=>'<div class="sugg"><div class="body">'+
-    '<span class="text">'+esc(it.content)+'</span>'+
-    '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+' &middot; queued '+(it.scheduled_at?new Date(it.scheduled_at).toLocaleString():'')+' &middot; '+esc(chNames(it.channels))+'</div></div>'+
-    '<div class="acts"><a class="btn btn-outline btn-sm" href="https://publish.buffer.com" target="_blank" rel="noopener">Open Buffer</a></div></div>').join('')+'</div>'):'';
+  SCHED_MAP={};
+  shost.innerHTML=sched.length?('<div class="story-card">'+sched.map(it=>{ SCHED_MAP[it.id]=it; return schedCard(it); }).join('')+'</div>'):'';
+  wireScheduledHandlers(shost);
 }
 function wireSchedHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
@@ -559,6 +581,41 @@ function wireSchedHandlers(host){
       if(data && data.all_done){ btn.textContent='Queued '+CK; setTimeout(()=>loadSchedule(),1500); }
       else { btn.disabled=false; btn.textContent='Retry remaining'; }
     }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Add to Buffer queue'; }
+  });
+}
+function wireScheduledHandlers(host){
+  host.querySelectorAll('.refreshq').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, res=row.querySelector('[data-res]'), btn=e.target, ot=btn.textContent;
+    btn.disabled=true; btn.textContent='Refreshing...'; res.className='sched-result'; res.textContent='';
+    try{ const {data,error}=await sb.functions.invoke('buffer',{body:{action:'refresh',suggestion_id:id}}); if(error) throw error; res.className='sched-result ok'; res.textContent=CK+' Times updated'; setTimeout(()=>loadSchedule(),900); }
+    catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent=ot; }
+  });
+  host.querySelectorAll('.removeq').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, res=row.querySelector('[data-res]'), btn=e.target;
+    btn.disabled=true; btn.textContent='Removing...'; res.className='sched-result'; res.textContent='';
+    try{ const {data,error}=await sb.functions.invoke('buffer',{body:{action:'unschedule',suggestion_id:id}}); if(error) throw error;
+      if(!data.ok){ const m=(data.results&&data.results.map(r=>r.error).filter(Boolean).join('; '))||data.error||'failed'; throw new Error(m); }
+      res.className='sched-result ok'; res.textContent=CK+' Removed from Buffer - back in Feed drafts'; setTimeout(()=>loadSchedule(),1300); }
+    catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Remove from queue'; }
+  });
+  host.querySelectorAll('.editq').forEach(b=>b.onclick=e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, body=row.querySelector('.body'); if(row.querySelector('.qedit')) return;
+    const it=SCHED_MAP[id]||{}; const span=row.querySelector('.text'); const res=row.querySelector('[data-res]');
+    const dues=Object.keys(it.buffer_due||{}).map(k=>it.buffer_due[k]).filter(Boolean).sort(); const dtVal=dues.length?toLocalInput(new Date(dues[0])):'';
+    const box=document.createElement('div'); box.className='qedit'; box.style.marginTop='8px';
+    box.innerHTML='<textarea class="editbox"></textarea><div class="when-row"><input type="datetime-local" class="when"><span class="when-hint">change time (blank keeps current slot)</span></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-gold btn-sm qsave">Save changes</button><button class="btn btn-outline btn-sm qcancel">Cancel</button></div>';
+    span.style.display='none'; body.insertBefore(box, res);
+    const ta=box.querySelector('.editbox'); ta.value=it.content||span.textContent; const dt=box.querySelector('.when'); if(dtVal) dt.value=dtVal; ta.focus();
+    box.querySelector('.qcancel').onclick=()=>{ box.remove(); span.style.display=''; };
+    box.querySelector('.qsave').onclick=async()=>{
+      const text=ta.value.trim(); let due=null; if(dt.value){ const d=new Date(dt.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That date/time is not valid.'; return; } due=d.toISOString(); }
+      const sv=box.querySelector('.qsave'); sv.disabled=true; sv.textContent='Saving...'; res.className='sched-result'; res.textContent='';
+      try{ const payload={action:'edit',suggestion_id:id,text:text}; if(due) payload.due_at=due;
+        const {data,error}=await sb.functions.invoke('buffer',{body:payload}); if(error) throw error;
+        if(!data.ok){ const m=(data.results&&data.results.map(r=>r.error).filter(Boolean).join('; '))||data.error||'failed'; throw new Error(m); }
+        res.className='sched-result ok'; res.textContent=CK+' Updated in Buffer'; setTimeout(()=>loadSchedule(),1200); }
+      catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); sv.disabled=false; sv.textContent='Save changes'; }
+    };
   });
 }
 $('#reload-sched').onclick=()=>loadSchedule(true);
