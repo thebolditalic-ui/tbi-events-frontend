@@ -25,6 +25,30 @@
       "destination": "/api/sitemap.xml"
     },
     {
+      "source": "/api/banner-click",
+      "destination": "/api/banner-active?a=click"
+    },
+    {
+      "source": "/api/banner-impression",
+      "destination": "/api/banner-active?a=impression"
+    },
+    {
+      "source": "/api/track-event-click",
+      "destination": "/api/track-page?t=event-click"
+    },
+    {
+      "source": "/api/track-event-view",
+      "destination": "/api/track-page?t=event-view"
+    },
+    {
+      "source": "/api/insert-event",
+      "destination": "/api/update-event"
+    },
+    {
+      "source": "/api/delete-event",
+      "destination": "/api/update-event"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
