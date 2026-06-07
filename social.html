@@ -100,6 +100,18 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .statuspill.no{background:rgba(231,76,60,.12);color:var(--red)}
 .savebar{position:sticky;bottom:0;background:var(--cream);padding:14px 0;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
 
+/* ---- Schedule / Buffer ---- */
+.chanbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:18px}
+.chanbar-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8a8178}
+.chan-chips{display:flex;gap:8px;flex-wrap:wrap}
+.chan-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:16px;border:1px solid var(--border);background:var(--bg-alt);color:#8a8178;cursor:pointer;user-select:none}
+.chan-chip.on{background:rgba(91,123,213,.12);border-color:var(--blue);color:var(--blue)}
+.chan-chip .svc{font-size:10px;text-transform:uppercase;opacity:.7;font-weight:700}
+.sched-sub{font-family:var(--title-font);font-weight:400;font-size:17px;margin:26px 0 12px;color:var(--dark)}
+.sched-result{font-size:12px;margin-top:6px;line-height:1.4}
+.sched-result.ok{color:var(--green)}
+.sched-result.err{color:var(--red)}
+
 /* ---- Mobile ---- */
 @media (max-width:768px){
   html,body{overflow-x:hidden}
@@ -192,9 +204,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- SCHEDULE -->
     <section class="panel" id="panel-schedule">
       <h2 class="section">Schedule</h2>
-      <p class="sub">Drafts you sent here are staged for Buffer. The Buffer connection + one-click scheduling to your channels lands in <b>Phase 3</b> — for now this is your staging queue (copy-paste into Buffer manually in the meantime).</p>
-      <div class="toolbar"><button class="btn btn-outline btn-sm" id="reload-sched">↻ Reload</button></div>
+      <p class="sub">Staged drafts drop straight into your Buffer queue &mdash; Buffer slots each one into the next open time in your posting schedule for that channel (you set those times in Buffer). Pick channels below, then hit <b>Add to Buffer queue</b> on any draft.</p>
+      <div class="chanbar">
+        <span class="chanbar-label">Post to</span>
+        <span class="chan-chips" id="chan-chips"><span class="run-status">Loading channels...</span></span>
+        <button class="btn btn-outline btn-sm" id="reload-sched" style="margin-left:auto">Reload</button>
+      </div>
       <div id="schedule-list"></div>
+      <h3 class="sched-sub" id="scheduled-head" style="display:none">Already in Buffer</h3>
+      <div id="scheduled-list"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -455,32 +473,87 @@ function wireSuggHandlers(host){
   });
 }
 
-/* ---- schedule (staged queue) ---- */
-$('#reload-sched').onclick=loadSchedule;
-async function loadSchedule(){
-  const {data,error}=await sb.from('social_suggestions')
-    .select('*').eq('status','staged').order('created_at',{ascending:false}).limit(300);
+/* ---- schedule (Buffer) ---- */
+var CK=String.fromCharCode(10003);
+let CHANNELS=null, CHAN_ON={};
+async function loadChannels(force){
+  if(CHANNELS && !force) return CHANNELS;
+  try{
+    const {data,error}=await sb.functions.invoke('buffer',{body:{action:'channels'}});
+    if(error) throw error;
+    CHANNELS=(data&&data.connected&&Array.isArray(data.channels))?data.channels:[];
+    CHANNELS.forEach(c=>{ if(CHAN_ON[c.id]===undefined) CHAN_ON[c.id]=true; });
+  }catch(e){ CHANNELS=[]; }
+  return CHANNELS;
+}
+function svcLabel(s){ return ({twitter:'X',threads:'Threads',facebook:'Facebook',instagram:'Instagram',linkedin:'LinkedIn',mastodon:'Mastodon',pinterest:'Pinterest',tiktok:'TikTok'}[s]||s||''); }
+function chNames(ids){
+  if(!ids||!ids.length) return '';
+  const m={}; (CHANNELS||[]).forEach(c=>{ m[c.id]=c.name+' ('+svcLabel(c.service)+')'; });
+  return ids.map(id=>m[id]||id).join(', ');
+}
+function selectedChannels(){ return (CHANNELS||[]).filter(c=>CHAN_ON[c.id]).map(c=>c.id); }
+function renderChips(){
+  const host=$('#chan-chips');
+  if(!CHANNELS||!CHANNELS.length){ host.innerHTML='<span class="run-status">No Buffer channels connected. Add them at publish.buffer.com, then Reload.</span>'; return; }
+  host.innerHTML=CHANNELS.map(c=>'<span class="chan-chip '+(CHAN_ON[c.id]?'on':'')+'" data-ch="'+esc(c.id)+'">'+esc(c.name)+' <span class="svc">'+esc(svcLabel(c.service))+'</span></span>').join('');
+  host.querySelectorAll('.chan-chip').forEach(ch=>ch.onclick=()=>{ const id=ch.dataset.ch; CHAN_ON[id]=!CHAN_ON[id]; ch.classList.toggle('on',!!CHAN_ON[id]); });
+}
+async function loadSchedule(force){
   const host=$('#schedule-list');
+  host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  await loadChannels(force); renderChips();
+  const {data,error}=await sb.from('social_suggestions')
+    .select('*').in('status',['staged','scheduled']).order('created_at',{ascending:false}).limit(300);
   if(error){ host.innerHTML='<div class="empty">Error: '+esc(error.message)+'</div>'; return; }
-  if(!data||!data.length){ host.innerHTML='<div class="empty">Nothing staged yet. On the Feed tab, click <b>Send to Scheduling</b> on a draft to queue it here.</div>'; return; }
-  host.innerHTML='<div class="story-card">'+data.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
-    (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
+  const staged=(data||[]).filter(r=>r.status==='staged');
+  const sched=(data||[]).filter(r=>r.status==='scheduled');
+  if(!staged.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft to queue it here.</div>'; }
+  else{
+    host.innerHTML='<div class="story-card">'+staged.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+      (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
+      '<span class="text">'+esc(it.content)+'</span>'+
+      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
+      '<div class="sched-result" data-res></div></div>'+
+      '<div class="acts">'+
+        '<button class="btn btn-gold btn-sm send">Add to Buffer queue</button>'+
+        '<button class="btn btn-outline btn-sm copy">Copy</button>'+
+        '<button class="btn btn-outline btn-sm unstage">Unstage</button>'+
+      '</div></div>').join('')+'</div>';
+  }
+  wireSchedHandlers(host);
+  const shost=$('#scheduled-list'); $('#scheduled-head').style.display=sched.length?'block':'none';
+  shost.innerHTML=sched.length?('<div class="story-card">'+sched.map(it=>'<div class="sugg"><div class="body">'+
     '<span class="text">'+esc(it.content)+'</span>'+
-    '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div></div>'+
-    '<div class="acts">'+
-      '<button class="btn btn-outline btn-sm copy">Copy</button>'+
-      '<button class="btn btn-outline btn-sm unstage">Unstage</button>'+
-    '</div></div>').join('')+'</div>';
+    '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+' &middot; queued '+(it.scheduled_at?new Date(it.scheduled_at).toLocaleString():'')+' &middot; '+esc(chNames(it.channels))+'</div></div>'+
+    '<div class="acts"><a class="btn btn-outline btn-sm" href="https://publish.buffer.com" target="_blank" rel="noopener">Open Buffer</a></div></div>').join('')+'</div>'):'';
+}
+function wireSchedHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
     const t=e.target.closest('.sugg').querySelector('.text').textContent;
-    navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
+    navigator.clipboard.writeText(t); e.target.textContent='Copied '+CK; setTimeout(()=>e.target.textContent='Copy',1400);
   });
   host.querySelectorAll('.unstage').forEach(b=>b.onclick=async e=>{
     const row=e.target.closest('.sugg');
     await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id);
     row.remove();
   });
+  host.querySelectorAll('.send').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, res=row.querySelector('[data-res]'), btn=e.target;
+    const chans=selectedChannels();
+    if(!chans.length){ res.className='sched-result err'; res.textContent='Pick at least one channel above first.'; return; }
+    btn.disabled=true; btn.textContent='Sending...'; res.className='sched-result'; res.textContent='';
+    try{
+      const {data,error}=await sb.functions.invoke('buffer',{body:{action:'schedule',suggestion_id:id,channel_ids:chans}});
+      if(error) throw error;
+      if(!data.ok){ const m=(data.results&&data.results.map(r=>r.error).filter(Boolean).join('; '))||data.error||'failed'; throw new Error(m); }
+      res.className='sched-result ok'; res.textContent=CK+' Added to Buffer queue: '+chNames(chans);
+      btn.textContent='Queued '+CK;
+      setTimeout(loadSchedule,1100);
+    }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Add to Buffer queue'; }
+  });
 }
+$('#reload-sched').onclick=()=>loadSchedule(true);
 
 gate();
 </script>
