@@ -7,6 +7,8 @@
 <title>TBI Social Admin</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Playfair+Display:ital,wght@1,800&display=swap" rel="stylesheet">
 <style>
 :root{
   --cream:#fff6e6; --dark:#1E1B1B; --gold:#FFD682; --blue:#5b7bd5;
@@ -117,6 +119,36 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .slots{margin:6px 0 2px}
 .slot{font-size:12px;color:var(--dark);line-height:1.55}
 
+/* ---- Instagram card builder ---- */
+.ig-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.ig-stage{background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;position:sticky;top:16px}
+#ig-card{width:auto;max-width:100%;max-height:64vh;height:auto;display:block;border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.18);background:#000}
+.ig-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%}
+.ig-body{padding:14px 16px}
+.ig-drop{border:1.5px dashed var(--border);border-radius:8px;padding:16px 12px;text-align:center;cursor:pointer;color:#8a8178;font-size:12px;line-height:1.5}
+.ig-drop:hover,.ig-drop.hot{border-color:var(--blue);background:rgba(91,123,213,.06);color:var(--dark)}
+.ig-drop b{color:var(--dark)}
+.ig-seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.ig-seg button{flex:1;border:0;border-right:1px solid var(--border);border-radius:0;padding:7px 4px;background:var(--bg-alt);color:#8a8178;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.ig-seg button:last-child{border-right:0}
+.ig-seg button.on{background:var(--blue);color:#fff}
+.ig-fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#444;margin-bottom:12px}
+.ig-fld .val{color:var(--dark);font-weight:700}
+.ig-fld input[type=range]{width:100%;accent-color:var(--blue)}
+.ig-fld textarea{width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.35}
+.ig-toggle{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--dark);margin-bottom:10px}
+.ig-swatches{display:flex;gap:7px;flex-wrap:wrap}
+.ig-sw{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);cursor:pointer}
+.ig-sw.on{outline:2px solid var(--blue);outline-offset:1px}
+.ig-hint{font-size:11px;color:#8a8178;line-height:1.5}
+.switch{position:relative;width:42px;height:24px;flex:0 0 auto}
+.switch input{opacity:0;width:0;height:0}
+.slider-sw{position:absolute;inset:0;background:#cfc7bb;border-radius:24px;transition:.18s;cursor:pointer}
+.slider-sw:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s}
+.switch input:checked + .slider-sw{background:var(--blue)}
+.switch input:checked + .slider-sw:before{transform:translateX(18px)}
+@media (max-width:768px){.ig-grid{grid-template-columns:1fr}.ig-stage{position:static}}
+
 /* ---- Mobile ---- */
 @media (max-width:768px){
   html,body{overflow-x:hidden}
@@ -197,7 +229,45 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- INSTAGRAM -->
     <section class="panel" id="panel-instagram">
       <h2 class="section">Instagram cards</h2>
-      <div class="placeholder">The Instagram card builder lands in <b>Phase 4</b>.<br>It will port the card builder's render logic for a pixel-matched preview and server PNG.</div>
+      <p class="sub">Drop in the story's photo, set the headline, frame it, and download a print-ready 1080-wide card in the TBI template. The brush font and red circle are stand-ins until you upload the real Ed's Market font and TBI favicon. (Auto-suggested cards + one-click Instagram scheduling arrive in the next sub-phases; for now, download and post manually.)</p>
+      <div class="ig-grid">
+        <div class="ig-stage">
+          <canvas id="ig-card" width="1080" height="1440"></canvas>
+          <div class="ig-actions">
+            <button class="btn btn-gold" id="ig-export">Download PNG</button>
+            <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
+          </div>
+        </div>
+        <div class="ig-ctrl">
+          <div class="set-group"><h3>1 &middot; Photo</h3><div class="ig-body">
+            <div class="ig-drop" id="ig-drop"><b>Drop a photo</b> or click to choose<br><span style="font-size:10px">use the story's image &mdash; full quality</span></div>
+            <input type="file" id="ig-file" accept="image/*" hidden>
+            <div class="ig-fld" style="margin-top:12px">Vertical framing <span class="val" id="ig-posVal">center</span><input type="range" id="ig-pos" min="-100" max="100" value="0"></div>
+            <div class="ig-fld">Zoom <span class="val" id="ig-zoomVal">100%</span><input type="range" id="ig-zoom" min="100" max="260" value="100"></div>
+            <div class="ig-hint">No photo? It uses the background color below &mdash; good for text-only series cards.</div>
+            <div class="ig-swatches" id="ig-swatches" style="margin-top:8px"></div>
+          </div></div>
+          <div class="set-group"><h3>2 &middot; Headline</h3><div class="ig-body">
+            <textarea id="ig-headline">WE NEVER LIKED PHILZ ANYWAY.</textarea>
+            <div class="ig-toggle" style="margin-top:10px">Auto-fit size<span class="switch"><input type="checkbox" id="ig-autofit" checked><span class="slider-sw"></span></span></div>
+            <div class="ig-fld" id="ig-sizeWrap" style="display:none">Manual size <span class="val" id="ig-sizeVal">120</span><input type="range" id="ig-size" min="40" max="220" value="120"></div>
+            <div class="ig-fld">Headline color<div class="ig-seg" id="ig-hcolor"><button data-hcolor="#ffffff" class="on">White</button><button data-hcolor="#000000">Black</button></div></div>
+          </div></div>
+          <div class="set-group"><h3>3 &middot; Headline font</h3><div class="ig-body">
+            <div class="ig-drop" id="ig-fontdrop"><b>Load your font</b> (.ttf / .otf / .woff)</div>
+            <input type="file" id="ig-fontfile" accept=".ttf,.otf,.woff,.woff2,font/*" hidden>
+            <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Permanent Marker (placeholder for Ed's Market Regular Slant)</span></div>
+          </div></div>
+          <div class="set-group"><h3>4 &middot; Format &amp; layout</h3><div class="ig-body">
+            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440" class="on">3:4</button><button data-w="1080" data-h="1350">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
+            <div class="ig-fld">Black panel height <span class="val" id="ig-blackVal">38%</span><input type="range" id="ig-black" min="20" max="55" value="38"></div>
+            <div class="ig-toggle">"The Bold Italic" badge<span class="switch"><input type="checkbox" id="ig-badge" checked><span class="slider-sw"></span></span></div>
+            <input type="text" id="ig-badgetext" value="The Bold Italic" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);margin-bottom:10px">
+            <div class="ig-toggle">Red "TBI" circle<span class="switch"><input type="checkbox" id="ig-tbi" checked><span class="slider-sw"></span></span></div>
+            <div class="ig-fld">Circle corner<div class="ig-seg" id="ig-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
+          </div></div>
+        </div>
+      </div>
     </section>
 
     <!-- JOKES -->
@@ -619,6 +689,114 @@ function wireScheduledHandlers(host){
   });
 }
 $('#reload-sched').onclick=()=>loadSchedule(true);
+
+/* ---- Instagram card builder (Module 3, on-demand) ---- */
+var igReady=false;
+function initIG(){ if(igReady) return; igReady=true; igBoot(); }
+function igBoot(){
+  var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
+  var NL=String.fromCharCode(10);
+  var state={ img:null, W:1080, H:1440, blackFrac:0.38, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:true, manualSize:120, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#e02329', font:'Permanent Marker' };
+  var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
+  function drawCover(img,x,y,w,h,zoom,posY){
+    var scale=Math.max(w/img.width,h/img.height)*zoom;
+    var dw=img.width*scale, dh=img.height*scale;
+    var overflowY=dh-h, dx=x+(w-dw)/2, dy=y+(h-dh)/2+(posY*overflowY/2);
+    ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip(); ctx.drawImage(img,dx,dy,dw,dh); ctx.restore();
+  }
+  function wrap(text,maxW){
+    var out=[];
+    text.split(NL).forEach(function(para){
+      if(para.trim()===''){ out.push(''); return; }
+      var words=para.split(/ +/), line='';
+      for(var i=0;i<words.length;i++){ var wd=words[i], test=line?line+' '+wd:wd; if(ctx.measureText(test).width>maxW && line){ out.push(line); line=wd; } else line=test; }
+      if(line) out.push(line);
+    });
+    return out;
+  }
+  function fitHeadline(text,maxW,maxH){
+    var size=Math.floor(maxH*0.92);
+    while(size>14){
+      ctx.font='400 '+size+'px "'+state.font+'"';
+      var lines=wrap(text,maxW), lineH=size*1.06, totalH=lines.length*lineH;
+      var fitsW=lines.every(function(l){ return ctx.measureText(l).width<=maxW; });
+      if(totalH<=maxH && fitsW) return {size:size,lines:lines,lineH:lineH};
+      size-=2;
+    }
+    ctx.font='400 16px "'+state.font+'"';
+    return {size:16,lines:wrap(text,maxW),lineH:17};
+  }
+  function render(){
+    var W=state.W, H=state.H, blackFrac=state.blackFrac;
+    if(canvas.width!==W) canvas.width=W;
+    if(canvas.height!==H) canvas.height=H;
+    var photoH=Math.round(H*(1-blackFrac));
+    if(state.img){ drawCover(state.img,0,0,W,photoH,state.zoom,state.posY); }
+    else { ctx.fillStyle=state.bgColor; ctx.fillRect(0,0,W,photoH); }
+    ctx.fillStyle='#000'; ctx.fillRect(0,photoH,W,H-photoH);
+    var padX=W*0.075, maxW=W-padX*2, blackH=H-photoH, headTopPad=blackH*0.16, maxH=blackH-headTopPad-blackH*0.10;
+    var text=(state.headline||'').trim();
+    if(text){
+      var f;
+      if(state.autofit){ f=fitHeadline(text,maxW,maxH); }
+      else { ctx.font='400 '+state.manualSize+'px "'+state.font+'"'; f={size:state.manualSize,lines:wrap(text,maxW),lineH:state.manualSize*1.06}; }
+      ctx.font='400 '+f.size+'px "'+state.font+'"'; ctx.fillStyle=state.hcolor; ctx.textAlign='center'; ctx.textBaseline='middle';
+      var blockH=f.lines.length*f.lineH, cy=photoH+headTopPad+(blackH-headTopPad-blockH)/2+f.lineH/2;
+      for(var i=0;i<f.lines.length;i++){ ctx.fillText(f.lines[i],W/2,cy); cy+=f.lineH; }
+    }
+    if(state.badge && state.badgeText.trim()){
+      var bsize=Math.round(W*0.030);
+      ctx.font='italic 800 '+bsize+'px "Playfair Display"'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      var tw=ctx.measureText(state.badgeText).width, padBX=bsize*0.55, padBY=bsize*0.34;
+      var bw=tw+padBX*2, bh=bsize+padBY*2, bx=(W-bw)/2, by=photoH-bh/2, r=Math.min(8,bh/2);
+      ctx.fillStyle='#fff'; ctx.beginPath();
+      ctx.moveTo(bx+r,by); ctx.arcTo(bx+bw,by,bx+bw,by+bh,r); ctx.arcTo(bx+bw,by+bh,bx,by+bh,r); ctx.arcTo(bx,by+bh,bx,by,r); ctx.arcTo(bx,by,bx+bw,by,r); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#000'; ctx.fillText(state.badgeText,W/2,by+bh/2+bsize*0.04);
+    }
+    if(state.tbiCircle){
+      var D=W*0.115, M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
+      if(state.tbiCirclePos==='tl'){cx=left;cyc=top;} else if(state.tbiCirclePos==='bl'){cx=left;cyc=bot;} else if(state.tbiCirclePos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;}
+      ctx.beginPath(); ctx.arc(cx,cyc,rr,0,Math.PI*2); ctx.fillStyle=state.tbiCircleColor; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='800 '+Math.round(D*0.34)+'px Arial, "Helvetica Neue", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('TBI',cx,cyc+D*0.02);
+    }
+    var ex=$('#ig-export'); if(ex) ex.disabled=false;
+  }
+  function loadImageFile(file){ if(!file||!file.type.startsWith('image/')) return; var url=URL.createObjectURL(file); var img=new Image(); img.onload=function(){ state.img=img; render(); $('#ig-drop').innerHTML='<b>'+esc(file.name)+'</b><br><span style="font-size:10px">click to replace</span>'; URL.revokeObjectURL(url); }; img.src=url; }
+  var drop=$('#ig-drop'), fileInput=$('#ig-file');
+  drop.onclick=function(){ fileInput.click(); };
+  fileInput.onchange=function(e){ loadImageFile(e.target.files[0]); };
+  ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('hot'); }); });
+  drop.addEventListener('drop',function(e){ loadImageFile(e.dataTransfer.files[0]); });
+  $('#ig-pos').oninput=function(e){ state.posY=e.target.value/100; $('#ig-posVal').textContent=state.posY===0?'center':(state.posY<0?'higher':'lower'); render(); };
+  $('#ig-zoom').oninput=function(e){ state.zoom=e.target.value/100; $('#ig-zoomVal').textContent=e.target.value+'%'; render(); };
+  $('#ig-headline').oninput=function(e){ state.headline=e.target.value; render(); };
+  $('#ig-autofit').onchange=function(e){ state.autofit=e.target.checked; $('#ig-sizeWrap').style.display=e.target.checked?'none':'flex'; render(); };
+  $('#ig-size').oninput=function(e){ state.manualSize=+e.target.value; $('#ig-sizeVal').textContent=e.target.value; render(); };
+  $('#ig-black').oninput=function(e){ state.blackFrac=e.target.value/100; $('#ig-blackVal').textContent=e.target.value+'%'; render(); };
+  $('#ig-badge').onchange=function(e){ state.badge=e.target.checked; render(); };
+  $('#ig-badgetext').oninput=function(e){ state.badgeText=e.target.value; render(); };
+  $('#ig-tbi').onchange=function(e){ state.tbiCircle=e.target.checked; render(); };
+  document.querySelectorAll('#ig-tbipos button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-tbipos button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.tbiCirclePos=b.dataset.pos; render(); }; });
+  document.querySelectorAll('#ig-hcolor button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-hcolor button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.hcolor=b.dataset.hcolor; render(); }; });
+  document.querySelectorAll('#ig-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#ig-aspect button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); state.W=+b.dataset.w; state.H=+b.dataset.h; render(); }; });
+  var sw=$('#ig-swatches');
+  BG.forEach(function(c,i){ var d=document.createElement('div'); d.className='ig-sw'+(i===0?' on':''); d.style.background=c; d.title=c; d.onclick=function(){ document.querySelectorAll('.ig-sw').forEach(function(x){ x.classList.remove('on'); }); d.classList.add('on'); state.bgColor=c; render(); }; sw.appendChild(d); });
+  var fontdrop=$('#ig-fontdrop'), fontfile=$('#ig-fontfile');
+  fontdrop.onclick=function(){ fontfile.click(); };
+  fontfile.onchange=function(e){ loadFont(e.target.files[0]); };
+  ['dragenter','dragover'].forEach(function(ev){ fontdrop.addEventListener(ev,function(e){ e.preventDefault(); fontdrop.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(ev){ fontdrop.addEventListener(ev,function(e){ e.preventDefault(); fontdrop.classList.remove('hot'); }); });
+  fontdrop.addEventListener('drop',function(e){ loadFont(e.dataTransfer.files[0]); });
+  async function loadFont(file){ if(!file) return; try{ var buf=await file.arrayBuffer(); var fam='IGHead_'+Date.now(); var face=new FontFace(fam,buf); await face.load(); document.fonts.add(face); state.font=fam; $('#ig-fontname').textContent=file.name; render(); }catch(err){ $('#ig-fontname').textContent='Could not load that file - try .ttf or .otf'; } }
+  function slug(){ return (state.headline||'tbi-card').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48)||'tbi-card'; }
+  $('#ig-export').onclick=function(){ canvas.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slug()+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
+  $('#ig-copy').onclick=async function(){ try{ var blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); }); await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); var b=$('#ig-copy'), t=b.textContent; b.textContent='Copied '+CK; setTimeout(function(){ b.textContent=t; },1400); }catch(e){ var b2=$('#ig-copy'); b2.textContent='Use Download'; setTimeout(function(){ b2.textContent='Copy image'; },1600); } };
+  (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"')]); }catch(e){} render(); })();
+  document.fonts.ready.then(render);
+}
+var _igtab=document.querySelector('.subtab[data-tab="instagram"]'); if(_igtab) _igtab.addEventListener('click', initIG);
 
 gate();
 </script>
