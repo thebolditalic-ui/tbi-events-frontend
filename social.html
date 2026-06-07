@@ -251,9 +251,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <div class="ig-stage">
           <canvas id="ig-card" width="1080" height="1440"></canvas>
           <div class="ig-actions">
-            <button class="btn btn-gold" id="ig-create">Create (save hosted)</button>
+            <button class="btn btn-gold" id="ig-post">Post to Instagram</button>
+            <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
+            <div class="run-status" id="ig-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
           </div>
         </div>
         <div class="ig-ctrl">
@@ -926,6 +928,27 @@ function igBoot(){
   if($("#ig-cand-reload")) $("#ig-cand-reload").onclick=loadIGCandidates;
   if($("#ig-cap-copy")) $("#ig-cap-copy").onclick=function(){ navigator.clipboard.writeText($("#ig-caption").value||""); var b=$("#ig-cap-copy"); b.textContent="Copied "+CK; setTimeout(function(){b.textContent="Copy caption";},1400); };
   if($("#ig-create")) $("#ig-create").onclick=async function(){ var b=$("#ig-create"); if(!IG_CUR){ b.textContent="Pick a card first"; setTimeout(function(){b.textContent="Create (save hosted)";},1600); return; } b.disabled=true; b.textContent="Creating..."; try{ var blob=await new Promise(function(r){ canvas.toBlob(r,"image/png"); }); var up=await sb.storage.from("ig-rendered").upload(IG_CUR+".png", blob, {upsert:true, contentType:"image/png"}); if(up.error) throw up.error; var pub=sb.storage.from("ig-rendered").getPublicUrl(IG_CUR+".png"); await sb.from("ig_cards").update({rendered_path:IG_CUR+".png", status:"created", chosen_caption:$("#ig-caption").value||"", template:{blackFrac:state.blackFrac,headOffX:state.headOffX,headOffY:state.headOffY,manualSize:state.manualSize,autofit:state.autofit,tbiScale:state.tbiScale,tbiCirclePos:state.tbiCirclePos,hairline:state.hairline,W:state.W,H:state.H}}).eq("id",IG_CUR); b.textContent="Created "+CK; loadIGCandidates(); setTimeout(function(){b.textContent="Create (save hosted)"; b.disabled=false;},1800); }catch(e){ b.textContent="Error"; b.disabled=false; setTimeout(function(){b.textContent="Create (save hosted)";},2000); } };
+  if($("#ig-post")) $("#ig-post").onclick=async function(){
+    var b=$("#ig-post"), st=$("#ig-post-status");
+    var ratio=canvas.width/canvas.height;
+    if(ratio<0.8||ratio>1.91){ st.innerHTML='<span style="color:var(--red)">Instagram needs a 4:5 or 1:1 card. Set that under <b>Format &amp; layout</b> -> Aspect ratio, then post.</span>'; return; }
+    if(!window.confirm("Post this card to @thebolditalic on Instagram now? This publishes to the live feed.")) return;
+    b.disabled=true; b.textContent="Posting..."; st.textContent="Rendering + uploading the image...";
+    try{
+      var blob=await new Promise(function(r){ canvas.toBlob(r,"image/jpeg",0.92); });
+      var key=(IG_CUR||("manual-"+Date.now()))+".jpg";
+      var up=await sb.storage.from("ig-rendered").upload(key, blob, {upsert:true, contentType:"image/jpeg"});
+      if(up.error) throw up.error;
+      var pub=sb.storage.from("ig-rendered").getPublicUrl(key).data.publicUrl;
+      st.textContent="Publishing to Instagram (~10s)...";
+      var r=await sb.functions.invoke("instagram",{body:{action:"publish", image_url:pub, caption:($("#ig-caption").value||""), alt_text:(state.headline||"").trim(), card_id:(IG_CUR||null)}});
+      var d=r.data||{};
+      if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
+      if(d.error) throw new Error(d.error);
+      st.innerHTML='<span style="color:var(--green)">Posted to Instagram '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View post</a>'):'');
+      b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to Instagram"; b.disabled=false; },3000);
+    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to Instagram"; b.disabled=false; }
+  };
   loadIGCandidates();
   (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"')]); }catch(e){} render(); })();
   document.fonts.ready.then(render);
