@@ -57,6 +57,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .subtab{background:none;border:none;font-family:inherit;font-size:14px;font-weight:600;color:#8a8178;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
 .subtab:hover{color:var(--dark)}
 .subtab.active{color:var(--dark);border-bottom-color:var(--gold)}
+.series-row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
+.series-row input,.series-row select{border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px;background:var(--bg-alt)}
+.series-row .se-key{width:110px}.series-row .se-name{width:150px}.series-row .se-brief{flex:1;min-width:200px}
 .panel{display:none}
 .panel.active{display:block}
 
@@ -301,7 +304,25 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- JOKES -->
     <section class="panel" id="panel-jokes">
       <h2 class="section">Jokes &amp; questions</h2>
-      <div class="placeholder">Series-based engagement prompts land in <b>Phase 5</b>.</div>
+      <p class="sub">Standalone engagement posts drafted from your <b>series</b> &mdash; recurring bits like &ldquo;Being in SF means&hellip;&rdquo; or a weekly question. Generate a batch, edit any in place, then <b>Send to Scheduling</b> to queue them in Buffer. Define the series at the bottom.</p>
+      <div class="toolbar">
+        <button class="btn btn-gold" id="jokes-gen">⚡ Generate a batch</button>
+        <button class="btn btn-outline btn-sm" id="jokes-reload">↻ Reload</button>
+        <span class="run-status" id="jokes-status"></span>
+      </div>
+      <div id="jokes-list"></div>
+      <div class="set-group" style="margin-top:24px">
+        <h3>Series</h3>
+        <div class="set-body">
+          <p class="sub" style="margin:0 0 10px"><b>Key</b> is a short id, <b>kind</b> picks joke vs question, <b>brief</b> tells the engine what each item should be. Saved to <code>social_config</code>; the daily run drafts a batch per series on your cadence.</p>
+          <div id="series-list"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" id="series-add">+ Add series</button>
+            <button class="btn btn-gold btn-sm" id="series-save">Save series</button>
+            <span class="run-status" id="series-status"></span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- SCHEDULE -->
@@ -446,6 +467,7 @@ document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
   b.classList.add('active'); $('#panel-'+b.dataset.tab).classList.add('active');
   if(b.dataset.tab==='schedule') loadSchedule();
   if(b.dataset.tab==='settings'){ loadSpend(); }
+  if(b.dataset.tab==='jokes') loadJokesTab();
 });
 
 /* ---- settings ---- */
@@ -575,6 +597,67 @@ function wireSuggHandlers(host){
     };
   });
 }
+
+/* ---- jokes & questions ---- */
+async function loadJokesTab(){ if(!CFG) await loadSettings(); loadJokes(); renderSeriesEditor(); }
+async function loadJokes(){
+  const host=$('#jokes-list');
+  const {data,error}=await sb.from('social_suggestions')
+    .select('*').in('kind',['joke','question']).in('status',['pending','staged'])
+    .order('created_at',{ascending:false}).limit(400);
+  if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
+  if(!data||!data.length){ host.innerHTML='<div class="empty">Nothing yet. Define your series below, then click <b>Generate a batch</b>.</div>'; return; }
+  const meta={}; (Array.isArray(CFG&&CFG.series)?CFG.series:[]).forEach(s=>{ meta[s.key]=s; });
+  const byKey={}; data.forEach(r=>{ const k=r.series||r.kind; (byKey[k]=byKey[k]||[]).push(r); });
+  host.innerHTML=Object.keys(byKey).map(k=>{
+    const m=meta[k]||{}; const label=esc(m.name||k); const kl=(m.kind==='question'?'Questions':'Jokes'); const items=byKey[k];
+    return '<div class="story-card"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+'</div></div>'+
+      items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+        '<span class="angle">'+esc(m.name||k)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
+        '<span class="text">'+esc(it.content)+'</span></div>'+
+        '<div class="acts">'+
+          '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged '+CK:'Send to Scheduling')+'</button>'+
+          '<button class="btn btn-outline btn-sm edit">Edit</button>'+
+          '<button class="btn btn-outline btn-sm copy">Copy</button>'+
+          '<button class="btn btn-outline btn-sm discard">Discard</button>'+
+        '</div></div>').join('')+'</div>';
+  }).join('');
+  wireSuggHandlers(host);
+}
+if($('#jokes-gen')) $('#jokes-gen').onclick=async()=>{
+  const btn=$('#jokes-gen'); btn.disabled=true; $('#jokes-status').textContent='Generating… (~10–20s)';
+  try{
+    const {data,error}=await sb.functions.invoke('generate',{body:{jokes:true}});
+    if(error) throw error; if(data.error) throw new Error(data.error);
+    $('#jokes-status').textContent=data.note?data.note:('Done — '+(data.jokes||0)+' drafts · '+money(data.est_cost_usd)+' this run.');
+    loadJokes(); loadSpend();
+  }catch(e){ $('#jokes-status').textContent='Error: '+(e.message||e); }
+  btn.disabled=false;
+};
+if($('#jokes-reload')) $('#jokes-reload').onclick=loadJokes;
+function renderSeriesEditor(){
+  const host=$('#series-list'); if(!host) return; const arr=Array.isArray(CFG&&CFG.series)?CFG.series:[];
+  host.innerHTML=arr.map(s=>'<div class="series-row">'+
+    '<input class="se-key" placeholder="key" value="'+esc(s.key||'')+'">'+
+    '<select class="se-kind"><option value="joke"'+(s.kind!=='question'?' selected':'')+'>Joke</option><option value="question"'+(s.kind==='question'?' selected':'')+'>Question</option></select>'+
+    '<input class="se-name" placeholder="display name" value="'+esc(s.name||'')+'">'+
+    '<input class="se-brief" placeholder="brief: what each item should be" value="'+esc(s.brief||'')+'">'+
+    '<button class="btn btn-outline btn-sm se-del">Remove</button></div>').join('');
+  host.querySelectorAll('.se-del').forEach(b=>b.onclick=e=>e.target.closest('.series-row').remove());
+}
+if($('#series-add')) $('#series-add').onclick=()=>{
+  const host=$('#series-list'); const div=document.createElement('div'); div.className='series-row';
+  div.innerHTML='<input class="se-key" placeholder="key"><select class="se-kind"><option value="joke">Joke</option><option value="question">Question</option></select><input class="se-name" placeholder="display name"><input class="se-brief" placeholder="brief: what each item should be"><button class="btn btn-outline btn-sm se-del">Remove</button>';
+  host.appendChild(div); div.querySelector('.se-del').onclick=()=>div.remove();
+};
+if($('#series-save')) $('#series-save').onclick=async()=>{
+  $('#series-status').textContent='Saving…';
+  const rows=[...document.querySelectorAll('#series-list .series-row')];
+  const series=rows.map(r=>({key:(r.querySelector('.se-key').value||'').trim().toLowerCase().replace(/[^a-z0-9_]+/g,'_').replace(/^_+|_+$/g,''),kind:r.querySelector('.se-kind').value,name:(r.querySelector('.se-name').value||'').trim(),brief:(r.querySelector('.se-brief').value||'').trim()})).filter(x=>x.key);
+  const {error}=await sb.from('social_config').update({series:series,updated_at:new Date().toISOString()}).eq('id',1);
+  if(error){ $('#series-status').textContent='Error: '+error.message; return; }
+  CFG.series=series; renderSeriesEditor(); $('#series-status').textContent='Saved '+CK; setTimeout(()=>$('#series-status').textContent='',2000);
+};
 
 /* ---- schedule (Buffer) ---- */
 var CK=String.fromCharCode(10003);
