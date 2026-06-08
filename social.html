@@ -433,13 +433,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- SCHEDULE -->
     <section class="panel" id="panel-schedule">
       <h2 class="section">Schedule</h2>
-      <p class="sub">Staged drafts drop straight into your Buffer queue &mdash; Buffer slots each one into the next open time in your posting schedule for that channel (you set those times in Buffer). Pick channels below, then hit <b>Add to Buffer queue</b> on any draft.</p>
+      <p class="sub">Staged drafts post to Facebook directly with a link preview and no raw URL, either now or at a time you set. Other channels still queue through Buffer (pick them below). Use <b>Post to Facebook</b> or <b>Add to Buffer queue</b> on any draft.</p>
       <div class="chanbar">
         <span class="chanbar-label">Post to</span>
         <span class="chan-chips" id="chan-chips"><span class="run-status">Loading channels...</span></span>
         <button class="btn btn-outline btn-sm" id="reload-sched" style="margin-left:auto">Reload</button>
       </div>
       <div id="schedule-list"></div>
+      <h3 class="sched-sub" id="fb-sched-head" style="display:none">Scheduled on Facebook</h3>
+      <div id="fb-sched-list"></div>
       <h3 class="sched-sub" id="scheduled-head" style="display:none">Already in Buffer</h3>
       <div id="scheduled-list"></div>
     </section>
@@ -767,7 +769,7 @@ if($('#series-save')) $('#series-save').onclick=async()=>{
 /* ---- schedule (Buffer) ---- */
 var CK=String.fromCharCode(10003);
 var ARR=String.fromCharCode(8594);
-let CHANNELS=null, CHAN_ON={}, SCHED_MAP={};
+let CHANNELS=null, CHAN_ON={}, SCHED_MAP={}, STAGED_MAP={};
 async function loadChannels(force){
   if(CHANNELS && !force) return CHANNELS;
   try{
@@ -784,11 +786,14 @@ function chNames(ids){
   const m={}; (CHANNELS||[]).forEach(c=>{ m[c.id]=c.name+' ('+svcLabel(c.service)+')'; });
   return ids.map(id=>m[id]||id).join(', ');
 }
-function selectedChannels(){ return (CHANNELS||[]).filter(c=>CHAN_ON[c.id]).map(c=>c.id); }
+function selectedChannels(){ return (CHANNELS||[]).filter(c=>CHAN_ON[c.id] && c.service!=='facebook').map(c=>c.id); }
+function fbStripLink(t){ t=(t||'').replace(/https?:\/\/\S+/gi,'').replace(/\b(?:www\.)?thebolditalic\.com\/\S*/gi,''); return t.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim(); }
 function renderChips(){
   const host=$('#chan-chips');
   if(!CHANNELS||!CHANNELS.length){ host.innerHTML='<span class="run-status">No Buffer channels connected. Add them at publish.buffer.com, then Reload.</span>'; return; }
-  host.innerHTML=CHANNELS.map(c=>'<span class="chan-chip '+(CHAN_ON[c.id]?'on':'')+'" data-ch="'+esc(c.id)+'">'+esc(c.name)+' <span class="svc">'+esc(svcLabel(c.service))+'</span></span>').join('');
+  const list=CHANNELS.filter(c=>c.service!=='facebook');
+  if(!list.length){ host.innerHTML='<span class="run-status">Facebook posts directly (button on each draft). No other Buffer channels connected.</span>'; return; }
+  host.innerHTML=list.map(c=>'<span class="chan-chip '+(CHAN_ON[c.id]?'on':'')+'" data-ch="'+esc(c.id)+'">'+esc(c.name)+' <span class="svc">'+esc(svcLabel(c.service))+'</span></span>').join('');
   host.querySelectorAll('.chan-chip').forEach(ch=>ch.onclick=()=>{ const id=ch.dataset.ch; CHAN_ON[id]=!CHAN_ON[id]; ch.classList.toggle('on',!!CHAN_ON[id]); });
 }
 function fmtWhen(iso){ try{ return new Date(iso).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }catch(e){ return iso; } }
@@ -820,6 +825,7 @@ async function loadSchedule(force){
   if(error){ host.innerHTML='<div class="empty">Error: '+esc(error.message)+'</div>'; return; }
   const staged=(data||[]).filter(r=>r.status==='staged');
   const sched=(data||[]).filter(r=>r.status==='scheduled');
+  STAGED_MAP={}; staged.forEach(it=>{ STAGED_MAP[it.id]=it; });
   if(!staged.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft to queue it here.</div>'; }
   else{
     host.innerHTML='<div class="story-card">'+staged.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
@@ -827,10 +833,11 @@ async function loadSchedule(force){
       '<span class="text">'+esc(it.content)+'</span>'+
       '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
       ((it.buffer_post_ids&&Object.keys(it.buffer_post_ids).length)?'<div class="meta" style="font-size:11px;color:var(--green);margin-top:4px">Already in Buffer: '+esc(chNames(Object.keys(it.buffer_post_ids)))+'</div>':'')+
-      '<div class="when-row"><input type="datetime-local" class="when"><span class="when-hint">leave blank = next open slot in Buffer</span></div>'+
+      '<div class="when-row"><input type="datetime-local" class="when"><span class="when-hint">pick a time to schedule, or leave blank to post now</span></div>'+
       '<div class="sched-result" data-res></div></div>'+
       '<div class="acts">'+
-        '<button class="btn btn-gold btn-sm send">Add to Buffer queue</button>'+
+        '<button class="btn btn-gold btn-sm fbpost">Post to Facebook</button>'+
+        '<button class="btn btn-outline btn-sm send">Add to Buffer queue</button>'+
         '<button class="btn btn-outline btn-sm copy">Copy</button>'+
         '<button class="btn btn-outline btn-sm unstage">Unstage</button>'+
       '</div></div>').join('')+'</div>';
@@ -840,6 +847,7 @@ async function loadSchedule(force){
   SCHED_MAP={};
   shost.innerHTML=sched.length?('<div class="story-card">'+sched.map(it=>{ SCHED_MAP[it.id]=it; return schedCard(it); }).join('')+'</div>'):'';
   wireScheduledHandlers(shost);
+  loadFbScheduled();
 }
 function wireSchedHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
@@ -867,6 +875,26 @@ function wireSchedHandlers(host){
       if(data && data.all_done){ btn.textContent='Queued '+CK; setTimeout(()=>loadSchedule(),1500); }
       else { btn.disabled=false; btn.textContent='Retry remaining'; }
     }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Add to Buffer queue'; }
+  });
+  host.querySelectorAll('.fbpost').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, res=row.querySelector('[data-res]'), btn=e.target;
+    const it=STAGED_MAP[id]||{};
+    const link=(it.story_url||'').trim();
+    const msg=link?fbStripLink(it.content):((it.content||'').trim());
+    if(!msg && !link){ res.className='sched-result err'; res.textContent='Nothing to post.'; return; }
+    const whenEl=row.querySelector('.when'); let due=null;
+    if(whenEl && whenEl.value){ const d=new Date(whenEl.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That date/time is not valid.'; return; } due=d.toISOString(); }
+    btn.disabled=true; btn.textContent=due?'Scheduling...':'Posting...'; res.className='sched-result'; res.innerHTML='';
+    try{
+      const fbbody={action:'publish',message:msg,link:link}; if(due) fbbody.scheduled_at=due;
+      const {data,error}=await sb.functions.invoke('facebook',{body:fbbody});
+      if(error) throw error;
+      if(!data||!data.ok){ throw new Error((data&&data.error)||'failed'); }
+      await sb.from('social_suggestions').update({status:'posted'}).eq('id',id);
+      if(due){ res.className='sched-result ok'; res.innerHTML=CK+' Scheduled on Facebook for '+esc(fmtWhen(due)); btn.textContent='Scheduled '+CK; }
+      else { res.className='sched-result ok'; res.innerHTML=CK+' Posted to Facebook'+(data.permalink?' &middot; <a href="'+esc(data.permalink)+'" target="_blank" rel="noopener">View</a>':''); btn.textContent='Posted '+CK; }
+      setTimeout(()=>loadSchedule(),1600);
+    }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Post to Facebook'; }
   });
 }
 function wireScheduledHandlers(host){
@@ -905,6 +933,28 @@ function wireScheduledHandlers(host){
   });
 }
 $('#reload-sched').onclick=()=>loadSchedule(true);
+async function loadFbScheduled(){
+  const head=$('#fb-sched-head'), host=$('#fb-sched-list'); if(!host) return;
+  try{
+    const {data,error}=await sb.functions.invoke('facebook',{body:{action:'scheduled'}});
+    if(error) throw error;
+    const items=(data&&data.scheduled)||[];
+    if(!items.length){ if(head) head.style.display='none'; host.innerHTML=''; return; }
+    if(head) head.style.display='block';
+    host.innerHTML='<div class="story-card">'+items.map(p=>'<div class="sugg" data-fbid="'+esc(String(p.id))+'"><div class="body">'+
+      '<span class="text">'+esc(p.message||'(no text)')+'</span>'+
+      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:4px">Facebook '+ARR+' '+esc(p.scheduled_publish_time?fmtWhen(new Date(p.scheduled_publish_time*1000).toISOString()):'')+'</div>'+
+      '<div class="sched-result" data-res></div></div>'+
+      '<div class="acts"><button class="btn btn-danger btn-sm fbcancel">Cancel</button></div></div>').join('')+'</div>';
+    host.querySelectorAll('.fbcancel').forEach(b=>b.onclick=async e=>{
+      const row=e.target.closest('.sugg'), pid=row.dataset.fbid, res=row.querySelector('[data-res]'), btn=e.target;
+      btn.disabled=true; btn.textContent='Cancelling...'; res.className='sched-result'; res.textContent='';
+      try{ const {data,error}=await sb.functions.invoke('facebook',{body:{action:'cancel',post_id:pid}}); if(error) throw error; if(!data||!data.ok) throw new Error((data&&data.error)||'failed');
+        res.className='sched-result ok'; res.textContent=CK+' Cancelled'; setTimeout(()=>loadFbScheduled(),900);
+      }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Cancel'; }
+    });
+  }catch(e){ if(head) head.style.display='none'; host.innerHTML=''; }
+}
 
 /* ---- Instagram card builder (Module 3, on-demand) ---- */
 var igReady=false;
