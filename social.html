@@ -376,14 +376,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-fld">Letterbox color<div class="ig-seg" id="cp-bg"><button data-bg="#ffffff" class="on">White</button><button data-bg="#000000">Black</button></div></div>
             <div class="ig-hint">Feed posts allow 4:5 (tallest) through 1.91:1 (widest); every photo in a carousel shares the ratio. <b>9:16</b> is a Stories size &mdash; use Download and post it as a Story by hand (the feed Post/Schedule buttons only take 4:5&ndash;1.91:1).</div>
           </div></div>
-          <div class="set-group"><h3>3 &middot; Red TBI circle</h3><div class="ig-body">
+          <div id="cp-coverwrap"></div>
+          <div class="set-group"><h3>4 &middot; Red TBI circle</h3><div class="ig-body">
             <div class="ig-toggle">Show red &ldquo;TBI&rdquo; circle<label class="switch"><input type="checkbox" id="cp-tbi" checked><span class="slider-sw"></span></label></div>
             <div class="ig-fld">Corner<div class="ig-seg" id="cp-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
             <div class="ig-fld">Size <span class="val" id="cp-tbiscaleVal">70%</span><input type="range" id="cp-tbiscale" min="40" max="220" value="70"></div>
             <div class="ig-hint">Uses the TBI icon you loaded on the Instagram tab if there is one, otherwise the drawn circle. Applied to every photo in a carousel.</div>
           </div></div>
           <div id="cp-tbwrap"></div>
-          <div class="set-group"><h3>4 &middot; Caption</h3><div class="ig-body">
+          <div class="set-group"><h3>5 &middot; Caption</h3><div class="ig-body">
             <textarea id="cp-caption" placeholder="Write the caption here, or paste source text below and let the AI helper draft it." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
             <button class="btn btn-outline btn-sm" id="cp-cap-copy" style="margin-top:6px">Copy caption</button>
             <div class="ig-hint" style="margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px"><b style="color:var(--dark)">AI helper</b> &mdash; paste notes, a blurb, or rough text and draft a caption in TBI voice.</div>
@@ -1143,6 +1144,107 @@ function loadSavedEdsMarket(cb){
     var face=new FontFace('EdsMarket', u.buffer); face.load().then(function(f){ document.fonts.add(f); cb&&cb(); }).catch(function(){ cb&&cb(); });
   }catch(e){ cb&&cb(); }
 }
+function defaultCover(){
+  return { on:false, blackFrac:0.33, headline:'', hcolor:'#ffffff', autofit:true, manualSize:79, font:'EdsMarket', headOffX:0, headOffY:-0.3, hairline:false, badge:true, badgeText:'The Bold Italic' };
+}
+function coverFit(c, text, maxW, maxH, fontStack){
+  var size=Math.floor(maxH*0.92);
+  while(size>14){
+    c.font='400 '+size+'px '+fontStack;
+    var lines=tbWrap(c,text,maxW), lineH=size*1.06, totalH=lines.length*lineH;
+    var fitsW=lines.every(function(l){ return c.measureText(l).width<=maxW; });
+    if(totalH<=maxH && fitsW) return {size:size,lines:lines,lineH:lineH};
+    size-=2;
+  }
+  c.font='400 16px '+fontStack;
+  return {size:16,lines:tbWrap(c,text,maxW),lineH:17};
+}
+// Story-style cover: photo region on top, black panel below with headline + optional hairline + "The Bold Italic" badge.
+// photoFn(c,x,y,w,h) draws the (cropped) photo into the top region; caller supplies its own crop logic.
+function drawCoverCard(c, W, H, cov, photoFn){
+  var blackFrac=(cov.blackFrac==null?0.33:cov.blackFrac);
+  var photoH=Math.round(H*(1-blackFrac));
+  photoFn(c, 0, 0, W, photoH);
+  c.fillStyle='#000'; c.fillRect(0,photoH,W,H-photoH);
+  if(cov.hairline){ c.fillStyle='#fff'; c.fillRect(0,photoH,W,2); }
+  var padX=W*0.075, maxW=W-padX*2, blackH=H-photoH, headTopPad=blackH*0.16, maxH=blackH-headTopPad-blackH*0.10;
+  var fontStack=tbFontStack(cov.font||'EdsMarket');
+  var text=(cov.headline||'').trim();
+  if(text){
+    var f;
+    if(cov.autofit!==false){ f=coverFit(c,text,maxW,maxH,fontStack); }
+    else { var ms=cov.manualSize||79; c.font='400 '+ms+'px '+fontStack; f={size:ms,lines:tbWrap(c,text,maxW),lineH:ms*1.06}; }
+    c.font='400 '+f.size+'px '+fontStack; c.fillStyle=cov.hcolor||'#ffffff'; c.textAlign='center'; c.textBaseline='middle';
+    var blockH=f.lines.length*f.lineH, hcx=W/2+(cov.headOffX||0)*(W*0.30), cy=photoH+headTopPad+(blackH-headTopPad-blockH)/2+f.lineH/2+(cov.headOffY==null?-0.3:cov.headOffY)*(blackH*0.50);
+    for(var i=0;i<f.lines.length;i++){ c.fillText(f.lines[i],hcx,cy); cy+=f.lineH; }
+  }
+  if(cov.badge!==false && (cov.badgeText||'').trim()){
+    var bsize=Math.round(W*0.030);
+    c.font='italic 800 '+bsize+'px "Playfair Display"'; c.textAlign='center'; c.textBaseline='middle';
+    var tw=c.measureText(cov.badgeText).width, padBX=bsize*0.55, padBY=bsize*0.34;
+    var bw=tw+padBX*2, bh=bsize+padBY*2, bx=(W-bw)/2, by=photoH-bh/2, r=Math.min(8,bh/2);
+    c.fillStyle='#fff'; c.beginPath();
+    c.moveTo(bx+r,by); c.arcTo(bx+bw,by,bx+bw,by+bh,r); c.arcTo(bx+bw,by+bh,bx,by+bh,r); c.arcTo(bx,by+bh,bx,by,r); c.arcTo(bx,by,bx+bw,by,r); c.closePath(); c.fill();
+    c.fillStyle='#000'; c.fillText(cov.badgeText,W/2,by+bh/2+bsize*0.04);
+  }
+  return photoH;
+}
+function coverSyncRows(p,on){ var r=document.getElementById(p+'-rows'); if(r) r.style.display=on?'block':'none'; }
+function coverPanelHTML(p){
+  return '<div class="set-group"><h3>3 &middot; Title / cover card</h3><div class="ig-body">'
+    +'<div class="ig-toggle">Make this a title / cover card<label class="switch"><input type="checkbox" id="'+p+'-on"><span class="slider-sw"></span></label></div>'
+    +'<div class="ig-hint" style="margin-bottom:8px">Story-style: photo on top, a black panel below with a big headline. The red circle and text box still draw on top of it.</div>'
+    +'<div id="'+p+'-rows" style="display:none">'
+    +'<div class="ig-fld">Black panel height <span class="val" id="'+p+'-bhVal">33%</span><input type="range" id="'+p+'-bh" min="20" max="55" value="33"></div>'
+    +'<div class="tb-sub">Headline</div>'
+    +'<textarea class="tb-ta" id="'+p+'-htext" placeholder="AN SF PRIDE GUIDE"></textarea>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">'
+    +'<select class="tb-sel" id="'+p+'-hfont"><option value="EdsMarket">Eds Market (brush)</option><option value="Playfair Display">Playfair (serif)</option><option value="Georgia">Georgia (serif)</option><option value="Arial">Arial (sans)</option></select>'
+    +'<div class="ig-seg" id="'+p+'-hcolor"><button data-c="#ffffff" class="on">White</button><button data-c="#000000">Black</button></div>'
+    +'</div>'
+    +'<div class="ig-toggle">Auto-fit the headline size<label class="switch"><input type="checkbox" id="'+p+'-autofit" checked><span class="slider-sw"></span></label></div>'
+    +'<div class="ig-fld">Manual size <span class="val" id="'+p+'-hsizeVal">79</span><input type="range" id="'+p+'-hsize" min="28" max="150" value="79"></div>'
+    +'<div class="ig-fld">Headline left/right <span class="val" id="'+p+'-hxVal">center</span><input type="range" id="'+p+'-hx" min="-100" max="100" value="0"></div>'
+    +'<div class="ig-fld">Headline up/down <span class="val" id="'+p+'-hyVal">up</span><input type="range" id="'+p+'-hy" min="-100" max="100" value="-30"></div>'
+    +'<div class="ig-toggle">White hairline at top of black box<label class="switch"><input type="checkbox" id="'+p+'-hairline"><span class="slider-sw"></span></label></div>'
+    +'<div class="ig-toggle">&ldquo;The Bold Italic&rdquo; badge<label class="switch"><input type="checkbox" id="'+p+'-badge" checked><span class="slider-sw"></span></label></div>'
+    +'<input type="text" class="tb-sel" id="'+p+'-badgetext" value="The Bold Italic" style="width:100%">'
+    +'</div>'
+    +'</div></div>';
+}
+function wireCover(p, get, rr){
+  function $(id){ return document.getElementById(id); }
+  $(p+'-on').onchange=function(e){ var cov=get(); if(!cov) return; cov.on=e.target.checked; coverSyncRows(p,cov.on); rr(); };
+  $(p+'-bh').oninput=function(e){ var cov=get(); if(cov) cov.blackFrac=e.target.value/100; $(p+'-bhVal').textContent=e.target.value+'%'; rr(); };
+  $(p+'-htext').oninput=function(e){ var cov=get(); if(cov) cov.headline=e.target.value; rr(); };
+  $(p+'-hfont').onchange=function(e){ var cov=get(); if(cov) cov.font=e.target.value; rr(); };
+  document.querySelectorAll('#'+p+'-hcolor button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#'+p+'-hcolor button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); var cov=get(); if(cov) cov.hcolor=b.dataset.c; rr(); }; });
+  $(p+'-autofit').onchange=function(e){ var cov=get(); if(cov) cov.autofit=e.target.checked; rr(); };
+  $(p+'-hsize').oninput=function(e){ var cov=get(); if(cov){ cov.manualSize=+e.target.value; cov.autofit=false; } var af=$(p+'-autofit'); if(af) af.checked=false; $(p+'-hsizeVal').textContent=e.target.value; rr(); };
+  $(p+'-hx').oninput=function(e){ var cov=get(); if(cov) cov.headOffX=e.target.value/100; var v=+e.target.value; $(p+'-hxVal').textContent=v===0?'center':(v<0?'left':'right'); rr(); };
+  $(p+'-hy').oninput=function(e){ var cov=get(); if(cov) cov.headOffY=e.target.value/100; var v=+e.target.value; $(p+'-hyVal').textContent=v===0?'middle':(v<0?'up':'down'); rr(); };
+  $(p+'-hairline').onchange=function(e){ var cov=get(); if(cov) cov.hairline=e.target.checked; rr(); };
+  $(p+'-badge').onchange=function(e){ var cov=get(); if(cov) cov.badge=e.target.checked; rr(); };
+  $(p+'-badgetext').oninput=function(e){ var cov=get(); if(cov) cov.badgeText=e.target.value; rr(); };
+}
+function syncCover(p, cov){
+  function $(id){ return document.getElementById(id); }
+  if(!$(p+'-on')) return;
+  var has=!!cov;
+  $(p+'-on').checked=has?(cov.on===true):false; coverSyncRows(p, has&&cov.on===true);
+  if(!has) return;
+  var bh=Math.round((cov.blackFrac==null?0.33:cov.blackFrac)*100); $(p+'-bh').value=bh; $(p+'-bhVal').textContent=bh+'%';
+  $(p+'-htext').value=cov.headline||'';
+  $(p+'-hfont').value=cov.font||'EdsMarket';
+  document.querySelectorAll('#'+p+'-hcolor button').forEach(function(b){ b.classList.toggle('on', b.dataset.c===(cov.hcolor||'#ffffff')); });
+  $(p+'-autofit').checked=cov.autofit!==false;
+  var ms=cov.manualSize||79; $(p+'-hsize').value=ms; $(p+'-hsizeVal').textContent=ms;
+  var hx=Math.round((cov.headOffX||0)*100); $(p+'-hx').value=hx; $(p+'-hxVal').textContent=hx===0?'center':(hx<0?'left':'right');
+  var hy=Math.round((cov.headOffY==null?-0.3:cov.headOffY)*100); $(p+'-hy').value=hy; $(p+'-hyVal').textContent=hy===0?'middle':(hy<0?'up':'down');
+  $(p+'-hairline').checked=cov.hairline===true;
+  $(p+'-badge').checked=cov.badge!==false;
+  $(p+'-badgetext').value=cov.badgeText||'The Bold Italic';
+}
 function tbPanelHTML(p){
   var fonts='<option value="EdsMarket">Eds Market (brush)</option><option value="Playfair Display">Playfair (serif)</option><option value="Georgia">Georgia (serif)</option><option value="Arial">Arial (sans)</option>';
   return '<div class="set-group"><h3>Text box (optional)</h3><div class="ig-body">'
@@ -1232,13 +1334,19 @@ function cpBoot(){
     else { c.beginPath(); c.arc(cx,cyc,rr,0,Math.PI*2); c.fillStyle=st.tbiCircleColor; c.fill();
       c.fillStyle='#fff'; c.font='400 '+Math.round(D*0.40)+'px "'+cpFont()+'", Arial, sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('TBI',cx,cyc+D*0.04); }
   }
-  function paint(c,o,W,H){
-    c.fillStyle=st.bg; c.fillRect(0,0,W,H);
+  function cpDrawPhoto(c,o,x,y,w,h){
+    c.fillStyle=st.bg; c.fillRect(x,y,w,h);
     if(o && o.img){
       var iw=o.img.width, ih=o.img.height;
-      if(st.fit==='contain'){ var s=Math.min(W/iw,H/ih); var dw=iw*s, dh=ih*s; c.drawImage(o.img,(W-dw)/2,(H-dh)/2,dw,dh); }
-      else { var s2=Math.max(W/iw,H/ih)*(o.zoom||1); var dw2=iw*s2, dh2=ih*s2; var overflowY=dh2-H, overflowX=dw2-W; var dx=(W-dw2)/2+((o.posX||0)*overflowX/2), dy=(H-dh2)/2+((o.posY||0)*overflowY/2); c.save(); c.beginPath(); c.rect(0,0,W,H); c.clip(); c.drawImage(o.img,dx,dy,dw2,dh2); c.restore(); }
+      if(st.fit==='contain'){ var s=Math.min(w/iw,h/ih); var dw=iw*s, dh=ih*s; c.drawImage(o.img,x+(w-dw)/2,y+(h-dh)/2,dw,dh); }
+      else { var s2=Math.max(w/iw,h/ih)*(o.zoom||1); var dw2=iw*s2, dh2=ih*s2; var ofY=dh2-h, ofX=dw2-w; var dx=x+(w-dw2)/2+((o.posX||0)*ofX/2), dy=y+(h-dh2)/2+((o.posY||0)*ofY/2); c.save(); c.beginPath(); c.rect(x,y,w,h); c.clip(); c.drawImage(o.img,dx,dy,dw2,dh2); c.restore(); }
     }
+  }
+  function paint(c,o,W,H){
+    c.fillStyle=st.bg; c.fillRect(0,0,W,H);
+    var cov=(o&&o.cover&&o.cover.on)?o.cover:null;
+    if(cov){ drawCoverCard(c,W,H,cov,function(cc,x,y,w,h){ cpDrawPhoto(cc,o,x,y,w,h); }); }
+    else { cpDrawPhoto(c,o,0,0,W,H); }
     drawTextBox(c,W,H, o?o.textBox:null);
     paintCircle(c,o,W,H);
   }
@@ -1251,7 +1359,7 @@ function cpBoot(){
     var cnt=$('#cp-count'); cnt.textContent = st.imgs.length ? (st.imgs.length+' photo'+(st.imgs.length>1?'s':'')+(st.imgs.length>1?' - posts as a carousel':' - posts as a single')) : 'No photos yet.';
     var ord=$('#cp-order'); if(st.imgs.length>1){ ord.style.display='flex'; $('#cp-sel-label').textContent='Photo '+(st.sel+1)+' of '+st.imgs.length; $('#cp-left').disabled=(st.sel===0); $('#cp-right').disabled=(st.sel===st.imgs.length-1); } else { ord.style.display='none'; }
   }
-  function syncSliders(){ var o=st.imgs[st.sel]; var pv=o?Math.round((o.posY||0)*100):0, pxv=o?Math.round((o.posX||0)*100):0, zv=o?Math.round((o.zoom||1)*100):100; $('#cp-pos').value=pv; $('#cp-posVal').textContent=pv===0?'center':(pv<0?'higher':'lower'); $('#cp-posx').value=pxv; $('#cp-posxVal').textContent=pxv===0?'center':(pxv<0?'left':'right'); $('#cp-zoom').value=zv; $('#cp-zoomVal').textContent=zv+'%'; var tcb=$('#cp-tbi'); if(tcb) tcb.checked=o?(o.tbiCircle!==false):true; var scv=o?Math.round((o.tbiScale==null?0.7:o.tbiScale)*100):70; var ts=$('#cp-tbiscale'); if(ts) ts.value=scv; var tsv=$('#cp-tbiscaleVal'); if(tsv) tsv.textContent=scv+'%'; var cpos=o?(o.tbiCirclePos||'tr'):'tr'; document.querySelectorAll('#cp-tbipos button').forEach(function(b){ b.classList.toggle('on', b.dataset.pos===cpos); }); syncTB('cptb', o?o.textBox:null); }
+  function syncSliders(){ var o=st.imgs[st.sel]; var pv=o?Math.round((o.posY||0)*100):0, pxv=o?Math.round((o.posX||0)*100):0, zv=o?Math.round((o.zoom||1)*100):100; $('#cp-pos').value=pv; $('#cp-posVal').textContent=pv===0?'center':(pv<0?'higher':'lower'); $('#cp-posx').value=pxv; $('#cp-posxVal').textContent=pxv===0?'center':(pxv<0?'left':'right'); $('#cp-zoom').value=zv; $('#cp-zoomVal').textContent=zv+'%'; var tcb=$('#cp-tbi'); if(tcb) tcb.checked=o?(o.tbiCircle!==false):true; var scv=o?Math.round((o.tbiScale==null?0.7:o.tbiScale)*100):70; var ts=$('#cp-tbiscale'); if(ts) ts.value=scv; var tsv=$('#cp-tbiscaleVal'); if(tsv) tsv.textContent=scv+'%'; var cpos=o?(o.tbiCirclePos||'tr'):'tr'; document.querySelectorAll('#cp-tbipos button').forEach(function(b){ b.classList.toggle('on', b.dataset.pos===cpos); }); syncCover('cpcov', o?o.cover:null); syncTB('cptb', o?o.textBox:null); }
   function selectImg(i){ st.sel=i; syncSliders(); renderThumbs(); cpRender(); }
   function removeImg(i){ var o=st.imgs[i]; if(o&&o.url){ try{URL.revokeObjectURL(o.url);}catch(e){} } st.imgs.splice(i,1); if(st.sel>=st.imgs.length) st.sel=Math.max(0,st.imgs.length-1); syncSliders(); renderThumbs(); cpRender(); }
   function flashCount(msg){ var c=$('#cp-count'), old=c.textContent; c.textContent=msg; setTimeout(function(){ renderThumbs(); },1800); }
@@ -1259,7 +1367,7 @@ function cpBoot(){
     var arr=[].slice.call(files).filter(function(f){ return f && f.type && f.type.indexOf('image/')===0; });
     for(var k=0;k<arr.length;k++){
       if(st.imgs.length>=10){ flashCount('Max 10 photos per post.'); break; }
-      (function(f){ var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,posX:0,posY:0,zoom:1,name:f.name,tbiCircle:true,tbiCirclePos:'tr',tbiScale:0.7,textBox:defaultTextBox()}; st.imgs.push(o); img.onload=function(){ o.img=img; renderThumbs(); cpRender(); }; img.src=url; })(arr[k]);
+      (function(f){ var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,posX:0,posY:0,zoom:1,name:f.name,tbiCircle:true,tbiCirclePos:'tr',tbiScale:0.7,cover:defaultCover(),textBox:defaultTextBox()}; st.imgs.push(o); img.onload=function(){ o.img=img; renderThumbs(); cpRender(); }; img.src=url; })(arr[k]);
     }
     if(st.sel>=st.imgs.length) st.sel=0;
     syncSliders(); renderThumbs(); cpRender();
@@ -1346,6 +1454,7 @@ function cpBoot(){
       b.textContent='Scheduled '+CK; setTimeout(function(){ b.textContent='Schedule'; b.disabled=false; },2600);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Schedule'; b.disabled=false; }
   };
+  if($('#cp-coverwrap')){ $('#cp-coverwrap').innerHTML=coverPanelHTML('cpcov'); wireCover('cpcov', function(){ return st.imgs[st.sel]?st.imgs[st.sel].cover:null; }, cpRender); syncCover('cpcov', st.imgs[st.sel]?st.imgs[st.sel].cover:null); }
   if($('#cp-tbwrap')){ $('#cp-tbwrap').innerHTML=tbPanelHTML('cptb'); wireTB('cptb', function(){ return st.imgs[st.sel]?st.imgs[st.sel].textBox:null; }, cpRender); syncTB('cptb', st.imgs[st.sel]?st.imgs[st.sel].textBox:null); }
   loadSavedEdsMarket(cpRender);
   renderThumbs(); cpRender();
