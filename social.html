@@ -125,7 +125,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 /* ---- Instagram card builder ---- */
 .ig-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
 .ig-stage{background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;position:sticky;top:16px}
-#ig-card{width:auto;max-width:100%;max-height:64vh;height:auto;display:block;border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.18);background:#000}
+#ig-card,#cp-card{width:auto;max-width:100%;max-height:64vh;height:auto;display:block;border-radius:4px;box-shadow:0 8px 28px rgba(0,0,0,.18);background:#000}
 .ig-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%}
 .ig-body{padding:14px 16px}
 .ig-drop{border:1.5px dashed var(--border);border-radius:8px;padding:16px 12px;text-align:center;cursor:pointer;color:#8a8178;font-size:12px;line-height:1.5}
@@ -158,6 +158,17 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .ig-opt{font-size:12px;line-height:1.4;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);cursor:pointer}
 .ig-opt:hover{border-color:var(--blue)}
 .ig-opt.on{border-color:var(--blue);background:rgba(91,123,213,.12)}
+/* ---- Custom post (carousel thumbnails) ---- */
+.cp-thumbs{display:flex;gap:8px;flex-wrap:wrap;width:100%;justify-content:center;min-height:4px}
+.cp-thumb{position:relative;width:56px;height:56px;border-radius:6px;overflow:hidden;border:2px solid var(--border);cursor:pointer;background:#000;flex:0 0 auto}
+.cp-thumb.on{border-color:var(--blue)}
+.cp-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.cp-thumb .num{position:absolute;top:0;left:0;background:rgba(0,0,0,.62);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-bottom-right-radius:5px}
+.cp-thumb .rm{position:absolute;top:0;right:0;background:rgba(0,0,0,.62);color:#fff;font-size:11px;width:16px;height:16px;line-height:15px;text-align:center;border-bottom-left-radius:5px}
+.cp-thumb .rm:hover{background:var(--red)}
+.cp-order{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-size:12px;color:#8a8178}
+.cp-order button{border:1px solid var(--border);background:var(--bg-alt);color:var(--dark);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.cp-order button:disabled{opacity:.4;cursor:default}
 @media (max-width:768px){.ig-grid{grid-template-columns:1fr}.ig-stage{position:static}}
 
 /* ---- Mobile ---- */
@@ -219,6 +230,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <div class="subtabs">
       <button class="subtab active" data-tab="feed">Feed / Suggestions</button>
       <button class="subtab" data-tab="instagram">Instagram</button>
+      <button class="subtab" data-tab="custompost">Custom Post</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
       <button class="subtab" data-tab="schedule">Schedule</button>
       <button class="subtab" data-tab="settings">Settings</button>
@@ -298,6 +310,57 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-fld">Circle size <span class="val" id="ig-tbiscaleVal">70%</span><input type="range" id="ig-tbiscale" min="40" max="220" value="70"></div>
             <div class="ig-drop" id="ig-icondrop"><b>Load TBI icon</b> (PNG) &mdash; replaces the drawn circle</div>
             <input type="file" id="ig-iconfile" accept="image/*" hidden>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CUSTOM POST -->
+    <section class="panel" id="panel-custompost">
+      <h2 class="section">Custom post</h2>
+      <p class="sub">A blank slate. Upload your own image &mdash; or several for a carousel &mdash; optionally drop the red TBI circle on top, write or AI-draft the caption, and post straight to Instagram. No black box, no badge unless you bring your own.</p>
+      <div class="ig-grid">
+        <div class="ig-stage">
+          <canvas id="cp-card" width="1080" height="1350"></canvas>
+          <div class="cp-thumbs" id="cp-thumbs"></div>
+          <div class="cp-order" id="cp-order" style="display:none"><button id="cp-left">&lt; Move</button><span id="cp-sel-label">Photo 1 of 1</span><button id="cp-right">Move &gt;</button></div>
+          <div class="ig-actions">
+            <button class="btn btn-gold" id="cp-post">Post to Instagram</button>
+            <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
+          </div>
+          <div class="run-status" id="cp-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
+        </div>
+        <div class="ig-ctrl">
+          <div class="set-group"><h3>1 &middot; Photos</h3><div class="ig-body">
+            <div class="ig-drop" id="cp-drop"><b>Drop photos</b> or click to choose<br><span style="font-size:10px">1 image posts as a single, 2&ndash;10 as a carousel</span></div>
+            <input type="file" id="cp-file" accept="image/*" multiple hidden>
+            <div class="ig-hint" id="cp-count" style="margin-top:8px">No photos yet.</div>
+            <div class="ig-fld" style="margin-top:12px">Vertical framing <span class="val" id="cp-posVal">center</span><input type="range" id="cp-pos" min="-100" max="100" value="0"></div>
+            <div class="ig-fld">Zoom <span class="val" id="cp-zoomVal">100%</span><input type="range" id="cp-zoom" min="100" max="260" value="100"></div>
+            <div class="ig-hint">Framing &amp; zoom apply to the selected photo. Click a thumbnail to pick which one.</div>
+          </div></div>
+          <div class="set-group"><h3>2 &middot; Format</h3><div class="ig-body">
+            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="cp-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button></div></div>
+            <div class="ig-fld" style="margin-top:10px">Fit<div class="ig-seg" id="cp-fit"><button data-fit="cover" class="on">Fill frame</button><button data-fit="contain">Fit (letterbox)</button></div></div>
+            <div class="ig-fld">Letterbox color<div class="ig-seg" id="cp-bg"><button data-bg="#ffffff" class="on">White</button><button data-bg="#000000">Black</button></div></div>
+            <div class="ig-hint">Instagram allows 4:5 (tallest) through 1.91:1 (widest). Every photo in a carousel shares this ratio.</div>
+          </div></div>
+          <div class="set-group"><h3>3 &middot; Red TBI circle</h3><div class="ig-body">
+            <div class="ig-toggle">Show red &ldquo;TBI&rdquo; circle<label class="switch"><input type="checkbox" id="cp-tbi" checked><span class="slider-sw"></span></label></div>
+            <div class="ig-fld">Corner<div class="ig-seg" id="cp-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
+            <div class="ig-fld">Size <span class="val" id="cp-tbiscaleVal">70%</span><input type="range" id="cp-tbiscale" min="40" max="220" value="70"></div>
+            <div class="ig-hint">Uses the TBI icon you loaded on the Instagram tab if there is one, otherwise the drawn circle. Applied to every photo in a carousel.</div>
+          </div></div>
+          <div class="set-group"><h3>4 &middot; Caption</h3><div class="ig-body">
+            <textarea id="cp-caption" placeholder="Write the caption here, or paste source text below and let the AI helper draft it." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <button class="btn btn-outline btn-sm" id="cp-cap-copy" style="margin-top:6px">Copy caption</button>
+            <div class="ig-hint" style="margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px"><b style="color:var(--dark)">AI helper</b> &mdash; paste notes, a blurb, or rough text and draft a caption in TBI voice.</div>
+            <textarea id="cp-src" placeholder="Paste the source text for the AI helper here..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <div class="ig-toggle" style="margin-top:10px">Add up to 5 hashtags<label class="switch"><input type="checkbox" id="cp-hash"><span class="slider-sw"></span></label></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+              <button class="btn btn-gold btn-sm" id="cp-draft">Draft caption</button>
+              <span class="run-status" id="cp-draft-status"></span>
+            </div>
           </div></div>
         </div>
       </div>
@@ -954,6 +1017,120 @@ function igBoot(){
   document.fonts.ready.then(render);
 }
 var _igtab=document.querySelector('.subtab[data-tab="instagram"]'); if(_igtab) _igtab.addEventListener('click', initIG);
+
+/* ===== Custom Post tab (blank-slate upload + carousel + AI caption) ===== */
+var cpReady=false;
+function initCP(){ if(cpReady) return; cpReady=true; cpBoot(); }
+function cpBoot(){
+  var canvas=$('#cp-card'), ctx=canvas.getContext('2d');
+  var st={ imgs:[], sel:0, W:1080, H:1350, fit:'cover', bg:'#ffffff', tbiCircle:true, tbiCirclePos:'tr', tbiScale:0.7, tbiImg:null, tbiCircleColor:'#f5333f' };
+  try{ var _ib=localStorage.getItem('ig_tbi_b64'); if(_ib){ var _im=new Image(); _im.onload=function(){ st.tbiImg=_im; cpRender(); }; _im.src=_ib; } }catch(e){}
+  function cpFont(){ try{ return document.fonts.check('400 40px "EdsMarket"')?'EdsMarket':'Permanent Marker'; }catch(e){ return 'Permanent Marker'; } }
+  function paintCircle(c,W,H){
+    if(!st.tbiCircle) return;
+    var D=W*0.115*(st.tbiScale||1), M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
+    if(st.tbiCirclePos==='tl'){cx=left;cyc=top;} else if(st.tbiCirclePos==='bl'){cx=left;cyc=bot;} else if(st.tbiCirclePos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;}
+    if(st.tbiImg){ c.drawImage(st.tbiImg,cx-rr,cyc-rr,D,D); }
+    else { c.beginPath(); c.arc(cx,cyc,rr,0,Math.PI*2); c.fillStyle=st.tbiCircleColor; c.fill();
+      c.fillStyle='#fff'; c.font='400 '+Math.round(D*0.40)+'px "'+cpFont()+'", Arial, sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('TBI',cx,cyc+D*0.04); }
+  }
+  function paint(c,o,W,H){
+    c.fillStyle=st.bg; c.fillRect(0,0,W,H);
+    if(o && o.img){
+      var iw=o.img.width, ih=o.img.height;
+      if(st.fit==='contain'){ var s=Math.min(W/iw,H/ih); var dw=iw*s, dh=ih*s; c.drawImage(o.img,(W-dw)/2,(H-dh)/2,dw,dh); }
+      else { var s2=Math.max(W/iw,H/ih)*(o.zoom||1); var dw2=iw*s2, dh2=ih*s2; var overflowY=dh2-H; var dx=(W-dw2)/2, dy=(H-dh2)/2+((o.posY||0)*overflowY/2); c.save(); c.beginPath(); c.rect(0,0,W,H); c.clip(); c.drawImage(o.img,dx,dy,dw2,dh2); c.restore(); }
+    }
+    paintCircle(c,W,H);
+  }
+  function cpRender(){ var W=st.W,H=st.H; if(canvas.width!==W) canvas.width=W; if(canvas.height!==H) canvas.height=H; paint(ctx, st.imgs[st.sel]||null, W, H); var ex=$('#cp-export'); if(ex) ex.disabled=!st.imgs.length; }
+  function renderThumbs(){
+    var host=$('#cp-thumbs');
+    host.innerHTML=st.imgs.map(function(o,i){ return '<div class="cp-thumb'+(i===st.sel?' on':'')+'" data-i="'+i+'"><span class="num">'+(i+1)+'</span><span class="rm" data-rm="'+i+'">&times;</span><img src="'+o.url+'"></div>'; }).join('');
+    host.querySelectorAll('.cp-thumb').forEach(function(t){ t.onclick=function(e){ if(e.target.classList.contains('rm')) return; selectImg(+t.dataset.i); }; });
+    host.querySelectorAll('.rm').forEach(function(r){ r.onclick=function(e){ e.stopPropagation(); removeImg(+r.dataset.rm); }; });
+    var cnt=$('#cp-count'); cnt.textContent = st.imgs.length ? (st.imgs.length+' photo'+(st.imgs.length>1?'s':'')+(st.imgs.length>1?' - posts as a carousel':' - posts as a single')) : 'No photos yet.';
+    var ord=$('#cp-order'); if(st.imgs.length>1){ ord.style.display='flex'; $('#cp-sel-label').textContent='Photo '+(st.sel+1)+' of '+st.imgs.length; $('#cp-left').disabled=(st.sel===0); $('#cp-right').disabled=(st.sel===st.imgs.length-1); } else { ord.style.display='none'; }
+  }
+  function syncSliders(){ var o=st.imgs[st.sel]; var pv=o?Math.round((o.posY||0)*100):0, zv=o?Math.round((o.zoom||1)*100):100; $('#cp-pos').value=pv; $('#cp-posVal').textContent=pv===0?'center':(pv<0?'higher':'lower'); $('#cp-zoom').value=zv; $('#cp-zoomVal').textContent=zv+'%'; }
+  function selectImg(i){ st.sel=i; syncSliders(); renderThumbs(); cpRender(); }
+  function removeImg(i){ var o=st.imgs[i]; if(o&&o.url){ try{URL.revokeObjectURL(o.url);}catch(e){} } st.imgs.splice(i,1); if(st.sel>=st.imgs.length) st.sel=Math.max(0,st.imgs.length-1); syncSliders(); renderThumbs(); cpRender(); }
+  function flashCount(msg){ var c=$('#cp-count'), old=c.textContent; c.textContent=msg; setTimeout(function(){ renderThumbs(); },1800); }
+  function addFiles(files){
+    var arr=[].slice.call(files).filter(function(f){ return f && f.type && f.type.indexOf('image/')===0; });
+    for(var k=0;k<arr.length;k++){
+      if(st.imgs.length>=10){ flashCount('Max 10 photos per post.'); break; }
+      (function(f){ var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,posY:0,zoom:1,name:f.name}; st.imgs.push(o); img.onload=function(){ o.img=img; renderThumbs(); cpRender(); }; img.src=url; })(arr[k]);
+    }
+    if(st.sel>=st.imgs.length) st.sel=0;
+    syncSliders(); renderThumbs(); cpRender();
+  }
+  var drop=$('#cp-drop'), fileInput=$('#cp-file');
+  drop.onclick=function(){ fileInput.click(); };
+  fileInput.onchange=function(e){ addFiles(e.target.files); e.target.value=''; };
+  ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove('hot'); }); });
+  drop.addEventListener('drop',function(e){ addFiles(e.dataTransfer.files); });
+  $('#cp-pos').oninput=function(e){ var o=st.imgs[st.sel]; if(o){ o.posY=e.target.value/100; } var v=+e.target.value; $('#cp-posVal').textContent=v===0?'center':(v<0?'higher':'lower'); cpRender(); };
+  $('#cp-zoom').oninput=function(e){ var o=st.imgs[st.sel]; if(o){ o.zoom=e.target.value/100; } $('#cp-zoomVal').textContent=e.target.value+'%'; cpRender(); };
+  document.querySelectorAll('#cp-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-aspect button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.W=+b.dataset.w; st.H=+b.dataset.h; cpRender(); }; });
+  document.querySelectorAll('#cp-fit button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-fit button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.fit=b.dataset.fit; cpRender(); }; });
+  document.querySelectorAll('#cp-bg button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-bg button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.bg=b.dataset.bg; cpRender(); }; });
+  $('#cp-tbi').onchange=function(e){ st.tbiCircle=e.target.checked; cpRender(); };
+  $('#cp-tbiscale').oninput=function(e){ st.tbiScale=e.target.value/100; $('#cp-tbiscaleVal').textContent=e.target.value+'%'; cpRender(); };
+  document.querySelectorAll('#cp-tbipos button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-tbipos button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.tbiCirclePos=b.dataset.pos; cpRender(); }; });
+  $('#cp-left').onclick=function(){ if(st.sel<=0) return; var a=st.imgs, t=a[st.sel-1]; a[st.sel-1]=a[st.sel]; a[st.sel]=t; st.sel--; renderThumbs(); cpRender(); };
+  $('#cp-right').onclick=function(){ if(st.sel>=st.imgs.length-1) return; var a=st.imgs, t=a[st.sel+1]; a[st.sel+1]=a[st.sel]; a[st.sel]=t; st.sel++; renderThumbs(); cpRender(); };
+  $('#cp-cap-copy').onclick=function(){ navigator.clipboard.writeText($('#cp-caption').value||''); var b=$('#cp-cap-copy'); b.textContent='Copied '+CK; setTimeout(function(){b.textContent='Copy caption';},1400); };
+  $('#cp-draft').onclick=async function(){
+    var b=$('#cp-draft'), stt=$('#cp-draft-status');
+    var src=($('#cp-src').value||'').trim();
+    if(!src){ stt.textContent='Paste some source text first.'; return; }
+    b.disabled=true; stt.textContent='Drafting (~10s)...';
+    try{
+      var r=await sb.functions.invoke('generate',{body:{caption:true, source_text:src, hashtags:$('#cp-hash').checked}});
+      var d=r.data||{};
+      if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
+      if(d.error) throw new Error(d.error);
+      $('#cp-caption').value=d.caption||'';
+      stt.textContent=d.caption?('Drafted '+CK+(d.est_cost_usd?(' - $'+d.est_cost_usd):'')):'No caption returned.';
+    }catch(e){ stt.textContent='Error: '+(e&&e.message?e.message:e); }
+    b.disabled=false;
+  };
+  $('#cp-export').onclick=function(){ if(!st.imgs.length) return; canvas.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tbi-custom-'+(st.sel+1)+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(a.href);},1000); },'image/png'); };
+  $('#cp-post').onclick=async function(){
+    var b=$('#cp-post'), stt=$('#cp-post-status');
+    var ready=st.imgs.filter(function(o){return o.img;});
+    if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
+    var ratio=st.W/st.H;
+    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick a 4:5, 1:1, or 1.91:1 ratio before posting.</span>'; return; }
+    var n=ready.length;
+    if(!window.confirm('Post '+(n>1?('this '+n+'-photo carousel'):'this photo')+' to @thebolditalic on Instagram now? This publishes to the live feed.')) return;
+    b.disabled=true; b.textContent='Posting...'; stt.textContent='Rendering + uploading '+n+' image'+(n>1?'s':'')+'...';
+    try{
+      var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d');
+      var urls=[], ts=Date.now();
+      for(var i=0;i<ready.length;i++){
+        paint(octx, ready[i], st.W, st.H);
+        var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); });
+        var key='custom-'+ts+'-'+i+'.jpg';
+        var up=await sb.storage.from('ig-rendered').upload(key, blob, {upsert:true, contentType:'image/jpeg'});
+        if(up.error) throw up.error;
+        urls.push(sb.storage.from('ig-rendered').getPublicUrl(key).data.publicUrl);
+      }
+      stt.textContent='Publishing to Instagram (~'+(10+(n-1)*4)+'s)...';
+      var r=await sb.functions.invoke('instagram',{body:{action:'publish', image_urls:urls, caption:($('#cp-caption').value||'')}});
+      var d=r.data||{};
+      if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
+      if(d.error) throw new Error(d.error);
+      stt.innerHTML='<span style="color:var(--green)">Posted to Instagram '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View post</a>'):'');
+      b.textContent='Posted '+CK; setTimeout(function(){ b.textContent='Post to Instagram'; b.disabled=false; },3000);
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Post to Instagram'; b.disabled=false; }
+  };
+  renderThumbs(); cpRender();
+  (async function(){ try{ await document.fonts.load('400 120px "Permanent Marker"'); }catch(e){} cpRender(); })();
+}
+var _cptab=document.querySelector('.subtab[data-tab="custompost"]'); if(_cptab) _cptab.addEventListener('click', initCP);
 
 gate();
 </script>
