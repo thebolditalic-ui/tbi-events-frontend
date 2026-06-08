@@ -169,6 +169,25 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .cp-order{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;font-size:12px;color:#8a8178}
 .cp-order button{border:1px solid var(--border);background:var(--bg-alt);color:var(--dark);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer}
 .cp-order button:disabled{opacity:.4;cursor:default}
+/* ---- Instagram inner views + scheduling ---- */
+.ig-viewnav{display:flex;gap:6px;margin:0 0 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ig-viewbtn{background:none;border:none;font-family:inherit;font-size:13px;font-weight:600;color:#8a8178;padding:8px 12px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.ig-viewbtn:hover{color:var(--dark)}
+.ig-viewbtn.active{color:var(--blue);border-bottom-color:var(--blue)}
+.ig-view{display:none}
+.ig-view.active{display:block}
+.ig-sched-row{display:flex;gap:6px;align-items:center;width:100%;justify-content:center;flex-wrap:wrap;margin-top:2px}
+.ig-sched-row input[type=datetime-local]{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--bg-alt);color:var(--dark)}
+.sched-card{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.sched-card img{width:64px;height:64px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:#000}
+.sched-card .body{flex:1;min-width:0}
+.sched-card .when{font-size:13px;font-weight:700;color:var(--dark)}
+.sched-card .cap{font-size:12px;color:#8a8178;line-height:1.4;margin-top:3px;white-space:pre-wrap;max-height:54px;overflow:hidden}
+.sched-card .meta{font-size:11px;color:#8a8178;margin-top:4px}
+.sched-card .acts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.sched-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:9px;margin-left:6px}
+.sched-badge.pending{background:rgba(91,123,213,.12);color:var(--blue)}
+.sched-badge.failed{background:rgba(231,76,60,.12);color:var(--red)}
 @media (max-width:768px){.ig-grid{grid-template-columns:1fr}.ig-stage{position:static}}
 
 /* ---- Mobile ---- */
@@ -230,7 +249,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <div class="subtabs">
       <button class="subtab active" data-tab="feed">Feed / Suggestions</button>
       <button class="subtab" data-tab="instagram">Instagram</button>
-      <button class="subtab" data-tab="custompost">Custom Post</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
       <button class="subtab" data-tab="schedule">Schedule</button>
       <button class="subtab" data-tab="settings">Settings</button>
@@ -251,8 +269,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 
     <!-- INSTAGRAM -->
     <section class="panel" id="panel-instagram">
-      <h2 class="section">Instagram cards</h2>
-      <p class="sub">Drop in the story's photo, set the headline, frame it, and download a print-ready 1080-wide card in the TBI template. The brush font and red circle are stand-ins until you upload the real Ed's Market font and TBI favicon. (Auto-suggested cards + one-click Instagram scheduling arrive in the next sub-phases; for now, download and post manually.)</p>
+      <h2 class="section">Instagram</h2>
+      <p class="sub">Build a card from a crawled story, start a custom post from your own photos, or review what's queued. Posts go straight to @thebolditalic &mdash; now, or at a time you set.</p>
+      <div class="ig-viewnav">
+        <button class="ig-viewbtn active" data-igview="story">From a story</button>
+        <button class="ig-viewbtn" data-igview="custom">Custom post</button>
+        <button class="ig-viewbtn" data-igview="scheduled">Scheduled</button>
+      </div>
+      <div class="ig-view active" id="ig-view-story">
       <div class="ig-cand">
         <button class="btn btn-gold btn-sm" id="ig-gen">Generate cards from stories</button>
         <button class="btn btn-outline btn-sm" id="ig-cand-reload">Reload</button>
@@ -267,6 +291,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
+            <div class="ig-sched-row"><input type="datetime-local" id="ig-when"><button class="btn btn-outline btn-sm" id="ig-schedule">Schedule</button></div>
             <div class="run-status" id="ig-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
           </div>
         </div>
@@ -313,12 +338,10 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           </div></div>
         </div>
       </div>
-    </section>
+      </div><!-- /ig-view-story -->
 
-    <!-- CUSTOM POST -->
-    <section class="panel" id="panel-custompost">
-      <h2 class="section">Custom post</h2>
-      <p class="sub">A blank slate. Upload your own image &mdash; or several for a carousel &mdash; optionally drop the red TBI circle on top, write or AI-draft the caption, and post straight to Instagram. No black box, no badge unless you bring your own.</p>
+      <div class="ig-view" id="ig-view-custom">
+      <p class="sub" style="margin-top:4px">A blank slate. Upload your own image &mdash; or several for a carousel &mdash; optionally drop the red TBI circle on top, write or AI-draft the caption. No black box, no badge unless you add them.</p>
       <div class="ig-grid">
         <div class="ig-stage">
           <canvas id="cp-card" width="1080" height="1350"></canvas>
@@ -327,6 +350,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="ig-actions">
             <button class="btn btn-gold" id="cp-post">Post to Instagram</button>
             <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
+            <div class="ig-sched-row"><input type="datetime-local" id="cp-when"><button class="btn btn-outline btn-sm" id="cp-schedule">Schedule</button></div>
           </div>
           <div class="run-status" id="cp-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
         </div>
@@ -340,10 +364,10 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-hint">Framing &amp; zoom apply to the selected photo. Click a thumbnail to pick which one.</div>
           </div></div>
           <div class="set-group"><h3>2 &middot; Format</h3><div class="ig-body">
-            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="cp-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button></div></div>
+            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="cp-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-fld" style="margin-top:10px">Fit<div class="ig-seg" id="cp-fit"><button data-fit="cover" class="on">Fill frame</button><button data-fit="contain">Fit (letterbox)</button></div></div>
             <div class="ig-fld">Letterbox color<div class="ig-seg" id="cp-bg"><button data-bg="#ffffff" class="on">White</button><button data-bg="#000000">Black</button></div></div>
-            <div class="ig-hint">Instagram allows 4:5 (tallest) through 1.91:1 (widest). Every photo in a carousel shares this ratio.</div>
+            <div class="ig-hint">Feed posts allow 4:5 (tallest) through 1.91:1 (widest); every photo in a carousel shares the ratio. <b>9:16</b> is a Stories size &mdash; use Download and post it as a Story by hand (the feed Post/Schedule buttons only take 4:5&ndash;1.91:1).</div>
           </div></div>
           <div class="set-group"><h3>3 &middot; Red TBI circle</h3><div class="ig-body">
             <div class="ig-toggle">Show red &ldquo;TBI&rdquo; circle<label class="switch"><input type="checkbox" id="cp-tbi" checked><span class="slider-sw"></span></label></div>
@@ -363,6 +387,13 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             </div>
           </div></div>
         </div>
+      </div>
+      </div><!-- /ig-view-custom -->
+
+      <div class="ig-view" id="ig-view-scheduled">
+        <p class="sub" style="margin-top:4px">Posts queued to publish to Instagram automatically. They fire at the set time (the queue is checked every few minutes). Cancel or post early anytime.</p>
+        <div class="toolbar"><button class="btn btn-outline btn-sm" id="ig-sched-reload">Reload</button><span class="run-status" id="ig-sched-status"></span></div>
+        <div id="ig-sched-list"></div>
       </div>
     </section>
 
@@ -1012,6 +1043,20 @@ function igBoot(){
       b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to Instagram"; b.disabled=false; },3000);
     }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to Instagram"; b.disabled=false; }
   };
+  if($("#ig-schedule")) $("#ig-schedule").onclick=async function(){
+    var b=$("#ig-schedule"), st=$("#ig-post-status");
+    var ratio=canvas.width/canvas.height;
+    if(ratio<0.8||ratio>1.91){ st.innerHTML='<span style="color:var(--red)">Scheduling needs a 4:5 or 1:1 card. Set that under <b>Format &amp; layout</b> first.</span>'; return; }
+    var whenIso=igWhenIso($("#ig-when").value, st); if(!whenIso) return;
+    if(!window.confirm("Schedule this card to post to @thebolditalic on "+new Date(whenIso).toLocaleString()+"?")) return;
+    b.disabled=true; b.textContent="Scheduling..."; st.textContent="Rendering + uploading...";
+    try{
+      var blob=await new Promise(function(r){ canvas.toBlob(r,"image/jpeg",0.92); });
+      await igStageAndSchedule([blob], { caption:($("#ig-caption").value||""), alt_text:(state.headline||"").trim(), source:"story", card_id:(IG_CUR||null), whenIso:whenIso });
+      st.innerHTML='<span style="color:var(--green)">Scheduled for '+esc(new Date(whenIso).toLocaleString())+' '+CK+' &middot; see the <b>Scheduled</b> tab</span>';
+      b.textContent="Scheduled "+CK; setTimeout(function(){ b.textContent="Schedule"; b.disabled=false; },2600);
+    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Schedule"; b.disabled=false; }
+  };
   loadIGCandidates();
   (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"')]); }catch(e){} render(); })();
   document.fonts.ready.then(render);
@@ -1127,10 +1172,112 @@ function cpBoot(){
       b.textContent='Posted '+CK; setTimeout(function(){ b.textContent='Post to Instagram'; b.disabled=false; },3000);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Post to Instagram'; b.disabled=false; }
   };
+  $('#cp-schedule').onclick=async function(){
+    var b=$('#cp-schedule'), stt=$('#cp-post-status');
+    var ready=st.imgs.filter(function(o){return o.img;});
+    if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
+    var ratio=st.W/st.H;
+    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick a 4:5, 1:1, or 1.91:1 ratio before scheduling (9:16 is Stories-only).</span>'; return; }
+    var whenIso=igWhenIso($('#cp-when').value, stt); if(!whenIso) return;
+    var n=ready.length;
+    if(!window.confirm('Schedule '+(n>1?('this '+n+'-photo carousel'):'this photo')+' to @thebolditalic on '+new Date(whenIso).toLocaleString()+'?')) return;
+    b.disabled=true; b.textContent='Scheduling...'; stt.textContent='Rendering + uploading '+n+' image'+(n>1?'s':'')+'...';
+    try{
+      var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d');
+      var blobs=[];
+      for(var i=0;i<ready.length;i++){ paint(octx, ready[i], st.W, st.H); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); blobs.push(blob); }
+      await igStageAndSchedule(blobs, { caption:($('#cp-caption').value||''), alt_text:'', source:'custom', card_id:null, whenIso:whenIso });
+      stt.innerHTML='<span style="color:var(--green)">Scheduled for '+esc(new Date(whenIso).toLocaleString())+' '+CK+' &middot; see the <b>Scheduled</b> tab</span>';
+      b.textContent='Scheduled '+CK; setTimeout(function(){ b.textContent='Schedule'; b.disabled=false; },2600);
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Schedule'; b.disabled=false; }
+  };
   renderThumbs(); cpRender();
   (async function(){ try{ await document.fonts.load('400 120px "Permanent Marker"'); }catch(e){} cpRender(); })();
 }
-var _cptab=document.querySelector('.subtab[data-tab="custompost"]'); if(_cptab) _cptab.addEventListener('click', initCP);
+// ---- Instagram inner views (story / custom / scheduled) ----
+var IG_SCHED_MAP={};
+function showIGView(v){
+  document.querySelectorAll('.ig-viewbtn').forEach(function(x){ x.classList.toggle('active', x.dataset.igview===v); });
+  document.querySelectorAll('.ig-view').forEach(function(x){ x.classList.toggle('active', x.id===('ig-view-'+v)); });
+  if(v==='custom') initCP();
+  if(v==='scheduled') loadIGScheduled();
+}
+document.querySelectorAll('.ig-viewbtn').forEach(function(b){ b.onclick=function(){ showIGView(b.dataset.igview); }; });
+if($('#ig-sched-reload')) $('#ig-sched-reload').onclick=loadIGScheduled;
+
+// datetime-local value -> ISO (must be present and at least a minute in the future).
+function igWhenIso(val, statusEl){
+  if(!val){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Pick a date &amp; time first.</span>'; return null; }
+  var d=new Date(val);
+  if(isNaN(d.getTime())){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">That date did not parse.</span>'; return null; }
+  if(d.getTime() < Date.now()+60000){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Pick a time at least a minute from now.</span>'; return null; }
+  return d.toISOString();
+}
+
+// Upload rendered JPEG blob(s) to ig-rendered/sched-* (purge-exempt), then queue an ig_scheduled row.
+async function igStageAndSchedule(blobs, opts){
+  var id=crypto.randomUUID();
+  var urls=[], paths=[];
+  for(var i=0;i<blobs.length;i++){
+    var path='sched-'+id+'-'+i+'.jpg';
+    var up=await sb.storage.from('ig-rendered').upload(path, blobs[i], {upsert:true, contentType:'image/jpeg'});
+    if(up.error) throw up.error;
+    paths.push(path);
+    urls.push(sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl);
+  }
+  var ins=await sb.from('ig_scheduled').insert({ source:opts.source||'custom', card_id:opts.card_id||null, image_urls:urls, storage_paths:paths, caption:opts.caption||'', alt_text:opts.alt_text||'', scheduled_at:opts.whenIso, status:'pending' });
+  if(ins.error) throw new Error(ins.error.message);
+}
+
+async function loadIGScheduled(){
+  var host=$('#ig-sched-list'); if(!host) return;
+  host.innerHTML='<span class="run-status">Loading...</span>';
+  var res=await sb.from('ig_scheduled').select('*').in('status',['pending','failed']).order('scheduled_at',{ascending:true}).limit(60);
+  if(res.error){ host.innerHTML='<span class="run-status">Error: '+esc(res.error.message)+'</span>'; return; }
+  var rows=res.data||[];
+  if(!rows.length){ host.innerHTML='<div class="empty">Nothing scheduled yet. Build a card or custom post, set a date &amp; time, then hit Schedule.</div>'; return; }
+  IG_SCHED_MAP={};
+  host.innerHTML=rows.map(function(r){
+    IG_SCHED_MAP[r.id]=r;
+    var imgs=Array.isArray(r.image_urls)?r.image_urls:[];
+    var when=r.scheduled_at?new Date(r.scheduled_at).toLocaleString():'';
+    var badge=r.status==='failed'?'<span class="sched-badge failed">failed</span>':'<span class="sched-badge pending">scheduled</span>';
+    var cnt=imgs.length>1?(' &middot; '+imgs.length+' photos'):'';
+    var errLine=(r.status==='failed'&&r.error)?('<div class="meta" style="color:var(--red)">'+esc(String(r.error).slice(0,140))+'</div>'):'';
+    return '<div class="sched-card"><img src="'+esc(imgs[0]||'')+'" alt=""><div class="body"><div class="when">'+esc(when)+' '+badge+'</div><div class="meta">'+esc(r.source==='story'?'From a story':'Custom post')+cnt+'</div><div class="cap">'+esc(r.caption||'')+'</div>'+errLine+'</div><div class="acts"><button class="btn btn-gold btn-sm" data-act="now" data-id="'+r.id+'">Post now</button><button class="btn btn-outline btn-sm" data-act="cancel" data-id="'+r.id+'">Cancel</button></div></div>';
+  }).join('');
+  host.querySelectorAll('button[data-act]').forEach(function(btn){ btn.onclick=function(){ igSchedAction(btn.dataset.act, btn.dataset.id, btn); }; });
+}
+
+async function igSchedAction(act, id, btn){
+  var r=IG_SCHED_MAP[id]; if(!r) return;
+  if(act==='cancel'){
+    if(!window.confirm('Cancel this scheduled post? The staged image is removed too.')) return;
+    btn.disabled=true; btn.textContent='Cancelling...';
+    try{
+      var del=await sb.from('ig_scheduled').delete().eq('id',id); if(del.error) throw new Error(del.error.message);
+      if(Array.isArray(r.storage_paths)&&r.storage_paths.length){ try{ await sb.storage.from('ig-rendered').remove(r.storage_paths); }catch(_e){} }
+      loadIGScheduled();
+    }catch(e){ btn.disabled=false; btn.textContent='Cancel'; alert('Could not cancel: '+(e&&e.message?e.message:e)); }
+    return;
+  }
+  if(act==='now'){
+    if(!window.confirm('Post this to @thebolditalic right now?')) return;
+    btn.disabled=true; btn.textContent='Posting...';
+    var statusEl=$('#ig-sched-status'); if(statusEl) statusEl.textContent='Publishing (~'+(10+(Math.max(1,(r.image_urls||[]).length)-1)*4)+'s)...';
+    try{
+      var resp=await sb.functions.invoke('instagram',{body:{action:'publish', image_urls:(r.image_urls||[]), caption:(r.caption||''), alt_text:(r.alt_text||''), card_id:(r.card_id||null)}});
+      var d=resp.data||{};
+      if(resp.error){ var m=(resp.error.message||String(resp.error)); try{ var jj=resp.error.context&&resp.error.context.json?await resp.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
+      if(d.error) throw new Error(d.error);
+      await sb.from('ig_scheduled').update({status:'posted', ig_media_id:d.media_id||null, ig_permalink:d.permalink||null, posted_at:new Date().toISOString()}).eq('id',id);
+      if(Array.isArray(r.storage_paths)&&r.storage_paths.length){ try{ await sb.storage.from('ig-rendered').remove(r.storage_paths); }catch(_e){} }
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--green)">Posted '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View</a>'):'');
+      loadIGScheduled();
+    }catch(e){ btn.disabled=false; btn.textContent='Post now'; if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; }
+    return;
+  }
+}
 
 gate();
 </script>
