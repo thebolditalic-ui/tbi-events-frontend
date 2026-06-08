@@ -188,6 +188,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .sched-badge{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:9px;margin-left:6px}
 .sched-badge.pending{background:rgba(91,123,213,.12);color:var(--blue)}
 .sched-badge.failed{background:rgba(231,76,60,.12);color:var(--red)}
+/* ---- Text-box overlay controls ---- */
+.tb-sub{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin:14px 0 8px;border-top:1px solid var(--border);padding-top:10px}
+.tb-ta{width:100%;min-height:54px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.35;margin-bottom:8px}
+.tb-sel{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;background:var(--bg-alt)}
+.tb-color{width:100%;height:30px;padding:2px;border:1px solid var(--border);border-radius:6px;background:var(--bg-alt);cursor:pointer}
 @media (max-width:768px){.ig-grid{grid-template-columns:1fr}.ig-stage{position:static}}
 
 /* ---- Mobile ---- */
@@ -336,6 +341,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-drop" id="ig-icondrop"><b>Load TBI icon</b> (PNG) &mdash; replaces the drawn circle</div>
             <input type="file" id="ig-iconfile" accept="image/*" hidden>
           </div></div>
+          <div id="ig-tbwrap"></div>
         </div>
       </div>
       </div><!-- /ig-view-story -->
@@ -375,6 +381,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-fld">Size <span class="val" id="cp-tbiscaleVal">70%</span><input type="range" id="cp-tbiscale" min="40" max="220" value="70"></div>
             <div class="ig-hint">Uses the TBI icon you loaded on the Instagram tab if there is one, otherwise the drawn circle. Applied to every photo in a carousel.</div>
           </div></div>
+          <div id="cp-tbwrap"></div>
           <div class="set-group"><h3>4 &middot; Caption</h3><div class="ig-body">
             <textarea id="cp-caption" placeholder="Write the caption here, or paste source text below and let the AI helper draft it." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
             <button class="btn btn-outline btn-sm" id="cp-cap-copy" style="margin-top:6px">Copy caption</button>
@@ -903,7 +910,7 @@ function initIG(){ if(igReady) return; igReady=true; igBoot(); }
 function igBoot(){
   var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
   var NL=String.fromCharCode(10);
-  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:false, manualSize:79, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false };
+  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'WE NEVER LIKED PHILZ ANYWAY.', autofit:false, manualSize:79, hcolor:'#ffffff', zoom:1, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false, textBox:defaultTextBox() };
   var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
   function drawCover(img,x,y,w,h,zoom,posY){
     var scale=Math.max(w/img.width,h/img.height)*zoom;
@@ -961,6 +968,7 @@ function igBoot(){
       ctx.moveTo(bx+r,by); ctx.arcTo(bx+bw,by,bx+bw,by+bh,r); ctx.arcTo(bx+bw,by+bh,bx,by+bh,r); ctx.arcTo(bx,by+bh,bx,by,r); ctx.arcTo(bx,by,bx+bw,by,r); ctx.closePath(); ctx.fill();
       ctx.fillStyle='#000'; ctx.fillText(state.badgeText,W/2,by+bh/2+bsize*0.04);
     }
+    drawTextBox(ctx,W,H,state.textBox);
     if(state.tbiCircle){
       var D=W*0.115*(state.tbiScale||1), M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc;
       if(state.tbiCirclePos==='tl'){cx=left;cyc=top;} else if(state.tbiCirclePos==='bl'){cx=left;cyc=bot;} else if(state.tbiCirclePos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;}
@@ -1057,9 +1065,152 @@ function igBoot(){
       b.textContent="Scheduled "+CK; setTimeout(function(){ b.textContent="Schedule"; b.disabled=false; },2600);
     }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Schedule"; b.disabled=false; }
   };
+  if($('#ig-tbwrap')){ $('#ig-tbwrap').innerHTML=tbPanelHTML('igtb'); wireTB('igtb', function(){ return state.textBox; }, render); syncTB('igtb', state.textBox); }
   loadIGCandidates();
-  (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"')]); }catch(e){} render(); })();
+  (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"'), document.fonts.load('400 40px "Georgia"')]); }catch(e){} render(); })();
   document.fonts.ready.then(render);
+}
+// ===== Shared text-box overlay (header + hairline + body; floating or full-bleed) =====
+function tbFontStack(name){
+  if(name==='EdsMarket') return '"EdsMarket", "Permanent Marker", cursive';
+  if(name==='Playfair Display') return '"Playfair Display", Georgia, serif';
+  if(name==='Georgia') return 'Georgia, "Times New Roman", serif';
+  if(name==='Arial') return 'Arial, Helvetica, sans-serif';
+  return name;
+}
+function tbWrap(c, text, maxW){
+  var out=[], paras=String(text==null?'':text).split(String.fromCharCode(10));
+  for(var p=0;p<paras.length;p++){
+    var para=paras[p];
+    if(para.trim()===''){ out.push(''); continue; }
+    var words=para.split(/ +/), line='';
+    for(var i=0;i<words.length;i++){ var wd=words[i], test=line?line+' '+wd:wd; if(c.measureText(test).width>maxW && line){ out.push(line); line=wd; } else line=test; }
+    if(line) out.push(line);
+  }
+  return out;
+}
+function defaultTextBox(){
+  return { on:false, mode:'float', bg:'#ffffff', bgOn:true, yPos:0.5, xPos:0, widthFrac:0.88, radius:14,
+    header:{ text:'THE PARADE IS MORE FUN THAN YOU THINK.', font:'EdsMarket', color:'#141414', size:0.050, lh:1.04, on:true },
+    hairlineOn:true, hairlineColor:'#d8d2c8',
+    body:{ text:'Everyone always says the Pride parade is too corporate. But I have always had fun walking in it.', font:'Georgia', color:'#2a2a2a', size:0.030, lh:1.45, on:true } };
+}
+function drawTextBox(c, W, H, tb){
+  if(!tb || !tb.on) return;
+  var bleed = tb.mode==='bleed';
+  var boxW = bleed ? W : Math.round(W*(tb.widthFrac==null?0.88:tb.widthFrac));
+  var padX = bleed ? W*0.075 : Math.round(boxW*0.07);
+  var padY = bleed ? Math.round(H*0.05) : Math.round(boxW*0.07);
+  var innerW = boxW - padX*2;
+  var h=tb.header||{}, b=tb.body||{};
+  var hLines=[], hLH=0, hSize=0;
+  if(h.on!==false && (h.text||'').trim()){
+    hSize=Math.round(W*(h.size==null?0.050:h.size));
+    c.font='400 '+hSize+'px '+tbFontStack(h.font||'EdsMarket');
+    hLines=tbWrap(c, h.text, innerW); hLH=hSize*(h.lh||1.04);
+  }
+  var bLines=[], bLH=0, bSize=0;
+  if(b.on!==false && (b.text||'').trim()){
+    bSize=Math.round(W*(b.size==null?0.030:b.size));
+    c.font='400 '+bSize+'px '+tbFontStack(b.font||'Georgia');
+    bLines=tbWrap(c, b.text, innerW); bLH=bSize*(b.lh||1.45);
+  }
+  var both=hLines.length&&bLines.length;
+  var hairGap=both?Math.round(hSize*0.5):0, hairH=(both&&tb.hairlineOn)?2:0, gapHB=(both&&!tb.hairlineOn)?Math.round(hSize*0.4):0;
+  var sep=both?(tb.hairlineOn?(hairGap*2+hairH):gapHB):0;
+  var contentH=hLines.length*hLH+sep+bLines.length*bLH;
+  if(!contentH) return;
+  var boxH=Math.min(H, Math.round(contentH+padY*2));
+  var yPos=(tb.yPos==null?0.5:tb.yPos), boxY=Math.round((H-boxH)*yPos), boxX;
+  if(bleed){ boxX=0; } else { var freeX=W-boxW, xPos=(tb.xPos==null?0:tb.xPos); boxX=Math.round(freeX/2+xPos*(freeX/2)); }
+  if(tb.bgOn!==false){
+    c.fillStyle=tb.bg||'#ffffff';
+    if(bleed){ c.fillRect(boxX,boxY,boxW,boxH); }
+    else { var r=Math.max(0,tb.radius==null?14:tb.radius); c.beginPath(); c.moveTo(boxX+r,boxY); c.arcTo(boxX+boxW,boxY,boxX+boxW,boxY+boxH,r); c.arcTo(boxX+boxW,boxY+boxH,boxX,boxY+boxH,r); c.arcTo(boxX,boxY+boxH,boxX,boxY,r); c.arcTo(boxX,boxY,boxX+boxW,boxY,r); c.closePath(); c.fill(); }
+  }
+  c.textAlign='left'; c.textBaseline='top';
+  var tx=boxX+padX, cy=boxY+padY;
+  if(hLines.length){ c.font='400 '+hSize+'px '+tbFontStack(h.font||'EdsMarket'); c.fillStyle=h.color||'#141414'; for(var i=0;i<hLines.length;i++){ c.fillText(hLines[i],tx,cy); cy+=hLH; } }
+  if(both){ if(tb.hairlineOn){ cy+=hairGap; c.fillStyle=tb.hairlineColor||'#d8d2c8'; c.fillRect(tx,Math.round(cy),innerW,hairH); cy+=hairH+hairGap; } else { cy+=gapHB; } }
+  if(bLines.length){ c.font='400 '+bSize+'px '+tbFontStack(b.font||'Georgia'); c.fillStyle=b.color||'#2a2a2a'; for(var j=0;j<bLines.length;j++){ c.fillText(bLines[j],tx,cy); cy+=bLH; } }
+}
+function loadSavedEdsMarket(cb){
+  try{
+    if(document.fonts.check('400 40px "EdsMarket"')){ cb&&cb(); return; }
+    var s=localStorage.getItem('ig_font_b64'); if(!s){ cb&&cb(); return; }
+    var bs=atob(s), u=new Uint8Array(bs.length); for(var i=0;i<bs.length;i++) u[i]=bs.charCodeAt(i);
+    var face=new FontFace('EdsMarket', u.buffer); face.load().then(function(f){ document.fonts.add(f); cb&&cb(); }).catch(function(){ cb&&cb(); });
+  }catch(e){ cb&&cb(); }
+}
+function tbPanelHTML(p){
+  var fonts='<option value="EdsMarket">Eds Market (brush)</option><option value="Playfair Display">Playfair (serif)</option><option value="Georgia">Georgia (serif)</option><option value="Arial">Arial (sans)</option>';
+  return '<div class="set-group"><h3>Text box (optional)</h3><div class="ig-body">'
+    +'<div class="ig-toggle">Show text box<label class="switch"><input type="checkbox" id="'+p+'-on"><span class="slider-sw"></span></label></div>'
+    +'<div class="ig-fld">Style<div class="ig-seg" id="'+p+'-mode"><button data-m="float" class="on">Floating</button><button data-m="bleed">Full-bleed</button></div></div>'
+    +'<div class="ig-toggle">Box background fill<label class="switch"><input type="checkbox" id="'+p+'-bgon" checked><span class="slider-sw"></span></label></div>'
+    +'<div class="ig-fld">Box color<input type="color" id="'+p+'-bg" value="#ffffff" class="tb-color"></div>'
+    +'<div class="ig-fld">Vertical position <span class="val" id="'+p+'-yVal">middle</span><input type="range" id="'+p+'-y" min="0" max="100" value="50"></div>'
+    +'<div class="ig-fld" id="'+p+'-xrow">Horizontal position <span class="val" id="'+p+'-xVal">center</span><input type="range" id="'+p+'-x" min="-100" max="100" value="0"></div>'
+    +'<div class="ig-fld" id="'+p+'-wrow">Box width <span class="val" id="'+p+'-wVal">88%</span><input type="range" id="'+p+'-w" min="45" max="100" value="88"></div>'
+    +'<div class="tb-sub">Header</div>'
+    +'<div class="ig-toggle">Show header<label class="switch"><input type="checkbox" id="'+p+'-hon" checked><span class="slider-sw"></span></label></div>'
+    +'<textarea id="'+p+'-htext" class="tb-ta"></textarea>'
+    +'<div class="ig-fld">Header font<select id="'+p+'-hfont" class="tb-sel">'+fonts+'</select></div>'
+    +'<div class="ig-fld">Header color<input type="color" id="'+p+'-hcolor" value="#141414" class="tb-color"></div>'
+    +'<div class="ig-fld">Header size <span class="val" id="'+p+'-hsizeVal">5.0%</span><input type="range" id="'+p+'-hsize" min="20" max="110" value="50"></div>'
+    +'<div class="ig-fld">Header line height <span class="val" id="'+p+'-hlhVal">1.04</span><input type="range" id="'+p+'-hlh" min="85" max="180" value="104"></div>'
+    +'<div class="ig-toggle">Hairline under header<label class="switch"><input type="checkbox" id="'+p+'-hair" checked><span class="slider-sw"></span></label></div>'
+    +'<div class="tb-sub">Body text</div>'
+    +'<div class="ig-toggle">Show body<label class="switch"><input type="checkbox" id="'+p+'-bon" checked><span class="slider-sw"></span></label></div>'
+    +'<textarea id="'+p+'-btext" class="tb-ta"></textarea>'
+    +'<div class="ig-fld">Body font<select id="'+p+'-bfont" class="tb-sel">'+fonts+'</select></div>'
+    +'<div class="ig-fld">Body color<input type="color" id="'+p+'-bcolor" value="#2a2a2a" class="tb-color"></div>'
+    +'<div class="ig-fld">Body size <span class="val" id="'+p+'-bsizeVal">3.0%</span><input type="range" id="'+p+'-bsize" min="14" max="70" value="30"></div>'
+    +'<div class="ig-fld">Body line height <span class="val" id="'+p+'-blhVal">1.45</span><input type="range" id="'+p+'-blh" min="100" max="220" value="145"></div>'
+    +'</div></div>';
+}
+function tbSyncModeRows(p, mode){ var f=(mode||'float')==='float'; var xr=document.getElementById(p+'-xrow'), wr=document.getElementById(p+'-wrow'); if(xr) xr.style.display=f?'':'none'; if(wr) wr.style.display=f?'':'none'; }
+function syncTB(p, tb){
+  function S(id){ return document.getElementById(p+'-'+id); }
+  if(!tb) return;
+  S('on').checked=!!tb.on;
+  document.querySelectorAll('#'+p+'-mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m===(tb.mode||'float')); });
+  S('bgon').checked=tb.bgOn!==false; S('bg').value=tb.bg||'#ffffff';
+  var yv=Math.round((tb.yPos==null?0.5:tb.yPos)*100); S('y').value=yv; S('yVal').textContent=yv<34?'top':(yv>66?'bottom':'middle');
+  var xv=Math.round((tb.xPos==null?0:tb.xPos)*100); S('x').value=xv; S('xVal').textContent=xv===0?'center':(xv<0?'left':'right');
+  var wv=Math.round((tb.widthFrac==null?0.88:tb.widthFrac)*100); S('w').value=wv; S('wVal').textContent=wv+'%';
+  var h=tb.header||{}; S('hon').checked=h.on!==false; S('htext').value=h.text||''; S('hfont').value=h.font||'EdsMarket'; S('hcolor').value=h.color||'#141414';
+  var hs=Math.round((h.size==null?0.050:h.size)*1000); S('hsize').value=hs; S('hsizeVal').textContent=(hs/10).toFixed(1)+'%';
+  var hl=Math.round((h.lh==null?1.04:h.lh)*100); S('hlh').value=hl; S('hlhVal').textContent=(hl/100).toFixed(2);
+  S('hair').checked=tb.hairlineOn!==false;
+  var b=tb.body||{}; S('bon').checked=b.on!==false; S('btext').value=b.text||''; S('bfont').value=b.font||'Georgia'; S('bcolor').value=b.color||'#2a2a2a';
+  var bs=Math.round((b.size==null?0.030:b.size)*1000); S('bsize').value=bs; S('bsizeVal').textContent=(bs/10).toFixed(1)+'%';
+  var bl=Math.round((b.lh==null?1.45:b.lh)*100); S('blh').value=bl; S('blhVal').textContent=(bl/100).toFixed(2);
+  tbSyncModeRows(p, tb.mode);
+}
+function wireTB(p, getTB, rerender){
+  function S(id){ return document.getElementById(p+'-'+id); }
+  function up(){ rerender(); }
+  S('on').onchange=function(e){ var t=getTB(); if(t){ t.on=e.target.checked; up(); } };
+  document.querySelectorAll('#'+p+'-mode button').forEach(function(b){ b.onclick=function(){ var t=getTB(); if(!t) return; document.querySelectorAll('#'+p+'-mode button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); t.mode=b.dataset.m; tbSyncModeRows(p,t.mode); up(); }; });
+  S('bgon').onchange=function(e){ var t=getTB(); if(t){ t.bgOn=e.target.checked; up(); } };
+  S('bg').oninput=function(e){ var t=getTB(); if(t){ t.bg=e.target.value; up(); } };
+  S('y').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.yPos=v/100; S('yVal').textContent=v<34?'top':(v>66?'bottom':'middle'); up(); };
+  S('x').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.xPos=v/100; S('xVal').textContent=v===0?'center':(v<0?'left':'right'); up(); };
+  S('w').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.widthFrac=v/100; S('wVal').textContent=v+'%'; up(); };
+  S('hon').onchange=function(e){ var t=getTB(); if(t){ t.header.on=e.target.checked; up(); } };
+  S('htext').oninput=function(e){ var t=getTB(); if(t){ t.header.text=e.target.value; up(); } };
+  S('hfont').onchange=function(e){ var t=getTB(); if(t){ t.header.font=e.target.value; up(); } };
+  S('hcolor').oninput=function(e){ var t=getTB(); if(t){ t.header.color=e.target.value; up(); } };
+  S('hsize').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.header.size=v/1000; S('hsizeVal').textContent=(v/10).toFixed(1)+'%'; up(); };
+  S('hlh').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.header.lh=v/100; S('hlhVal').textContent=(v/100).toFixed(2); up(); };
+  S('hair').onchange=function(e){ var t=getTB(); if(t){ t.hairlineOn=e.target.checked; up(); } };
+  S('bon').onchange=function(e){ var t=getTB(); if(t){ t.body.on=e.target.checked; up(); } };
+  S('btext').oninput=function(e){ var t=getTB(); if(t){ t.body.text=e.target.value; up(); } };
+  S('bfont').onchange=function(e){ var t=getTB(); if(t){ t.body.font=e.target.value; up(); } };
+  S('bcolor').oninput=function(e){ var t=getTB(); if(t){ t.body.color=e.target.value; up(); } };
+  S('bsize').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.body.size=v/1000; S('bsizeVal').textContent=(v/10).toFixed(1)+'%'; up(); };
+  S('blh').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.body.lh=v/100; S('blhVal').textContent=(v/100).toFixed(2); up(); };
 }
 var _igtab=document.querySelector('.subtab[data-tab="instagram"]'); if(_igtab) _igtab.addEventListener('click', initIG);
 
@@ -1086,6 +1237,7 @@ function cpBoot(){
       if(st.fit==='contain'){ var s=Math.min(W/iw,H/ih); var dw=iw*s, dh=ih*s; c.drawImage(o.img,(W-dw)/2,(H-dh)/2,dw,dh); }
       else { var s2=Math.max(W/iw,H/ih)*(o.zoom||1); var dw2=iw*s2, dh2=ih*s2; var overflowY=dh2-H; var dx=(W-dw2)/2, dy=(H-dh2)/2+((o.posY||0)*overflowY/2); c.save(); c.beginPath(); c.rect(0,0,W,H); c.clip(); c.drawImage(o.img,dx,dy,dw2,dh2); c.restore(); }
     }
+    drawTextBox(c,W,H, o?o.textBox:null);
     paintCircle(c,W,H);
   }
   function cpRender(){ var W=st.W,H=st.H; if(canvas.width!==W) canvas.width=W; if(canvas.height!==H) canvas.height=H; paint(ctx, st.imgs[st.sel]||null, W, H); var ex=$('#cp-export'); if(ex) ex.disabled=!st.imgs.length; }
@@ -1097,7 +1249,7 @@ function cpBoot(){
     var cnt=$('#cp-count'); cnt.textContent = st.imgs.length ? (st.imgs.length+' photo'+(st.imgs.length>1?'s':'')+(st.imgs.length>1?' - posts as a carousel':' - posts as a single')) : 'No photos yet.';
     var ord=$('#cp-order'); if(st.imgs.length>1){ ord.style.display='flex'; $('#cp-sel-label').textContent='Photo '+(st.sel+1)+' of '+st.imgs.length; $('#cp-left').disabled=(st.sel===0); $('#cp-right').disabled=(st.sel===st.imgs.length-1); } else { ord.style.display='none'; }
   }
-  function syncSliders(){ var o=st.imgs[st.sel]; var pv=o?Math.round((o.posY||0)*100):0, zv=o?Math.round((o.zoom||1)*100):100; $('#cp-pos').value=pv; $('#cp-posVal').textContent=pv===0?'center':(pv<0?'higher':'lower'); $('#cp-zoom').value=zv; $('#cp-zoomVal').textContent=zv+'%'; }
+  function syncSliders(){ var o=st.imgs[st.sel]; var pv=o?Math.round((o.posY||0)*100):0, zv=o?Math.round((o.zoom||1)*100):100; $('#cp-pos').value=pv; $('#cp-posVal').textContent=pv===0?'center':(pv<0?'higher':'lower'); $('#cp-zoom').value=zv; $('#cp-zoomVal').textContent=zv+'%'; syncTB('cptb', o?o.textBox:null); }
   function selectImg(i){ st.sel=i; syncSliders(); renderThumbs(); cpRender(); }
   function removeImg(i){ var o=st.imgs[i]; if(o&&o.url){ try{URL.revokeObjectURL(o.url);}catch(e){} } st.imgs.splice(i,1); if(st.sel>=st.imgs.length) st.sel=Math.max(0,st.imgs.length-1); syncSliders(); renderThumbs(); cpRender(); }
   function flashCount(msg){ var c=$('#cp-count'), old=c.textContent; c.textContent=msg; setTimeout(function(){ renderThumbs(); },1800); }
@@ -1105,7 +1257,7 @@ function cpBoot(){
     var arr=[].slice.call(files).filter(function(f){ return f && f.type && f.type.indexOf('image/')===0; });
     for(var k=0;k<arr.length;k++){
       if(st.imgs.length>=10){ flashCount('Max 10 photos per post.'); break; }
-      (function(f){ var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,posY:0,zoom:1,name:f.name}; st.imgs.push(o); img.onload=function(){ o.img=img; renderThumbs(); cpRender(); }; img.src=url; })(arr[k]);
+      (function(f){ var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,posY:0,zoom:1,name:f.name,textBox:defaultTextBox()}; st.imgs.push(o); img.onload=function(){ o.img=img; renderThumbs(); cpRender(); }; img.src=url; })(arr[k]);
     }
     if(st.sel>=st.imgs.length) st.sel=0;
     syncSliders(); renderThumbs(); cpRender();
@@ -1191,8 +1343,10 @@ function cpBoot(){
       b.textContent='Scheduled '+CK; setTimeout(function(){ b.textContent='Schedule'; b.disabled=false; },2600);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Schedule'; b.disabled=false; }
   };
+  if($('#cp-tbwrap')){ $('#cp-tbwrap').innerHTML=tbPanelHTML('cptb'); wireTB('cptb', function(){ return st.imgs[st.sel]?st.imgs[st.sel].textBox:null; }, cpRender); syncTB('cptb', st.imgs[st.sel]?st.imgs[st.sel].textBox:null); }
+  loadSavedEdsMarket(cpRender);
   renderThumbs(); cpRender();
-  (async function(){ try{ await document.fonts.load('400 120px "Permanent Marker"'); }catch(e){} cpRender(); })();
+  (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('400 40px "Georgia"'), document.fonts.load('italic 800 40px "Playfair Display"')]); }catch(e){} cpRender(); })();
 }
 // ---- Instagram inner views (story / custom / scheduled) ----
 var IG_SCHED_MAP={};
