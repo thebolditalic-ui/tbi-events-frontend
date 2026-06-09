@@ -671,8 +671,8 @@ async function loadFeed(){
   if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
   const groups={};
   data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,when:r.created_at,items:[]}).items.push(r); });
-  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+'</div></div>'+
-    g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Collapse</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+    '<div class="grp-items">'+g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
       '<span class="text">'+esc(it.content)+'</span></div>'+
       '<div class="acts">'+
@@ -680,10 +680,12 @@ async function loadFeed(){
         '<button class="btn btn-outline btn-sm edit">Edit</button>'+
         '<button class="btn btn-outline btn-sm copy">Copy</button>'+
         '<button class="btn btn-outline btn-sm discard">Discard</button>'+
-      '</div></div>').join('')+'</div>').join('');
+      '</div></div>').join('')+'</div></div>').join('');
   wireSuggHandlers(host);
 }
 function wireSuggHandlers(host){
+  host.querySelectorAll('.grp-toggle').forEach(b=>b.onclick=e=>{ const card=e.target.closest('.story-card'); const items=card.querySelector('.grp-items'); const hidden=items.style.display==='none'; items.style.display=hidden?'':'none'; e.target.textContent=hidden?'Collapse':'Expand'; });
+  host.querySelectorAll('.grp-del').forEach(b=>b.onclick=async e=>{ const card=e.target.closest('.story-card'); const ids=(card.dataset.ids||'').split(',').filter(Boolean); if(!ids.length){ card.remove(); return; } e.target.disabled=true; e.target.textContent='Deleting…'; try{ await sb.from('social_suggestions').update({status:'discarded'}).in('id',ids); card.remove(); }catch(err){ e.target.disabled=false; e.target.textContent='Delete all'; } });
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
     const t=e.target.closest('.sugg').querySelector('.text').textContent;
     navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
