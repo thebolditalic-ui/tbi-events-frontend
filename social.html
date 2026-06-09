@@ -312,6 +312,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <div class="ig-viewnav">
         <button class="ig-viewbtn active" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="custom">Custom post</button>
+        <button class="ig-viewbtn" data-igview="reel">Reel</button>
         <button class="ig-viewbtn" data-igview="scheduled">Scheduled</button>
       </div>
       <div class="ig-view active" id="ig-view-story">
@@ -437,6 +438,38 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
       </div>
       </div><!-- /ig-view-custom -->
+
+      <div class="ig-view" id="ig-view-reel">
+      <p class="sub" style="margin-top:4px">Upload a finished vertical video and send it out as a <b>Reel</b> on Instagram and Facebook. Best results: <b>9:16</b>, up to <b>90 seconds</b> (Facebook's limit; Instagram allows longer), MP4, under <b>50MB</b>.</p>
+      <div class="ig-grid">
+        <div class="ig-stage">
+          <video id="reel-preview" controls playsinline style="display:none;width:100%;max-width:280px;aspect-ratio:9/16;border-radius:10px;background:#000;margin:0 auto"></video>
+          <div class="ig-drop" id="reel-drop" style="margin-top:10px"><b>Drop a video</b> or click to choose<br><span style="font-size:10px">MP4 or MOV, up to 50MB</span></div>
+          <input type="file" id="reel-file" accept="video/mp4,video/quicktime" hidden>
+          <div class="ig-hint" id="reel-info" style="margin-top:8px;text-align:center"></div>
+          <div class="ig-actions">
+            <button class="btn btn-gold" id="reel-send">Send to Scheduling</button>
+            <button class="btn btn-outline btn-sm" id="reel-clear" style="display:none">Remove video</button>
+          </div>
+          <div class="run-status" id="reel-status" style="width:100%;text-align:center;line-height:1.4"></div>
+        </div>
+        <div class="ig-ctrl">
+          <div class="set-group"><h3>1 &middot; Caption</h3><div class="ig-body">
+            <textarea id="reel-caption" placeholder="Write the caption here, or describe the reel below and let the AI helper draft it." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <div class="ig-hint" style="margin:14px 0 8px;border-top:1px solid var(--border);padding-top:12px"><b style="color:var(--dark)">AI helper</b> &mdash; describe what's in the reel (or paste notes) and draft a caption in TBI voice.</div>
+            <textarea id="reel-src" placeholder="e.g. A walk through the new night market on Folsom, ends on the taiyaki stand..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <div class="ig-toggle" style="margin-top:10px">Add up to 5 hashtags<label class="switch"><input type="checkbox" id="reel-hash"><span class="slider-sw"></span></label></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+              <button class="btn btn-gold btn-sm" id="reel-draft">Draft caption</button>
+              <span class="run-status" id="reel-draft-status"></span>
+            </div>
+          </div></div>
+          <div class="set-group"><h3>2 &middot; What happens next</h3><div class="ig-body">
+            <div class="ig-hint" style="line-height:1.5"><b style="color:var(--dark)">Send to Scheduling</b> stages it on the <b>Schedule</b> tab, where you pick Instagram and/or Facebook and post now, drop it in a slot, or set a time. Publishing a video takes the networks a couple of minutes &mdash; the queue handles the waiting.<br><br>Spec notes: Facebook Reels must be <b>3&ndash;90s</b> and 9:16 or Facebook rejects them; Instagram takes 3s up to 15 min. The staged video file is cleaned up automatically after it posts everywhere.</div>
+          </div></div>
+        </div>
+      </div>
+      </div><!-- /ig-view-reel -->
 
       <div class="ig-view" id="ig-view-scheduled">
         <p class="sub" style="margin-top:4px">Posts queued to publish to Instagram automatically. They fire at the set time (the queue is checked every few minutes). Cancel or post early anytime.</p>
@@ -915,10 +948,13 @@ async function loadStaged(){
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft.</div>'; return; }
   var slotOpts=slotOptionsHtml(await upcomingSlots(20));
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
-    var isImg=Array.isArray(it.image_urls)&&it.image_urls.length;
-    var media=isImg?('<div class="staged-thumbs">'+it.image_urls.map(function(u){return '<img src="'+esc(u)+'" alt="">';}).join('')+'</div>'):'';
-    var metaRow=isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>');
-    var toggles=isImg?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
+    var isVid=!!it.video_url;
+    var isImg=!isVid&&Array.isArray(it.image_urls)&&it.image_urls.length;
+    var media=isVid?('<div class="staged-thumbs"><video src="'+esc(it.video_url)+'" controls preload="metadata" playsinline style="width:120px;aspect-ratio:9/16;border-radius:8px;background:#000"></video></div>')
+      :(isImg?('<div class="staged-thumbs">'+it.image_urls.map(function(u){return '<img src="'+esc(u)+'" alt="">';}).join('')+'</div>'):'');
+    var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Reel &middot; posts as a video on Instagram / Facebook</div>')
+      :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
+    var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
@@ -935,7 +971,13 @@ async function loadStaged(){
   host.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
   host.querySelectorAll('.linkopen').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var inp=a.parentNode.querySelector('.linkfield'); var u=inp?(inp.value||'').trim():''; if(u) window.open(u,'_blank','noopener'); }; });
   host.querySelectorAll('.comp .copy').forEach(function(b){ b.onclick=function(e){ var t=e.target.closest('.sugg').querySelector('.text').textContent; navigator.clipboard.writeText(t); e.target.textContent='Copied '+CK; setTimeout(function(){e.target.textContent='Copy';},1400); }; });
-  host.querySelectorAll('.comp .unstage').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
+  host.querySelectorAll('.comp .unstage').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); var it=STAGED_MAP[row.dataset.id]||{};
+    if(it.video_url){
+      if(!window.confirm('Remove this reel from Staged? The uploaded video file is deleted too.')) return;
+      try{ var vp=it.video_url.split('/storage/v1/object/public/ig-rendered/')[1]; if(vp) await sb.storage.from('ig-rendered').remove([vp.split('?')[0]]); }catch(_e){}
+      await sb.from('social_suggestions').delete().eq('id',row.dataset.id); row.remove(); return;
+    }
+    await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
   host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
 }
 async function scheduleStaged(row){
@@ -943,8 +985,9 @@ async function scheduleStaged(row){
   var channels=[].map.call(row.querySelectorAll('.ch-toggle.on'),function(c){return c.dataset.ch;});
   if(!channels.length){ res.className='sched-result err'; res.textContent='Pick at least one channel.'; return; }
   var imgs=Array.isArray(it.image_urls)?it.image_urls:[];
-  var link=imgs.length?'':((row.querySelector('.linkfield')||{}).value||'').trim();
-  var msg=(imgs.length||!link)?((it.content||'').trim()):fbStripLink(it.content);
+  var vid=it.video_url||'';
+  var link=(imgs.length||vid)?'':((row.querySelector('.linkfield')||{}).value||'').trim();
+  var msg=(imgs.length||vid||!link)?((it.content||'').trim()):fbStripLink(it.content);
   var mode=(row.querySelector('input[name="w'+id+'"]:checked')||{}).value||'slot';
   var when=null;
   if(mode==='now'){ when=new Date().toISOString(); }
@@ -953,11 +996,12 @@ async function scheduleStaged(row){
   btn.disabled=true; btn.textContent=(mode==='now')?'Posting...':'Scheduling...'; res.className='sched-result'; res.textContent='';
   try{
     if(mode==='now'){
-      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,image_urls:imgs,channels:channels,suggestion_id:id}});
+      if(vid){ res.className='sched-result'; res.textContent='Publishing the reel - Instagram and Facebook take a couple of minutes to process video. Leave this tab open...'; }
+      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,image_urls:imgs,video_url:vid||null,channels:channels,suggestion_id:id}});
       if(dr.error) throw dr.error; if(!dr.data||(dr.data.ok===false&&dr.data.status==='failed')) throw new Error('all channels failed');
       res.className='sched-result ok'; res.innerHTML=CK+' Posted ('+esc(channels.join(', '))+')';
     } else {
-      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
+      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,video_url:vid||null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
       if(ins.error) throw ins.error;
       await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',id);
       res.className='sched-result ok'; res.innerHTML=CK+' Scheduled for '+esc(fmtWhen(when));
@@ -975,9 +1019,9 @@ async function loadQueue(){
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing in the new queue yet.</div>'; host.insertAdjacentHTML('beforeend','<div id="q-draining"></div>'); loadDraining(); return; }
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
     return '<div class="sugg q" data-id="'+it.id+'"><div class="body">'+
-      ((Array.isArray(it.image_urls)&&it.image_urls.length)?'<img class="q-thumb" src="'+esc(it.image_urls[0])+'" alt="">':'')+
+      (it.video_url?('<video class="q-thumb" src="'+esc(it.video_url)+'" preload="metadata" muted playsinline style="aspect-ratio:9/16;background:#000;object-fit:cover"></video>'):((Array.isArray(it.image_urls)&&it.image_urls.length)?'<img class="q-thumb" src="'+esc(it.image_urls[0])+'" alt="">':''))+
       '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
-      '<div class="meta" style="margin-top:6px">'+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; <a href="'+esc(it.link)+'" target="_blank" rel="noopener">link</a>':'')+'</div>'+
+      '<div class="meta" style="margin-top:6px">'+(it.video_url?'Reel &middot; ':'')+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; <a href="'+esc(it.link)+'" target="_blank" rel="noopener">link</a>':'')+'</div>'+
       '<div class="sched-result" data-res></div></div>'+
       '<div class="acts"><button class="btn btn-outline btn-sm qedit">Edit</button>'+
       '<button class="btn btn-danger btn-sm qrevoke">Revoke</button></div></div>';
@@ -1004,7 +1048,7 @@ async function revokeQueued(row){
   try{
     var q=await sb.from('post_queue').select('*').eq('id',id).single(); var it=q.data||{};
     if(it.source_suggestion_id){ await sb.from('social_suggestions').update({status:'staged'}).eq('id',it.source_suggestion_id); }
-    else { await sb.from('social_suggestions').insert({kind:'story_post',content:it.text||'',story_url:it.link||null,status:'staged'}); }
+    else { await sb.from('social_suggestions').insert({kind:(it.video_url?'reel':'story_post'),content:it.text||'',story_url:it.link||null,video_url:it.video_url||null,status:'staged'}); }
     await sb.from('post_queue').delete().eq('id',id);
     res.className='sched-result ok'; res.textContent=CK+' Back in Staged drafts'; setTimeout(loadQueue,1100);
   }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Revoke'; }
@@ -1863,6 +1907,7 @@ function showIGView(v){
   document.querySelectorAll('.ig-viewbtn').forEach(function(x){ x.classList.toggle('active', x.dataset.igview===v); });
   document.querySelectorAll('.ig-view').forEach(function(x){ x.classList.toggle('active', x.id===('ig-view-'+v)); });
   if(v==='custom') initCP();
+  if(v==='reel') initReel();
   if(v==='scheduled') loadIGScheduled();
 }
 document.querySelectorAll('.ig-viewbtn').forEach(function(b){ b.onclick=function(){ showIGView(b.dataset.igview); }; });
@@ -1902,6 +1947,73 @@ async function igStageAndSchedule(blobs, opts){
   }
   var ins=await sb.from('ig_scheduled').insert({ source:opts.source||'custom', card_id:opts.card_id||null, image_urls:urls, storage_paths:paths, caption:opts.caption||'', alt_text:opts.alt_text||'', scheduled_at:opts.whenIso, status:'pending' });
   if(ins.error) throw new Error(ins.error.message);
+}
+
+// ---- Reel (video) upload view ----
+var REEL_ST={file:null, url:null, wired:false};
+function initReel(){
+  if(REEL_ST.wired) return; REEL_ST.wired=true;
+  var drop=$('#reel-drop'), inp=$('#reel-file'), prev=$('#reel-preview'), info=$('#reel-info'), clearBtn=$('#reel-clear');
+  function setFile(f){
+    if(!f) return;
+    var okType=/^video[/](mp4|quicktime)$/i.test(f.type||'')||/[.](mp4|mov)$/i.test(f.name||'');
+    if(!okType){ info.innerHTML='<span style="color:var(--red)">That is not an MP4/MOV video.</span>'; return; }
+    if(f.size>50*1024*1024){ info.innerHTML='<span style="color:var(--red)">Too big: '+(f.size/1048576).toFixed(1)+'MB. Hosting caps uploads at 50MB &mdash; export a smaller or shorter cut.</span>'; return; }
+    if(REEL_ST.url){ try{ URL.revokeObjectURL(REEL_ST.url); }catch(_e){} }
+    REEL_ST.file=f; REEL_ST.url=URL.createObjectURL(f);
+    prev.src=REEL_ST.url; prev.style.display='block'; clearBtn.style.display='';
+    info.textContent='Checking the video...';
+    var probe=document.createElement('video');
+    probe.preload='metadata';
+    probe.onloadedmetadata=function(){
+      var dur=probe.duration||0, w=probe.videoWidth||0, h=probe.videoHeight||0;
+      var bits=[(f.size/1048576).toFixed(1)+'MB', Math.round(dur)+'s', w+'&times;'+h];
+      var warns=[];
+      if(dur&&dur<3) warns.push('shorter than 3 seconds &mdash; both networks reject it');
+      if(dur>90) warns.push('over 90 seconds &mdash; Facebook Reels max is 90s (Instagram is fine with it)');
+      if(w&&h&&(w/h)>0.6) warns.push('not 9:16 vertical &mdash; Facebook may reject it; Instagram will crop');
+      info.innerHTML=bits.join(' &middot; ')+(warns.length?('<br><span style="color:var(--red)">&#9888; '+warns.join('<br>&#9888; ')+'</span>'):' <span style="color:var(--green)">'+CK+' looks good</span>');
+    };
+    probe.onerror=function(){ info.textContent=(f.size/1048576).toFixed(1)+'MB'; };
+    probe.src=REEL_ST.url;
+  }
+  drop.onclick=function(){ inp.click(); };
+  inp.onchange=function(){ setFile(inp.files&&inp.files[0]); inp.value=''; };
+  drop.ondragover=function(e){ e.preventDefault(); drop.classList.add('drag'); };
+  drop.ondragleave=function(){ drop.classList.remove('drag'); };
+  drop.ondrop=function(e){ e.preventDefault(); drop.classList.remove('drag'); setFile(e.dataTransfer.files&&e.dataTransfer.files[0]); };
+  clearBtn.onclick=function(){ REEL_ST.file=null; if(REEL_ST.url){ try{ URL.revokeObjectURL(REEL_ST.url); }catch(_e){} REEL_ST.url=null; } prev.removeAttribute('src'); prev.load(); prev.style.display='none'; clearBtn.style.display='none'; info.textContent=''; $('#reel-status').textContent=''; };
+  $('#reel-draft').onclick=async function(){
+    var b=$('#reel-draft'), stt=$('#reel-draft-status');
+    var src=($('#reel-src').value||'').trim();
+    if(!src){ stt.textContent='Describe the reel first.'; return; }
+    b.disabled=true; stt.textContent='Drafting...';
+    try{
+      var r=await sb.functions.invoke('generate',{body:{caption:true, source_text:src, hashtags:$('#reel-hash').checked}});
+      var d=r.data||{};
+      if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
+      if(d.error) throw new Error(d.error);
+      $('#reel-caption').value=d.caption||'';
+      stt.textContent=d.caption?('Drafted '+CK+(d.est_cost_usd?(' - $'+d.est_cost_usd):'')):'No caption returned.';
+    }catch(e){ stt.textContent='Error: '+(e&&e.message?e.message:e); }
+    b.disabled=false;
+  };
+  $('#reel-send').onclick=async function(){
+    var b=$('#reel-send'), stt=$('#reel-status');
+    if(!REEL_ST.file){ stt.innerHTML='<span style="color:var(--red)">Add a video first.</span>'; return; }
+    b.disabled=true; b.textContent='Sending...'; stt.textContent='Uploading video ('+(REEL_ST.file.size/1048576).toFixed(1)+'MB &mdash; can take a minute)...';
+    try{
+      var ext=/[.]mov$/i.test(REEL_ST.file.name||'')?'.mov':'.mp4';
+      var path='sched-reel-'+crypto.randomUUID()+ext;
+      var up=await sb.storage.from('ig-rendered').upload(path, REEL_ST.file, {upsert:true, contentType:(REEL_ST.file.type||'video/mp4')});
+      if(up.error) throw up.error;
+      var pub=sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl;
+      var ins=await sb.from('social_suggestions').insert({ kind:'reel', angle:'Reel', content:($('#reel-caption').value||''), video_url:pub, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() });
+      if(ins.error) throw new Error(ins.error.message);
+      stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged) to pick Instagram/Facebook and when.';
+      b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
+  };
 }
 
 async function loadIGScheduled(){
