@@ -237,6 +237,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .staged-thumbs img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
 .q-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);float:left;margin-right:8px}
 .ch-instagram{background:#d6336c;color:#fff}
+.linkopen{font-size:11px;color:var(--blue);white-space:nowrap;text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
@@ -721,8 +722,9 @@ async function loadFeed(){
   if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
   if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
   const groups={};
-  data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,when:r.created_at,items:[]}).items.push(r); });
+  data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,link:r.link,when:r.created_at,items:[]}).items.push(r); });
   host.innerHTML=Object.values(groups).map(g=>'<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Expand</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+    '<div class="when-row feedlink-row" style="margin:0 0 10px"><span class="when-hint">Link:</span> <input type="text" class="feedlink" value="'+esc(g.link||g.url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'+
     '<div class="grp-items" style="display:none">'+g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
       '<span class="text">'+esc(it.content)+'</span></div>'+
@@ -737,6 +739,8 @@ async function loadFeed(){
 function wireSuggHandlers(host){
   host.querySelectorAll('.grp-toggle').forEach(b=>b.onclick=e=>{ const card=e.target.closest('.story-card'); const items=card.querySelector('.grp-items'); const hidden=items.style.display==='none'; items.style.display=hidden?'':'none'; e.target.textContent=hidden?'Collapse':'Expand'; });
   host.querySelectorAll('.grp-del').forEach(b=>b.onclick=async e=>{ const card=e.target.closest('.story-card'); const ids=(card.dataset.ids||'').split(',').filter(Boolean); if(!ids.length){ card.remove(); return; } e.target.disabled=true; e.target.textContent='Deleting…'; try{ await sb.from('social_suggestions').update({status:'discarded'}).in('id',ids); card.remove(); }catch(err){ e.target.disabled=false; e.target.textContent='Delete all'; } });
+  host.querySelectorAll('.linkopen').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var inp=a.parentNode.querySelector('.feedlink')||a.parentNode.querySelector('.linkfield'); var u=inp?(inp.value||'').trim():''; if(u) window.open(u,'_blank','noopener'); }; });
+  host.querySelectorAll('.feedlink').forEach(function(inp){ inp.onchange=async function(){ var card=inp.closest('.story-card'); var ids=(card.dataset.ids||'').split(',').filter(Boolean); var u=(inp.value||'').trim()||null; if(ids.length){ await sb.from('social_suggestions').update({link:u,story_url:u}).in('id',ids); } }; });
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
     const t=e.target.closest('.sugg').querySelector('.text').textContent;
     navigator.clipboard.writeText(t); e.target.textContent='Copied ✓'; setTimeout(()=>e.target.textContent='Copy',1400);
@@ -913,7 +917,7 @@ async function loadStaged(){
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
     var isImg=Array.isArray(it.image_urls)&&it.image_urls.length;
     var media=isImg?('<div class="staged-thumbs">'+it.image_urls.map(function(u){return '<img src="'+esc(u)+'" alt="">';}).join('')+'</div>'):'';
-    var metaRow=isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"></div>');
+    var metaRow=isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>');
     var toggles=isImg?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
@@ -929,6 +933,7 @@ async function loadStaged(){
       '<button class="btn btn-outline btn-sm unstage">Unstage</button></div></div>';
   }).join('')+'</div>';
   host.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
+  host.querySelectorAll('.linkopen').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var inp=a.parentNode.querySelector('.linkfield'); var u=inp?(inp.value||'').trim():''; if(u) window.open(u,'_blank','noopener'); }; });
   host.querySelectorAll('.comp .copy').forEach(function(b){ b.onclick=function(e){ var t=e.target.closest('.sugg').querySelector('.text').textContent; navigator.clipboard.writeText(t); e.target.textContent='Copied '+CK; setTimeout(function(){e.target.textContent='Copy';},1400); }; });
   host.querySelectorAll('.comp .unstage').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
   host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
