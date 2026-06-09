@@ -176,8 +176,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .ig-viewbtn.active{color:var(--blue);border-bottom-color:var(--blue)}
 .ig-view{display:none}
 .ig-view.active{display:block}
-.ig-sched-row{display:flex;gap:6px;align-items:center;width:100%;justify-content:center;flex-wrap:wrap;margin-top:2px}
-.ig-sched-row input[type=datetime-local]{padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:12px;background:var(--bg-alt);color:var(--dark)}
 .sched-card{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px}
 .sched-card img{width:64px;height:64px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:#000}
 .sched-card .body{flex:1;min-width:0}
@@ -313,7 +311,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <button class="ig-viewbtn active" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="custom">Custom post</button>
         <button class="ig-viewbtn" data-igview="reel">Reel</button>
-        <button class="ig-viewbtn" data-igview="scheduled">Scheduled (IG direct)</button>
       </div>
       <div class="ig-view active" id="ig-view-story">
       <div class="ig-cand">
@@ -333,7 +330,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
-            <div class="ig-sched-row"><input type="datetime-local" id="ig-when"><button class="btn btn-outline btn-sm" id="ig-schedule">Schedule</button></div>
             <div class="run-status" id="ig-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
           </div>
         </div>
@@ -396,7 +392,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <button class="btn btn-gold" id="cp-send">Send to Scheduling</button>
             <button class="btn btn-outline btn-sm" id="cp-post">Post to IG now</button>
             <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
-            <div class="ig-sched-row"><input type="datetime-local" id="cp-when"><button class="btn btn-outline btn-sm" id="cp-schedule">Schedule</button></div>
           </div>
           <div class="run-status" id="cp-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
         </div>
@@ -509,11 +504,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div>
       </div><!-- /ig-view-reel -->
 
-      <div class="ig-view" id="ig-view-scheduled">
-        <p class="sub" style="margin-top:4px">The older <b>Instagram-only</b> direct scheduler &mdash; used when you hit Schedule inside the two builders. Fires at the set time, IG only. Anything sent via <b>Send to Scheduling</b> lives on the Schedule tab instead (and can hit Facebook too). Cancel or post early anytime.</p>
-        <div class="toolbar"><button class="btn btn-outline btn-sm" id="ig-sched-reload">Reload</button><span class="run-status" id="ig-sched-status"></span></div>
-        <div id="ig-sched-list"></div>
-      </div>
     </section>
 
     <!-- JOKES -->
@@ -1518,20 +1508,6 @@ function igBoot(){
       b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to Instagram"; b.disabled=false; },3000);
     }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to Instagram"; b.disabled=false; }
   };
-  if($("#ig-schedule")) $("#ig-schedule").onclick=async function(){
-    var b=$("#ig-schedule"), st=$("#ig-post-status");
-    var ratio=canvas.width/canvas.height;
-    if(ratio<0.8||ratio>1.91){ st.innerHTML='<span style="color:var(--red)">Scheduling needs a 4:5 or 1:1 card. Set that under <b>Format &amp; layout</b> first.</span>'; return; }
-    var whenIso=igWhenIso($("#ig-when").value, st); if(!whenIso) return;
-    if(!window.confirm("Schedule this card to post to @thebolditalic on "+new Date(whenIso).toLocaleString()+"?")) return;
-    b.disabled=true; b.textContent="Scheduling..."; st.textContent="Rendering + uploading...";
-    try{
-      var blob=await new Promise(function(r){ canvas.toBlob(r,"image/jpeg",0.92); });
-      await igStageAndSchedule([blob], { caption:($("#ig-caption").value||""), alt_text:(state.headline||"").trim(), source:"story", card_id:(IG_CUR||null), whenIso:whenIso });
-      st.innerHTML='<span style="color:var(--green)">Scheduled for '+esc(new Date(whenIso).toLocaleString())+' '+CK+' &middot; see the <b>Scheduled</b> tab</span>';
-      b.textContent="Scheduled "+CK; setTimeout(function(){ b.textContent="Schedule"; b.disabled=false; },2600);
-    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Schedule"; b.disabled=false; }
-  };
   if($('#ig-tbwrap')){ $('#ig-tbwrap').innerHTML=tbPanelHTML('igtb'); wireTB('igtb', function(){ return state.textBox; }, render); syncTB('igtb', state.textBox); }
   loadIGCandidates();
   (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('italic 800 60px "Playfair Display"'), document.fonts.load('400 40px "Georgia"')]); }catch(e){} render(); })();
@@ -1918,53 +1894,23 @@ function cpBoot(){
       b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
   };
-  $('#cp-schedule').onclick=async function(){
-    var b=$('#cp-schedule'), stt=$('#cp-post-status');
-    var ready=st.imgs.filter(function(o){return o.img;});
-    if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
-    var ratio=st.W/st.H;
-    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick a 4:5, 1:1, or 1.91:1 ratio before scheduling (9:16 is Stories-only).</span>'; return; }
-    var whenIso=igWhenIso($('#cp-when').value, stt); if(!whenIso) return;
-    var n=ready.length;
-    if(!window.confirm('Schedule '+(n>1?('this '+n+'-photo carousel'):'this photo')+' to @thebolditalic on '+new Date(whenIso).toLocaleString()+'?')) return;
-    b.disabled=true; b.textContent='Scheduling...'; stt.textContent='Rendering + uploading '+n+' image'+(n>1?'s':'')+'...';
-    try{
-      var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d');
-      var blobs=[];
-      for(var i=0;i<ready.length;i++){ paint(octx, ready[i], st.W, st.H); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); blobs.push(blob); }
-      await igStageAndSchedule(blobs, { caption:($('#cp-caption').value||''), alt_text:'', source:'custom', card_id:null, whenIso:whenIso });
-      stt.innerHTML='<span style="color:var(--green)">Scheduled for '+esc(new Date(whenIso).toLocaleString())+' '+CK+' &middot; see the <b>Scheduled</b> tab</span>';
-      b.textContent='Scheduled '+CK; setTimeout(function(){ b.textContent='Schedule'; b.disabled=false; },2600);
-    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Schedule'; b.disabled=false; }
-  };
   if($('#cp-coverwrap')){ $('#cp-coverwrap').innerHTML=coverPanelHTML('cpcov'); wireCover('cpcov', function(){ return st.imgs[st.sel]?st.imgs[st.sel].cover:null; }, cpRender); syncCover('cpcov', st.imgs[st.sel]?st.imgs[st.sel].cover:null); }
   if($('#cp-tbwrap')){ $('#cp-tbwrap').innerHTML=tbPanelHTML('cptb'); wireTB('cptb', function(){ return st.imgs[st.sel]?st.imgs[st.sel].textBox:null; }, cpRender); syncTB('cptb', st.imgs[st.sel]?st.imgs[st.sel].textBox:null); }
   loadSavedEdsMarket(cpRender);
   renderThumbs(); cpRender();
   (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('400 40px "Georgia"'), document.fonts.load('italic 800 40px "Playfair Display"')]); }catch(e){} cpRender(); })();
 }
-// ---- Instagram inner views (story / custom / scheduled) ----
-var IG_SCHED_MAP={};
+// ---- Image / Video inner views (story / custom / reel) ----
 function showIGView(v){
   document.querySelectorAll('.ig-viewbtn').forEach(function(x){ x.classList.toggle('active', x.dataset.igview===v); });
   document.querySelectorAll('.ig-view').forEach(function(x){ x.classList.toggle('active', x.id===('ig-view-'+v)); });
   if(v==='custom') initCP();
   if(v==='reel') initReel();
-  if(v==='scheduled') loadIGScheduled();
 }
 document.querySelectorAll('.ig-viewbtn').forEach(function(b){ b.onclick=function(){ showIGView(b.dataset.igview); }; });
-if($('#ig-sched-reload')) $('#ig-sched-reload').onclick=loadIGScheduled;
 
-// datetime-local value -> ISO (must be present and at least a minute in the future).
-function igWhenIso(val, statusEl){
-  if(!val){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Pick a date &amp; time first.</span>'; return null; }
-  var d=new Date(val);
-  if(isNaN(d.getTime())){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">That date did not parse.</span>'; return null; }
-  if(d.getTime() < Date.now()+60000){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">Pick a time at least a minute from now.</span>'; return null; }
-  return d.toISOString();
-}
-
-// Upload rendered JPEG blob(s) to ig-rendered/sched-* (purge-exempt), then queue an ig_scheduled row.
+// Upload rendered JPEG blob(s) to ig-rendered/sched-* (purge-exempt), then stage a
+// social_suggestions row for the unified Schedule tab (Staged drafts).
 async function igSendToScheduling(blobs, caption){
   var id=crypto.randomUUID(); var urls=[];
   for(var i=0;i<blobs.length;i++){
@@ -1977,20 +1923,6 @@ async function igSendToScheduling(blobs, caption){
   if(ins.error) throw new Error(ins.error.message);
   return urls.length;
 }
-async function igStageAndSchedule(blobs, opts){
-  var id=crypto.randomUUID();
-  var urls=[], paths=[];
-  for(var i=0;i<blobs.length;i++){
-    var path='sched-'+id+'-'+i+'.jpg';
-    var up=await sb.storage.from('ig-rendered').upload(path, blobs[i], {upsert:true, contentType:'image/jpeg'});
-    if(up.error) throw up.error;
-    paths.push(path);
-    urls.push(sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl);
-  }
-  var ins=await sb.from('ig_scheduled').insert({ source:opts.source||'custom', card_id:opts.card_id||null, image_urls:urls, storage_paths:paths, caption:opts.caption||'', alt_text:opts.alt_text||'', scheduled_at:opts.whenIso, status:'pending' });
-  if(ins.error) throw new Error(ins.error.message);
-}
-
 // ---- Reel (video) upload view: upload, overlay editor (text + TBI mark), cover picker, IG options ----
 var REEL_ST={file:null, url:null, dur:0, w:0, h:0, wired:false, rafOn:false,
   cover:{mode:'auto', frameMs:0, file:null},
@@ -2248,56 +2180,6 @@ function initReel(){
       b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
   };
-}
-
-async function loadIGScheduled(){
-  var host=$('#ig-sched-list'); if(!host) return;
-  host.innerHTML='<span class="run-status">Loading...</span>';
-  var res=await sb.from('ig_scheduled').select('*').in('status',['pending','failed']).order('scheduled_at',{ascending:true}).limit(60);
-  if(res.error){ host.innerHTML='<span class="run-status">Error: '+esc(res.error.message)+'</span>'; return; }
-  var rows=res.data||[];
-  if(!rows.length){ host.innerHTML='<div class="empty">Nothing scheduled yet. Build a card or custom post, set a date &amp; time, then hit Schedule.</div>'; return; }
-  IG_SCHED_MAP={};
-  host.innerHTML=rows.map(function(r){
-    IG_SCHED_MAP[r.id]=r;
-    var imgs=Array.isArray(r.image_urls)?r.image_urls:[];
-    var when=r.scheduled_at?new Date(r.scheduled_at).toLocaleString():'';
-    var badge=r.status==='failed'?'<span class="sched-badge failed">failed</span>':'<span class="sched-badge pending">scheduled</span>';
-    var cnt=imgs.length>1?(' &middot; '+imgs.length+' photos'):'';
-    var errLine=(r.status==='failed'&&r.error)?('<div class="meta" style="color:var(--red)">'+esc(String(r.error).slice(0,140))+'</div>'):'';
-    return '<div class="sched-card"><img src="'+esc(imgs[0]||'')+'" alt=""><div class="body"><div class="when">'+esc(when)+' '+badge+'</div><div class="meta">'+esc(r.source==='story'?'From a story':'Custom post')+cnt+'</div><div class="cap">'+esc(r.caption||'')+'</div>'+errLine+'</div><div class="acts"><button class="btn btn-gold btn-sm" data-act="now" data-id="'+r.id+'">Post now</button><button class="btn btn-outline btn-sm" data-act="cancel" data-id="'+r.id+'">Cancel</button></div></div>';
-  }).join('');
-  host.querySelectorAll('button[data-act]').forEach(function(btn){ btn.onclick=function(){ igSchedAction(btn.dataset.act, btn.dataset.id, btn); }; });
-}
-
-async function igSchedAction(act, id, btn){
-  var r=IG_SCHED_MAP[id]; if(!r) return;
-  if(act==='cancel'){
-    if(!window.confirm('Cancel this scheduled post? The staged image is removed too.')) return;
-    btn.disabled=true; btn.textContent='Cancelling...';
-    try{
-      var del=await sb.from('ig_scheduled').delete().eq('id',id); if(del.error) throw new Error(del.error.message);
-      if(Array.isArray(r.storage_paths)&&r.storage_paths.length){ try{ await sb.storage.from('ig-rendered').remove(r.storage_paths); }catch(_e){} }
-      loadIGScheduled();
-    }catch(e){ btn.disabled=false; btn.textContent='Cancel'; alert('Could not cancel: '+(e&&e.message?e.message:e)); }
-    return;
-  }
-  if(act==='now'){
-    if(!window.confirm('Post this to @thebolditalic right now?')) return;
-    btn.disabled=true; btn.textContent='Posting...';
-    var statusEl=$('#ig-sched-status'); if(statusEl) statusEl.textContent='Publishing (~'+(10+(Math.max(1,(r.image_urls||[]).length)-1)*4)+'s)...';
-    try{
-      var resp=await sb.functions.invoke('instagram',{body:{action:'publish', image_urls:(r.image_urls||[]), caption:(r.caption||''), alt_text:(r.alt_text||''), card_id:(r.card_id||null)}});
-      var d=resp.data||{};
-      if(resp.error){ var m=(resp.error.message||String(resp.error)); try{ var jj=resp.error.context&&resp.error.context.json?await resp.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
-      if(d.error) throw new Error(d.error);
-      await sb.from('ig_scheduled').update({status:'posted', ig_media_id:d.media_id||null, ig_permalink:d.permalink||null, posted_at:new Date().toISOString()}).eq('id',id);
-      if(Array.isArray(r.storage_paths)&&r.storage_paths.length){ try{ await sb.storage.from('ig-rendered').remove(r.storage_paths); }catch(_e){} }
-      if(statusEl) statusEl.innerHTML='<span style="color:var(--green)">Posted '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View</a>'):'');
-      loadIGScheduled();
-    }catch(e){ btn.disabled=false; btn.textContent='Post now'; if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; }
-    return;
-  }
 }
 
 gate();
