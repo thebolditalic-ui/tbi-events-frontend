@@ -220,6 +220,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .cal-day{margin-bottom:6px}
 .wopt{font-size:12px;margin-right:12px;white-space:nowrap}
 .sview{margin-top:6px}
+/* ---- posting-time slots grid ---- */
+.slot-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin-top:4px}
+.slot-col{border:1px solid #e7e0d6;border-radius:8px;padding:6px}
+.slot-h{font-size:11px;font-weight:700;color:#8a8178;text-align:center;margin-bottom:6px}
+.slot-chip{display:flex;align-items:center;justify-content:space-between;background:#efeae3;border-radius:5px;padding:3px 6px;font-size:12px;margin-bottom:4px}
+.slot-x{cursor:pointer;color:#b03a3a;font-weight:700;margin-left:6px}
+.slot-none{color:#c8bfb2;text-align:center;font-size:12px;padding:4px 0}
+@media(max-width:640px){.slot-grid{grid-template-columns:repeat(7,minmax(42px,1fr));overflow-x:auto}}
 </style>
 </head>
 <body>
@@ -1005,13 +1013,38 @@ async function loadHistory(){
 var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 async function loadSlots(){
   var host=$('#sv-slots'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
-  var r=await sb.from('posting_slots').select('*').order('dow',{ascending:true}).order('minute',{ascending:true});
+  var r=await sb.from('posting_slots').select('*').order('minute',{ascending:true});
   if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
   var rows=r.data||[];
-  var list=rows.map(function(s){ var hh=String(Math.floor(s.minute/60)); var mm=String(s.minute%60); if(mm.length<2) mm='0'+mm; if(hh.length<2) hh='0'+hh; return '<div class="cal-item" data-id="'+s.id+'"><b>'+DOW[s.dow]+' '+hh+':'+mm+'</b> <button class="btn btn-outline btn-sm slotdel" style="margin-left:8px">Remove</button></div>'; }).join('');
-  host.innerHTML='<p class="sub">Your standing posting times (Pacific). "Next slot" on a draft fills the next open one.</p><div class="story-card" style="padding:12px">'+(list||'<div class="empty">No times yet.</div>')+'<div class="when-row" style="margin-top:12px"><select class="slotdow">'+DOW.map(function(d,i){return '<option value="'+i+'">'+d+'</option>';}).join('')+'</select> <input type="time" class="slottime" value="10:00"> <button class="btn btn-gold btn-sm slotadd">Add time</button></div></div>';
-  host.querySelector('.slotadd').onclick=async function(){ var dow=parseInt(host.querySelector('.slotdow').value,10); var tv=host.querySelector('.slottime').value||'10:00'; var p=tv.split(':'); var minute=parseInt(p[0],10)*60+parseInt(p[1],10); await sb.from('posting_slots').insert({dow:dow,minute:minute,active:true}); loadSlots(); };
-  host.querySelectorAll('.slotdel').forEach(function(b){ b.onclick=async function(e){ var el=e.target.closest('.cal-item'); await sb.from('posting_slots').delete().eq('id',el.dataset.id); loadSlots(); }; });
+  function hhmm(m){ var h=Math.floor(m/60),mm=m%60; return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm; }
+  var byd={}; for(var i=0;i<7;i++) byd[i]=[];
+  rows.forEach(function(sl){ byd[sl.dow].push(sl); });
+  var grid='<div class="slot-grid">'+[0,1,2,3,4,5,6].map(function(d){
+    var chips=byd[d].map(function(sl){ return '<div class="slot-chip">'+hhmm(sl.minute)+'<span class="slot-x" data-id="'+sl.id+'">&times;</span></div>'; }).join('')||'<div class="slot-none">--</div>';
+    return '<div class="slot-col"><div class="slot-h">'+DOW[d]+'</div><div class="slot-colday" data-d="'+d+'">'+chips+'</div></div>';
+  }).join('')+'</div>';
+  host.innerHTML='<p class="sub">Your standing posting times (Pacific). On a draft, <b>Next slot</b> drops it into the next open one.</p>'+
+    '<div class="story-card" style="padding:12px">'+
+    '<div class="meta" style="margin-bottom:6px;color:#8a8178">Pick days, set a time, then add it to all of them at once:</div>'+
+    '<div class="daypick chan-chips" style="margin-bottom:8px">'+DOW.map(function(d,i){return '<span class="chan-chip dp" data-d="'+i+'">'+d+'</span>';}).join('')+
+    ' <button class="btn btn-outline btn-sm" id="dp-weekdays">Weekdays</button><button class="btn btn-outline btn-sm" id="dp-all">All</button><button class="btn btn-outline btn-sm" id="dp-none">None</button></div>'+
+    '<div class="when-row" style="margin-bottom:14px"><input type="time" id="slottime" value="10:00"> <button class="btn btn-gold btn-sm" id="slotadd">Add to selected days</button>'+
+    (rows.length?' <button class="btn btn-danger btn-sm" id="slotclear" style="margin-left:auto">Clear all ('+rows.length+')</button>':'')+'</div>'+grid+'</div>';
+  host.querySelectorAll('.dp').forEach(function(c){ c.onclick=function(){ c.classList.toggle('on'); }; });
+  $('#dp-all').onclick=function(){ host.querySelectorAll('.dp').forEach(function(c){ c.classList.add('on'); }); };
+  $('#dp-none').onclick=function(){ host.querySelectorAll('.dp').forEach(function(c){ c.classList.remove('on'); }); };
+  $('#dp-weekdays').onclick=function(){ host.querySelectorAll('.dp').forEach(function(c){ var d=parseInt(c.dataset.d,10); c.classList.toggle('on', d>=1 && d<=5); }); };
+  $('#slotadd').onclick=async function(){
+    var days=[].map.call(host.querySelectorAll('.dp.on'),function(c){return parseInt(c.dataset.d,10);});
+    if(!days.length){ alert('Pick at least one day first.'); return; }
+    var tv=$('#slottime').value||'10:00'; var p=tv.split(':'); var minute=parseInt(p[0],10)*60+parseInt(p[1],10);
+    var existing={}; rows.forEach(function(sl){ existing[sl.dow+':'+sl.minute]=1; });
+    var toAdd=days.filter(function(d){ return !existing[d+':'+minute]; }).map(function(d){ return {dow:d,minute:minute,active:true}; });
+    if(toAdd.length){ var ins=await sb.from('posting_slots').insert(toAdd); if(ins.error){ alert('Error: '+ins.error.message); return; } }
+    loadSlots();
+  };
+  if($('#slotclear')) $('#slotclear').onclick=async function(){ if(!confirm('Remove all posting times?')) return; await sb.from('posting_slots').delete().gte('minute',0); loadSlots(); };
+  host.querySelectorAll('.slot-x').forEach(function(x){ x.onclick=async function(e){ e.stopPropagation(); await sb.from('posting_slots').delete().eq('id',x.dataset.id); loadSlots(); }; });
 }
 async function nextOpenSlot(){
   var sr=await sb.from('posting_slots').select('*').eq('active',true);
