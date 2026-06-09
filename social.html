@@ -909,7 +909,7 @@ async function loadQueue(){
   var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(300);
   if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
   var rows=r.data||[];
-  if(!rows.length){ host.innerHTML='<div class="empty">Queue is empty. Schedule a staged draft to fill it.</div>'; return; }
+  if(!rows.length){ host.innerHTML='<div class="empty">Nothing in the new queue yet.</div>'; host.insertAdjacentHTML('beforeend','<div id="q-draining"></div>'); loadDraining(); return; }
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
     return '<div class="sugg q" data-id="'+it.id+'"><div class="body">'+
       '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
@@ -920,6 +920,19 @@ async function loadQueue(){
   }).join('')+'</div>';
   host.querySelectorAll('.qrevoke').forEach(function(b){ b.onclick=function(e){ revokeQueued(e.target.closest('.sugg')); }; });
   host.querySelectorAll('.qedit').forEach(function(b){ b.onclick=function(e){ editQueued(e.target.closest('.sugg')); }; });
+  host.insertAdjacentHTML('beforeend','<div id="q-draining"></div>'); loadDraining();
+}
+async function loadDraining(){
+  var host=$('#q-draining'); if(!host) return;
+  var items=[];
+  try{
+    var tr=await sb.from('threads_scheduled').select('text,scheduled_at').eq('status','pending'); (tr.data||[]).forEach(function(r){ items.push({ch:'threads',text:r.text,when:r.scheduled_at}); });
+    var br=await sb.from('bluesky_scheduled').select('text,scheduled_at').eq('status','pending'); (br.data||[]).forEach(function(r){ items.push({ch:'bluesky',text:r.text,when:r.scheduled_at}); });
+    var fr=await sb.functions.invoke('facebook',{body:{action:'scheduled'}}); var fi=(fr.data&&fr.data.scheduled)||[]; fi.forEach(function(r){ items.push({ch:'facebook',text:r.message,when:r.scheduled_publish_time?new Date(r.scheduled_publish_time*1000).toISOString():null}); });
+  }catch(e){}
+  if(!items.length){ host.innerHTML=''; return; }
+  items.sort(function(a,b){ return new Date(a.when||0)-new Date(b.when||0); });
+  host.innerHTML='<div class="sched-sub" style="margin:18px 0 4px">Draining from the old schedule ('+items.length+')</div><div class="meta" style="margin-bottom:8px;color:#8a8178">Scheduled before the new queue, on their original per-network times. Shown for visibility; they finish on their own and are not editable here.</div><div class="story-card">'+items.map(function(it){ return '<div class="cal-item">'+chIcon(it.ch)+' <b>'+esc(fmtWhen(it.when))+'</b> <span style="color:#8a8178">'+esc((it.text||'').slice(0,64))+'</span></div>'; }).join('')+'</div>';
 }
 async function revokeQueued(row){
   var id=row.dataset.id, res=row.querySelector('[data-res]'), btn=row.querySelector('.qrevoke');
