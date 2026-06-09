@@ -279,7 +279,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
   <div class="wrap">
     <div class="subtabs">
       <button class="subtab active" data-tab="feed">Feed / Suggestions</button>
-      <button class="subtab" data-tab="instagram">Instagram</button>
+      <button class="subtab" data-tab="instagram">Image / Video</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
       <button class="subtab" data-tab="schedule">Schedule</button>
       <button class="subtab" data-tab="settings">Settings</button>
@@ -305,15 +305,15 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <div id="feed-list"></div>
     </section>
 
-    <!-- INSTAGRAM -->
+    <!-- IMAGE / VIDEO (was Instagram; now feeds Instagram + Facebook, TikTok later) -->
     <section class="panel" id="panel-instagram">
-      <h2 class="section">Instagram</h2>
-      <p class="sub">Build a card from a crawled story, start a custom post from your own photos, or review what's queued. Posts go straight to @thebolditalic &mdash; now, or at a time you set.</p>
+      <h2 class="section">Image / Video</h2>
+      <p class="sub">Build a card from a crawled story, start a custom post from your own photos, or upload a reel. Everything here can go to <b>Instagram and/or Facebook</b> (TikTok later) &mdash; Send to Scheduling drops it in the <b>Schedule</b> tab's Staged list, where you pick channels and timing.</p>
       <div class="ig-viewnav">
         <button class="ig-viewbtn active" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="custom">Custom post</button>
         <button class="ig-viewbtn" data-igview="reel">Reel</button>
-        <button class="ig-viewbtn" data-igview="scheduled">Scheduled</button>
+        <button class="ig-viewbtn" data-igview="scheduled">Scheduled (IG direct)</button>
       </div>
       <div class="ig-view active" id="ig-view-story">
       <div class="ig-cand">
@@ -440,10 +440,13 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div><!-- /ig-view-custom -->
 
       <div class="ig-view" id="ig-view-reel">
-      <p class="sub" style="margin-top:4px">Upload a finished vertical video and send it out as a <b>Reel</b> on Instagram and Facebook. Best results: <b>9:16</b>, up to <b>90 seconds</b> (Facebook's limit; Instagram allows longer), MP4, under <b>50MB</b>.</p>
+      <p class="sub" style="margin-top:4px">Upload a finished vertical video and send it out as a <b>Reel</b> on Instagram and Facebook. Best results: <b>9:16</b>, up to <b>90 seconds</b> (Facebook's limit; Instagram allows longer), MP4, under <b>50MB</b>. Text and the TBI mark below get burned into the video before posting, so they show on both networks.</p>
       <div class="ig-grid">
         <div class="ig-stage">
-          <video id="reel-preview" controls playsinline style="display:none;width:100%;max-width:280px;aspect-ratio:9/16;border-radius:10px;background:#000;margin:0 auto"></video>
+          <div id="reel-stagewrap" style="position:relative;width:100%;max-width:280px;margin:0 auto;display:none">
+            <video id="reel-preview" controls playsinline style="display:block;width:100%;aspect-ratio:9/16;border-radius:10px;background:#000"></video>
+            <canvas id="reel-ovcanvas" width="540" height="960" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;border-radius:10px"></canvas>
+          </div>
           <div class="ig-drop" id="reel-drop" style="margin-top:10px"><b>Drop a video</b> or click to choose<br><span style="font-size:10px">MP4 or MOV, up to 50MB</span></div>
           <input type="file" id="reel-file" accept="video/mp4,video/quicktime" hidden>
           <div class="ig-hint" id="reel-info" style="margin-top:8px;text-align:center"></div>
@@ -464,15 +467,50 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
               <span class="run-status" id="reel-draft-status"></span>
             </div>
           </div></div>
-          <div class="set-group"><h3>2 &middot; What happens next</h3><div class="ig-body">
-            <div class="ig-hint" style="line-height:1.5"><b style="color:var(--dark)">Send to Scheduling</b> stages it on the <b>Schedule</b> tab, where you pick Instagram and/or Facebook and post now, drop it in a slot, or set a time. Publishing a video takes the networks a couple of minutes &mdash; the queue handles the waiting.<br><br>Spec notes: Facebook Reels must be <b>3&ndash;90s</b> and 9:16 or Facebook rejects them; Instagram takes 3s up to 15 min. The staged video file is cleaned up automatically after it posts everywhere.</div>
+          <div class="set-group"><h3>2 &middot; Text on the video</h3><div class="ig-body">
+            <div class="ig-toggle">Show text on the video<label class="switch"><input type="checkbox" id="rov-on"><span class="slider-sw"></span></label></div>
+            <textarea id="rov-text" placeholder="The text to draw on the video..." style="width:100%;min-height:60px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <div class="ig-fld" style="margin-top:10px">Font<div class="ig-seg" id="rov-font"><button data-font="eds" class="on">Ed's Market</button><button data-font="playfair">Playfair</button><button data-font="georgia">Georgia</button><button data-font="arial">Arial</button></div></div>
+            <div class="ig-fld">Size <span class="val" id="rov-sizeVal">54</span><input type="range" id="rov-size" min="24" max="120" value="54"></div>
+            <div class="ig-fld">Color<div class="ig-seg" id="rov-color"><button data-c="#ffffff" class="on">White</button><button data-c="#000000">Black</button></div></div>
+            <div class="ig-toggle">Dark band behind the text<label class="switch"><input type="checkbox" id="rov-band" checked><span class="slider-sw"></span></label></div>
+            <div class="ig-fld">Vertical position <span class="val" id="rov-yVal">lower third</span><input type="range" id="rov-y" min="8" max="92" value="76"></div>
+            <div class="ig-fld">Shows from <span class="val" id="rov-startVal">0.0s</span><input type="range" id="rov-start" min="0" max="60" value="0" step="0.1"></div>
+            <div class="ig-fld">Until <span class="val" id="rov-endVal">end</span><input type="range" id="rov-end" min="0" max="60" value="60" step="0.1"></div>
+            <div class="ig-hint">Scrub the video to watch the text appear and disappear at your in and out times.</div>
+          </div></div>
+          <div class="set-group"><h3>3 &middot; Red TBI mark</h3><div class="ig-body">
+            <div class="ig-toggle">Show the red TBI mark<label class="switch"><input type="checkbox" id="ric-on"><span class="slider-sw"></span></label></div>
+            <div class="ig-fld">Corner<div class="ig-seg" id="ric-pos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
+            <div class="ig-fld">Size <span class="val" id="ric-scaleVal">70%</span><input type="range" id="ric-scale" min="40" max="220" value="70"></div>
+            <div class="ig-hint">Uses the TBI icon you loaded on the photo builders if it is saved in this browser, otherwise the drawn red circle. Stays on for the whole video.</div>
+          </div></div>
+          <div class="set-group"><h3>4 &middot; Cover (Instagram)</h3><div class="ig-body">
+            <div class="ig-fld">Cover image<div class="ig-seg" id="rcov-mode"><button data-cov="auto" class="on">Auto</button><button data-cov="frame">Pick a frame</button><button data-cov="upload">Upload</button></div></div>
+            <div class="ig-fld" id="rcov-frame-row" style="display:none">Frame <span class="val" id="rcov-frameVal">0.0s</span><input type="range" id="rcov-frame" min="0" max="60" value="0" step="0.1"></div>
+            <div id="rcov-upload-row" style="display:none">
+              <div class="ig-drop" id="rcov-drop" style="padding:10px"><b>Choose a cover image</b> (9:16 works best)</div>
+              <input type="file" id="rcov-file" accept="image/*" hidden>
+              <div class="ig-hint" id="rcov-filename"></div>
+            </div>
+            <div class="ig-hint">"Pick a frame" scrubs the preview so you see exactly the frame you chose. The grid shows the middle square of the cover. Facebook picks its own thumbnail, no API control there.</div>
+          </div></div>
+          <div class="set-group"><h3>5 &middot; Instagram options</h3><div class="ig-body">
+            <div class="ig-toggle">Also show on the profile grid<label class="switch"><input type="checkbox" id="rig-grid" checked><span class="slider-sw"></span></label></div>
+            <input type="text" id="rig-collab" placeholder="Collaborators: up to 3 usernames, comma separated" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+            <input type="text" id="rig-audio" placeholder="Audio name (optional, renames the original audio)" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:8px">
+            <input type="text" id="rig-loc" placeholder="Location Page ID (optional, advanced)" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:8px">
+            <div class="ig-hint" style="margin-top:8px">Off = Reels tab only, on = Reels tab plus your grid. Collaborators get an invite and appear once they accept. Location wants a Facebook place Page ID; finding IDs by name needs a Meta review we have not filed.</div>
+          </div></div>
+          <div class="set-group"><h3>6 &middot; What happens next</h3><div class="ig-body">
+            <div class="ig-hint" style="line-height:1.5"><b style="color:var(--dark)">Send to Scheduling</b> stages it on the <b>Schedule</b> tab, where you pick Instagram and/or Facebook and post now, drop it in a slot, or set a time. If text or the TBI mark is on, the video is processed in your browser first (it runs at video speed, a 60s reel takes about a minute). Publishing then takes the networks a couple of minutes &mdash; the queue handles the waiting.<br><br>Spec notes: Facebook Reels must be <b>3&ndash;90s</b> and 9:16 or Facebook rejects them; Instagram takes 3s up to 15 min. The staged video file is cleaned up automatically after it posts everywhere.</div>
           </div></div>
         </div>
       </div>
       </div><!-- /ig-view-reel -->
 
       <div class="ig-view" id="ig-view-scheduled">
-        <p class="sub" style="margin-top:4px">Posts queued to publish to Instagram automatically. They fire at the set time (the queue is checked every few minutes). Cancel or post early anytime.</p>
+        <p class="sub" style="margin-top:4px">The older <b>Instagram-only</b> direct scheduler &mdash; used when you hit Schedule inside the two builders. Fires at the set time, IG only. Anything sent via <b>Send to Scheduling</b> lives on the Schedule tab instead (and can hit Facebook too). Cancel or post early anytime.</p>
         <div class="toolbar"><button class="btn btn-outline btn-sm" id="ig-sched-reload">Reload</button><span class="run-status" id="ig-sched-status"></span></div>
         <div id="ig-sched-list"></div>
       </div>
@@ -952,7 +990,10 @@ async function loadStaged(){
     var isImg=!isVid&&Array.isArray(it.image_urls)&&it.image_urls.length;
     var media=isVid?('<div class="staged-thumbs"><video src="'+esc(it.video_url)+'" controls preload="metadata" playsinline style="width:120px;aspect-ratio:9/16;border-radius:8px;background:#000"></video></div>')
       :(isImg?('<div class="staged-thumbs">'+it.image_urls.map(function(u){return '<img src="'+esc(u)+'" alt="">';}).join('')+'</div>'):'');
-    var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Reel &middot; posts as a video on Instagram / Facebook</div>')
+    var vop=(isVid&&it.options&&typeof it.options==='object')?it.options:null;
+    var vbits=['Reel'];
+    if(vop){ vbits.push(vop.share_to_feed===false?'Reels tab only':'grid + Reels tab'); if(vop.cover_url) vbits.push('custom cover'); else if(vop.thumb_offset) vbits.push('cover @ '+(vop.thumb_offset/1000).toFixed(1)+'s'); if(Array.isArray(vop.collaborators)&&vop.collaborators.length) vbits.push(vop.collaborators.length+' collaborator'+(vop.collaborators.length>1?'s':'')); if(vop.location_id) vbits.push('location'); }
+    var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
       :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
     var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
@@ -975,6 +1016,7 @@ async function loadStaged(){
     if(it.video_url){
       if(!window.confirm('Remove this reel from Staged? The uploaded video file is deleted too.')) return;
       try{ var vp=it.video_url.split('/storage/v1/object/public/ig-rendered/')[1]; if(vp) await sb.storage.from('ig-rendered').remove([vp.split('?')[0]]); }catch(_e){}
+      try{ var cu=(it.options&&it.options.cover_url)?String(it.options.cover_url):''; var cp2=cu.split('/storage/v1/object/public/ig-rendered/')[1]; if(cp2) await sb.storage.from('ig-rendered').remove([cp2.split('?')[0]]); }catch(_e){}
       await sb.from('social_suggestions').delete().eq('id',row.dataset.id); row.remove(); return;
     }
     await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
@@ -997,11 +1039,11 @@ async function scheduleStaged(row){
   try{
     if(mode==='now'){
       if(vid){ res.className='sched-result'; res.textContent='Publishing the reel - Instagram and Facebook take a couple of minutes to process video. Leave this tab open...'; }
-      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,image_urls:imgs,video_url:vid||null,channels:channels,suggestion_id:id}});
+      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,image_urls:imgs,video_url:vid||null,options:(it.options||null),channels:channels,suggestion_id:id}});
       if(dr.error) throw dr.error; if(!dr.data||(dr.data.ok===false&&dr.data.status==='failed')) throw new Error('all channels failed');
       res.className='sched-result ok'; res.innerHTML=CK+' Posted ('+esc(channels.join(', '))+')';
     } else {
-      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,video_url:vid||null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
+      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,video_url:vid||null,options:(it.options||null),channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
       if(ins.error) throw ins.error;
       await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',id);
       res.className='sched-result ok'; res.innerHTML=CK+' Scheduled for '+esc(fmtWhen(when));
@@ -1949,11 +1991,148 @@ async function igStageAndSchedule(blobs, opts){
   if(ins.error) throw new Error(ins.error.message);
 }
 
-// ---- Reel (video) upload view ----
-var REEL_ST={file:null, url:null, wired:false};
+// ---- Reel (video) upload view: upload, overlay editor (text + TBI mark), cover picker, IG options ----
+var REEL_ST={file:null, url:null, dur:0, w:0, h:0, wired:false, rafOn:false,
+  cover:{mode:'auto', frameMs:0, file:null},
+  ov:{textOn:false, text:'', font:'eds', size:54, color:'#ffffff', band:true, y:0.76, start:0, end:null},
+  icon:{on:false, pos:'tr', scale:0.7},
+  ig:{grid:true}
+};
+var REEL_TBI_IMG=null;
+function reelFontStack(k){ if(k==='eds') return 'EdsMarket, Arial, sans-serif'; if(k==='playfair') return '"Playfair Display", Georgia, serif'; if(k==='georgia') return 'Georgia, serif'; return 'Arial, Helvetica, sans-serif'; }
+function reelOverlaysActive(){ return !!((REEL_ST.ov.textOn&&(REEL_ST.ov.text||'').trim())||REEL_ST.icon.on); }
+function reelRRect(c,x,y,w,h,r){ if(c.roundRect){ c.beginPath(); c.roundRect(x,y,w,h,r); } else { c.beginPath(); c.rect(x,y,w,h); } }
+function reelWrapLines(c,text,maxW){
+  var out=[]; var paras=String(text||'').split(String.fromCharCode(10));
+  for(var p=0;p<paras.length;p++){
+    var words=paras[p].split(/ +/).filter(function(w){return w!=='';});
+    if(!words.length){ continue; }
+    var line=words[0];
+    for(var i=1;i<words.length;i++){
+      var t=line+' '+words[i];
+      if(c.measureText(t).width<=maxW) line=t; else { out.push(line); line=words[i]; }
+    }
+    out.push(line);
+  }
+  return out.length?out:[''];
+}
+function drawReelTBI(c,W,H){
+  var ic=REEL_ST.icon; var D=W*0.115*(ic.scale||0.7); var pad=W*0.04;
+  var x=(ic.pos==='tl'||ic.pos==='bl')?(pad+D/2):(W-pad-D/2);
+  var y=(ic.pos==='tl'||ic.pos==='tr')?(pad+D/2):(H-pad-D/2);
+  if(REEL_TBI_IMG){ c.drawImage(REEL_TBI_IMG, x-D/2, y-D/2, D, D); return; }
+  c.fillStyle='#f5333f'; c.beginPath(); c.arc(x,y,D/2,0,Math.PI*2); c.fill();
+  c.fillStyle='#ffffff'; c.font='700 '+Math.max(8,Math.round(D*0.42))+'px EdsMarket, Arial, sans-serif';
+  c.textAlign='center'; c.textBaseline='middle'; c.fillText('TBI',x,y+D*0.02);
+}
+// Draws the configured overlays for time t (seconds) onto a W x H frame. Used by the
+// live preview AND the burn-in export, so what you see is exactly what posts.
+function drawReelOverlay(c,W,H,t){
+  var o=REEL_ST.ov;
+  if(o.textOn&&(o.text||'').trim()){
+    var t0=o.start||0; var t1=(o.end===null||o.end===undefined)?1e9:o.end;
+    if(t>=t0&&t<=t1){
+      var fs=Math.max(10,Math.round(o.size*(W/1080)));
+      c.font='700 '+fs+'px '+reelFontStack(o.font);
+      c.textAlign='center'; c.textBaseline='middle';
+      var maxW=W*0.86; var lines=reelWrapLines(c,o.text,maxW);
+      var lh=Math.round(fs*1.18); var totalH=lines.length*lh;
+      var cy=H*(o.y||0.76)-totalH/2+lh/2;
+      if(o.band){
+        var bw=0; for(var i=0;i<lines.length;i++){ var lw=c.measureText(lines[i]).width; if(lw>bw) bw=lw; }
+        var padX=fs*0.6, padY=fs*0.45;
+        c.fillStyle='rgba(0,0,0,0.55)';
+        reelRRect(c,(W-bw)/2-padX, cy-lh/2-padY, bw+padX*2, totalH+padY*2, fs*0.35); c.fill();
+      }
+      c.fillStyle=o.color||'#ffffff';
+      if(!o.band){ c.shadowColor='rgba(0,0,0,0.75)'; c.shadowBlur=fs*0.18; c.shadowOffsetY=Math.max(1,Math.round(fs*0.04)); }
+      for(var j=0;j<lines.length;j++) c.fillText(lines[j],W/2,cy+j*lh);
+      c.shadowColor='transparent'; c.shadowBlur=0; c.shadowOffsetY=0;
+    }
+  }
+  if(REEL_ST.icon.on) drawReelTBI(c,W,H);
+}
+// Live preview: a transparent canvas sits over the <video>; we draw the overlays into the
+// region the video content actually occupies (it letterboxes inside the 9:16 box).
+function reelPaintPreview(){
+  var cv=$('#reel-ovcanvas'), v=$('#reel-preview'); if(!cv||!v) return;
+  var c=cv.getContext('2d'); c.clearRect(0,0,cv.width,cv.height);
+  if(!REEL_ST.url||!REEL_ST.w||!REEL_ST.h) return;
+  var bw=cv.width, bh=cv.height, vr=REEL_ST.w/REEL_ST.h, br=bw/bh, rw,rh;
+  if(vr>br){ rw=bw; rh=bw/vr; } else { rh=bh; rw=bh*vr; }
+  var rx=(bw-rw)/2, ry=(bh-rh)/2;
+  c.save(); c.translate(rx,ry); c.beginPath(); c.rect(0,0,rw,rh); c.clip();
+  drawReelOverlay(c,rw,rh,v.currentTime||0);
+  c.restore();
+}
+// Burn-in export: plays the video into a canvas, draws the overlays per-frame, and
+// re-records it as MP4 (H.264/AAC) via MediaRecorder. Runs at video speed.
+async function reelBurn(progressCb){
+  var cands=['video/mp4;codecs="avc1.640028,mp4a.40.2"','video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4'];
+  var mime=''; for(var i=0;i<cands.length;i++){ try{ if(window.MediaRecorder&&MediaRecorder.isTypeSupported(cands[i])){ mime=cands[i]; break; } }catch(_e){} }
+  if(!mime) throw new Error('This browser cannot export MP4 video. Use a current Chrome, or turn the overlays off to upload the original.');
+  var pv=document.createElement('video'); pv.src=REEL_ST.url; pv.playsInline=true; pv.muted=false; pv.volume=1;
+  await new Promise(function(res,rej){ pv.onloadedmetadata=res; pv.onerror=function(){ rej(new Error('could not open the video for processing')); }; });
+  var vw=pv.videoWidth||REEL_ST.w||1080, vh=pv.videoHeight||REEL_ST.h||1920;
+  var sc=Math.min(1, 1080/vw, 1920/vh);
+  var W=Math.max(2,Math.round(vw*sc/2)*2), H=Math.max(2,Math.round(vh*sc/2)*2);
+  var oc=document.createElement('canvas'); oc.width=W; oc.height=H; var c=oc.getContext('2d');
+  var stream=oc.captureStream(30);
+  var AC=window.AudioContext||window.webkitAudioContext; var actx=new AC();
+  try{ if(actx.state==='suspended') await actx.resume(); }catch(_e){}
+  var srcNode=actx.createMediaElementSource(pv); var dest=actx.createMediaStreamDestination(); srcNode.connect(dest);
+  dest.stream.getAudioTracks().forEach(function(tr){ stream.addTrack(tr); });
+  var dur=pv.duration||REEL_ST.dur||30;
+  var vbr=Math.max(1000000, Math.min(8000000, Math.floor((44*8388608)/dur)-128000));
+  var rec=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:vbr, audioBitsPerSecond:128000});
+  var chunks=[]; rec.ondataavailable=function(ev){ if(ev.data&&ev.data.size) chunks.push(ev.data); };
+  var done=new Promise(function(res,rej){ rec.onstop=function(){res();}; rec.onerror=function(ev){ rej((ev&&ev.error)||new Error('recording failed')); }; });
+  var stopped=false; function stopAll(){ if(stopped) return; stopped=true; try{ rec.stop(); }catch(_e){} try{ pv.pause(); }catch(_e){} try{ actx.close(); }catch(_e){} }
+  pv.onended=stopAll;
+  function frame(){
+    try{ c.drawImage(pv,0,0,W,H); drawReelOverlay(c,W,H,pv.currentTime||0); }catch(_e){}
+    if(progressCb) progressCb(Math.min(99,Math.round(((pv.currentTime||0)/dur)*100)));
+    if(!stopped){ if(pv.requestVideoFrameCallback) pv.requestVideoFrameCallback(frame); else requestAnimationFrame(frame); }
+  }
+  rec.start(1000);
+  try{ await pv.play(); }catch(e){ stopAll(); throw new Error('could not play the video for processing'); }
+  frame();
+  var guard=setTimeout(stopAll,(dur+5)*1000);
+  await done; clearTimeout(guard);
+  var blob=new Blob(chunks,{type:'video/mp4'});
+  if(progressCb) progressCb(100);
+  if(blob.size<1000) throw new Error('Processing produced an empty file. Try again, or turn the overlays off.');
+  if(blob.size>50*1024*1024) throw new Error('Processed video is '+(blob.size/1048576).toFixed(1)+'MB, over the 50MB hosting cap. Use a shorter video.');
+  return blob;
+}
+async function reelBuildCoverBlob(){
+  var cv=REEL_ST.cover;
+  if(cv.mode!=='upload'||!cv.file) return null;
+  var u=URL.createObjectURL(cv.file);
+  try{
+    var img=await new Promise(function(res,rej){ var im=new Image(); im.onload=function(){res(im);}; im.onerror=function(){rej(new Error('cover image failed to load'));}; im.src=u; });
+    var w=Math.min(1080,img.naturalWidth||1080); var h=Math.max(2,Math.round(w*((img.naturalHeight||1920)/(img.naturalWidth||1080))));
+    var oc=document.createElement('canvas'); oc.width=w; oc.height=h; oc.getContext('2d').drawImage(img,0,0,w,h);
+    return await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.9); });
+  } finally { try{ URL.revokeObjectURL(u); }catch(_e){} }
+}
+function reelBuildOptions(coverUrl){
+  var o={ share_to_feed: !!REEL_ST.ig.grid };
+  if(coverUrl) o.cover_url=coverUrl;
+  else if(REEL_ST.cover.mode==='frame') o.thumb_offset=Math.max(0,Math.round(REEL_ST.cover.frameMs||0));
+  var col=(($('#rig-collab')||{}).value||'').split(',').map(function(s){ return s.trim().replace(/^@/,''); }).filter(function(s){ return !!s; }).slice(0,3);
+  if(col.length) o.collaborators=col;
+  var au=(($('#rig-audio')||{}).value||'').trim(); if(au) o.audio_name=au;
+  var lc=(($('#rig-loc')||{}).value||'').trim(); if(lc) o.location_id=lc;
+  return o;
+}
 function initReel(){
   if(REEL_ST.wired) return; REEL_ST.wired=true;
-  var drop=$('#reel-drop'), inp=$('#reel-file'), prev=$('#reel-preview'), info=$('#reel-info'), clearBtn=$('#reel-clear');
+  var drop=$('#reel-drop'), inp=$('#reel-file'), prev=$('#reel-preview'), info=$('#reel-info'), clearBtn=$('#reel-clear'), wrap=$('#reel-stagewrap');
+  try{ var b64=localStorage.getItem('ig_tbi_b64'); if(b64){ var im=new Image(); im.onload=function(){ REEL_TBI_IMG=im; }; im.src=b64; } }catch(_e){}
+  if(typeof loadSavedEdsMarket==='function'){ try{ loadSavedEdsMarket(function(){}); }catch(_e){} }
+  if(!REEL_ST.rafOn){ REEL_ST.rafOn=true; (function loop(){ reelPaintPreview(); requestAnimationFrame(loop); })(); }
+  function setRange(id,max,val){ var el=$(id.charAt(0)==='#'?id:('#'+id)); if(!el) return; el.max=String(max); if(val!==undefined) el.value=String(val); }
   function setFile(f){
     if(!f) return;
     var okType=/^video[/](mp4|quicktime)$/i.test(f.type||'')||/[.](mp4|mov)$/i.test(f.name||'');
@@ -1961,12 +2140,19 @@ function initReel(){
     if(f.size>50*1024*1024){ info.innerHTML='<span style="color:var(--red)">Too big: '+(f.size/1048576).toFixed(1)+'MB. Hosting caps uploads at 50MB &mdash; export a smaller or shorter cut.</span>'; return; }
     if(REEL_ST.url){ try{ URL.revokeObjectURL(REEL_ST.url); }catch(_e){} }
     REEL_ST.file=f; REEL_ST.url=URL.createObjectURL(f);
-    prev.src=REEL_ST.url; prev.style.display='block'; clearBtn.style.display='';
+    REEL_ST.cover={mode:'auto', frameMs:0, file:null};
+    document.querySelectorAll('#rcov-mode button').forEach(function(x){ x.classList.toggle('on', x.dataset.cov==='auto'); });
+    $('#rcov-frame-row').style.display='none'; $('#rcov-upload-row').style.display='none'; $('#rcov-filename').textContent='';
+    prev.src=REEL_ST.url; wrap.style.display='block'; clearBtn.style.display='';
     info.textContent='Checking the video...';
     var probe=document.createElement('video');
     probe.preload='metadata';
     probe.onloadedmetadata=function(){
       var dur=probe.duration||0, w=probe.videoWidth||0, h=probe.videoHeight||0;
+      REEL_ST.dur=dur; REEL_ST.w=w; REEL_ST.h=h;
+      var m=Math.max(1,Math.round(dur*10)/10);
+      setRange('rov-start',m,0); setRange('rov-end',m,m); setRange('rcov-frame',m,0);
+      REEL_ST.ov.start=0; REEL_ST.ov.end=null; $('#rov-startVal').textContent='0.0s'; $('#rov-endVal').textContent='end';
       var bits=[(f.size/1048576).toFixed(1)+'MB', Math.round(dur)+'s', w+'&times;'+h];
       var warns=[];
       if(dur&&dur<3) warns.push('shorter than 3 seconds &mdash; both networks reject it');
@@ -1982,7 +2168,35 @@ function initReel(){
   drop.ondragover=function(e){ e.preventDefault(); drop.classList.add('drag'); };
   drop.ondragleave=function(){ drop.classList.remove('drag'); };
   drop.ondrop=function(e){ e.preventDefault(); drop.classList.remove('drag'); setFile(e.dataTransfer.files&&e.dataTransfer.files[0]); };
-  clearBtn.onclick=function(){ REEL_ST.file=null; if(REEL_ST.url){ try{ URL.revokeObjectURL(REEL_ST.url); }catch(_e){} REEL_ST.url=null; } prev.removeAttribute('src'); prev.load(); prev.style.display='none'; clearBtn.style.display='none'; info.textContent=''; $('#reel-status').textContent=''; };
+  clearBtn.onclick=function(){ REEL_ST.file=null; REEL_ST.dur=0; REEL_ST.w=0; REEL_ST.h=0; if(REEL_ST.url){ try{ URL.revokeObjectURL(REEL_ST.url); }catch(_e){} REEL_ST.url=null; } prev.removeAttribute('src'); prev.load(); wrap.style.display='none'; clearBtn.style.display='none'; info.textContent=''; $('#reel-status').textContent=''; };
+  // -- text overlay controls --
+  $('#rov-on').onchange=function(){ REEL_ST.ov.textOn=this.checked; };
+  $('#rov-text').oninput=function(){ REEL_ST.ov.text=this.value; };
+  document.querySelectorAll('#rov-font button').forEach(function(bt){ bt.onclick=function(){ document.querySelectorAll('#rov-font button').forEach(function(x){x.classList.remove('on');}); bt.classList.add('on'); REEL_ST.ov.font=bt.dataset.font; }; });
+  $('#rov-size').oninput=function(){ REEL_ST.ov.size=parseInt(this.value,10)||54; $('#rov-sizeVal').textContent=this.value; };
+  document.querySelectorAll('#rov-color button').forEach(function(bt){ bt.onclick=function(){ document.querySelectorAll('#rov-color button').forEach(function(x){x.classList.remove('on');}); bt.classList.add('on'); REEL_ST.ov.color=bt.dataset.c; }; });
+  $('#rov-band').onchange=function(){ REEL_ST.ov.band=this.checked; };
+  $('#rov-y').oninput=function(){ var v=parseInt(this.value,10)||76; REEL_ST.ov.y=v/100; $('#rov-yVal').textContent=v+'%'+(v<34?' (top)':(v<67?' (middle)':' (lower)')); };
+  $('#rov-start').oninput=function(){ var v=parseFloat(this.value)||0; REEL_ST.ov.start=v; $('#rov-startVal').textContent=v.toFixed(1)+'s'; var ev=$('#rov-end'); if(parseFloat(ev.value)<v){ ev.value=this.value; ev.oninput(); } };
+  $('#rov-end').oninput=function(){ var v=parseFloat(this.value)||0; var m=parseFloat(this.max)||0; if(v>=m-0.05){ REEL_ST.ov.end=null; $('#rov-endVal').textContent='end'; } else { REEL_ST.ov.end=v; $('#rov-endVal').textContent=v.toFixed(1)+'s'; } };
+  // -- TBI mark controls --
+  $('#ric-on').onchange=function(){ REEL_ST.icon.on=this.checked; };
+  document.querySelectorAll('#ric-pos button').forEach(function(bt){ bt.onclick=function(){ document.querySelectorAll('#ric-pos button').forEach(function(x){x.classList.remove('on');}); bt.classList.add('on'); REEL_ST.icon.pos=bt.dataset.pos; }; });
+  $('#ric-scale').oninput=function(){ var v=parseInt(this.value,10)||70; REEL_ST.icon.scale=v/100; $('#ric-scaleVal').textContent=v+'%'; };
+  // -- cover controls --
+  document.querySelectorAll('#rcov-mode button').forEach(function(bt){ bt.onclick=function(){
+    document.querySelectorAll('#rcov-mode button').forEach(function(x){x.classList.remove('on');}); bt.classList.add('on');
+    REEL_ST.cover.mode=bt.dataset.cov;
+    $('#rcov-frame-row').style.display=(bt.dataset.cov==='frame')?'':'none';
+    $('#rcov-upload-row').style.display=(bt.dataset.cov==='upload')?'':'none';
+    if(bt.dataset.cov==='frame'&&REEL_ST.url){ try{ prev.pause(); prev.currentTime=(REEL_ST.cover.frameMs||0)/1000; }catch(_e){} }
+  }; });
+  $('#rcov-frame').oninput=function(){ var v=parseFloat(this.value)||0; REEL_ST.cover.frameMs=Math.round(v*1000); $('#rcov-frameVal').textContent=v.toFixed(1)+'s'; if(REEL_ST.url){ try{ prev.pause(); prev.currentTime=v; }catch(_e){} } };
+  $('#rcov-drop').onclick=function(){ $('#rcov-file').click(); };
+  $('#rcov-file').onchange=function(){ var f=this.files&&this.files[0]; if(f){ REEL_ST.cover.file=f; $('#rcov-filename').textContent='Cover: '+(f.name||'image')+' ('+(f.size/1048576).toFixed(1)+'MB)'; } this.value=''; };
+  // -- IG options --
+  $('#rig-grid').onchange=function(){ REEL_ST.ig.grid=this.checked; };
+  // -- AI caption helper --
   $('#reel-draft').onclick=async function(){
     var b=$('#reel-draft'), stt=$('#reel-draft-status');
     var src=($('#reel-src').value||'').trim();
@@ -1998,17 +2212,37 @@ function initReel(){
     }catch(e){ stt.textContent='Error: '+(e&&e.message?e.message:e); }
     b.disabled=false;
   };
+  // -- send to scheduling --
   $('#reel-send').onclick=async function(){
     var b=$('#reel-send'), stt=$('#reel-status');
     if(!REEL_ST.file){ stt.innerHTML='<span style="color:var(--red)">Add a video first.</span>'; return; }
-    b.disabled=true; b.textContent='Sending...'; stt.textContent='Uploading video ('+(REEL_ST.file.size/1048576).toFixed(1)+'MB &mdash; can take a minute)...';
+    if(REEL_ST.ov.textOn&&!(REEL_ST.ov.text||'').trim()){ stt.innerHTML='<span style="color:var(--red)">Text overlay is on but empty &mdash; type the text or turn it off.</span>'; return; }
+    if(REEL_ST.cover.mode==='upload'&&!REEL_ST.cover.file){ stt.innerHTML='<span style="color:var(--red)">Cover is set to Upload but no image is chosen.</span>'; return; }
+    b.disabled=true; b.textContent='Sending...';
     try{
-      var ext=/[.]mov$/i.test(REEL_ST.file.name||'')?'.mov':'.mp4';
-      var path='sched-reel-'+crypto.randomUUID()+ext;
-      var up=await sb.storage.from('ig-rendered').upload(path, REEL_ST.file, {upsert:true, contentType:(REEL_ST.file.type||'video/mp4')});
+      var upBlob=REEL_ST.file; var ext=/[.]mov$/i.test(REEL_ST.file.name||'')?'.mov':'.mp4'; var ctype=REEL_ST.file.type||'video/mp4';
+      if(reelOverlaysActive()){
+        try{ prev.pause(); }catch(_e){}
+        stt.textContent='Burning the overlays into the video (runs at video speed)... 0%';
+        upBlob=await reelBurn(function(p){ stt.textContent='Burning the overlays into the video (runs at video speed)... '+p+'%'; });
+        ext='.mp4'; ctype='video/mp4';
+      }
+      var id=crypto.randomUUID();
+      stt.textContent='Uploading video ('+(upBlob.size/1048576).toFixed(1)+'MB &mdash; can take a minute)...';
+      var path='sched-reel-'+id+ext;
+      var up=await sb.storage.from('ig-rendered').upload(path, upBlob, {upsert:true, contentType:ctype});
       if(up.error) throw up.error;
       var pub=sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl;
-      var ins=await sb.from('social_suggestions').insert({ kind:'reel', angle:'Reel', content:($('#reel-caption').value||''), video_url:pub, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() });
+      var coverUrl=null; var cb=await reelBuildCoverBlob();
+      if(cb){
+        stt.textContent='Uploading the cover image...';
+        var cpath='sched-cover-'+id+'.jpg';
+        var cup=await sb.storage.from('ig-rendered').upload(cpath, cb, {upsert:true, contentType:'image/jpeg'});
+        if(cup.error) throw cup.error;
+        coverUrl=sb.storage.from('ig-rendered').getPublicUrl(cpath).data.publicUrl;
+      }
+      var opts=reelBuildOptions(coverUrl);
+      var ins=await sb.from('social_suggestions').insert({ kind:'reel', angle:'Reel', content:($('#reel-caption').value||''), video_url:pub, options:opts, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() });
       if(ins.error) throw new Error(ins.error.message);
       stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged) to pick Instagram/Facebook and when.';
       b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
