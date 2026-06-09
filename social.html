@@ -769,12 +769,12 @@ async function loadJokes(){
   if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
   if(!data||!data.length){ host.innerHTML='<div class="empty">Nothing yet. Define your series below, then click <b>Generate a batch</b>.</div>'; return; }
   const meta={}; (Array.isArray(CFG&&CFG.series)?CFG.series:[]).forEach(s=>{ meta[s.key]=s; });
-  const byKey={}; data.forEach(r=>{ const k=r.series||r.kind; (byKey[k]=byKey[k]||[]).push(r); });
+  const byKey={}; data.forEach(r=>{ const k=r.batch_id||r.series||r.kind; (byKey[k]=byKey[k]||[]).push(r); });
   host.innerHTML=Object.keys(byKey).map(k=>{
-    const m=meta[k]||{}; const label=esc(m.name||k); const kl=(m.kind==='question'?'Questions':'Jokes'); const items=byKey[k];
+    const items=byKey[k]; const first=items[0]; const sk=first.series||first.kind; const m=meta[sk]||{}; const label=esc(first.angle||m.name||sk); const kl=((first.kind==='question')?'Questions':'Jokes');
     return '<div class="story-card" data-ids="'+items.map(it=>it.id).join(',')+'"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Collapse</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
       '<div class="grp-items">'+items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
-        '<span class="angle">'+esc(m.name||k)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
+        '<span class="angle">'+label+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
         '<span class="text">'+esc(it.content)+'</span></div>'+
         '<div class="acts">'+
           '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged '+CK:'Send to Scheduling')+'</button>'+
