@@ -233,6 +233,10 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .sres{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px}
 .sres .t{font-size:13px}
 .sres .d{font-size:11px;color:#8a8178;white-space:nowrap}
+.staged-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.staged-thumbs img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--border)}
+.q-thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);float:left;margin-right:8px}
+.ch-instagram{background:#d6336c;color:#fff}
 </style>
 </head>
 <body>
@@ -322,7 +326,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <div class="ig-stage">
           <canvas id="ig-card" width="1080" height="1440"></canvas>
           <div class="ig-actions">
-            <button class="btn btn-gold" id="ig-post">Post to Instagram</button>
+            <button class="btn btn-gold" id="ig-send">Send to Scheduling</button>
+            <button class="btn btn-outline btn-sm" id="ig-post">Post to IG now</button>
             <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
@@ -386,7 +391,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="cp-thumbs" id="cp-thumbs"></div>
           <div class="cp-order" id="cp-order" style="display:none"><button id="cp-left">&lt; Move</button><span id="cp-sel-label">Photo 1 of 1</span><button id="cp-right">Move &gt;</button></div>
           <div class="ig-actions">
-            <button class="btn btn-gold" id="cp-post">Post to Instagram</button>
+            <button class="btn btn-gold" id="cp-send">Send to Scheduling</button>
+            <button class="btn btn-outline btn-sm" id="cp-post">Post to IG now</button>
             <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
             <div class="ig-sched-row"><input type="datetime-local" id="cp-when"><button class="btn btn-outline btn-sm" id="cp-schedule">Schedule</button></div>
           </div>
@@ -892,8 +898,9 @@ function schedShow(v){
   else if(v==='slots') loadSlots();
 }
 var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'}];
+var IMG_CH=[{k:'instagram',l:'Instagram'},{k:'facebook',l:'Facebook'}];
 function chIcon(k){ var m={facebook:'FB',threads:'TH',bluesky:'BS',x:'X',instagram:'IG'}; return '<span class="ch-ico ch-'+k+'" title="'+esc(k)+'">'+(m[k]||k)+'</span>'; }
-function chTogglesHtml(sel){ sel=sel||[]; return DIRECT_CH.map(function(c){ return '<span class="chan-chip ch-toggle '+(sel.indexOf(c.k)>=0?'on':'')+'" data-ch="'+c.k+'">'+esc(c.l)+'</span>'; }).join(''); }
+function chTogglesHtml(sel,list){ sel=sel||[]; list=list||DIRECT_CH; return list.map(function(c){ return '<span class="chan-chip ch-toggle '+(sel.indexOf(c.k)>=0?'on':'')+'" data-ch="'+c.k+'">'+esc(c.l)+'</span>'; }).join(''); }
 
 // ---------- Staged drafts: compose + schedule ----------
 async function loadStaged(){
@@ -904,12 +911,15 @@ async function loadStaged(){
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft.</div>'; return; }
   var slotOpts=slotOptionsHtml(await upcomingSlots(20));
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
+    var isImg=Array.isArray(it.image_urls)&&it.image_urls.length;
+    var media=isImg?('<div class="staged-thumbs">'+it.image_urls.map(function(u){return '<img src="'+esc(u)+'" alt="">';}).join('')+'</div>'):'';
+    var metaRow=isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"></div>');
+    var toggles=isImg?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
-      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
-      '<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"></div>'+
-      '<div class="chan-chips" style="margin:8px 0">'+chTogglesHtml(['facebook','threads','bluesky','x'])+'</div>'+
+      media+metaRow+
+      '<div class="chan-chips" style="margin:8px 0">'+toggles+'</div>'+
       '<div class="when-row"><label class="wopt"><input type="radio" name="w'+it.id+'" value="now"> Post now</label>'+
       '<label class="wopt"><input type="radio" name="w'+it.id+'" value="slot" checked> Slot: <select class="slotsel">'+slotOpts+'</select></label>'+
       '<label class="wopt"><input type="radio" name="w'+it.id+'" value="time"> At <input type="datetime-local" class="when"></label></div>'+
@@ -927,8 +937,9 @@ async function scheduleStaged(row){
   var id=row.dataset.id, it=STAGED_MAP[id]||{}, res=row.querySelector('[data-res]'), btn=row.querySelector('.go');
   var channels=[].map.call(row.querySelectorAll('.ch-toggle.on'),function(c){return c.dataset.ch;});
   if(!channels.length){ res.className='sched-result err'; res.textContent='Pick at least one channel.'; return; }
-  var link=((row.querySelector('.linkfield')||{}).value||'').trim();
-  var msg=link?fbStripLink(it.content):((it.content||'').trim());
+  var imgs=Array.isArray(it.image_urls)?it.image_urls:[];
+  var link=imgs.length?'':((row.querySelector('.linkfield')||{}).value||'').trim();
+  var msg=(imgs.length||!link)?((it.content||'').trim()):fbStripLink(it.content);
   var mode=(row.querySelector('input[name="w'+id+'"]:checked')||{}).value||'slot';
   var when=null;
   if(mode==='now'){ when=new Date().toISOString(); }
@@ -937,11 +948,11 @@ async function scheduleStaged(row){
   btn.disabled=true; btn.textContent=(mode==='now')?'Posting...':'Scheduling...'; res.className='sched-result'; res.textContent='';
   try{
     if(mode==='now'){
-      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,channels:channels,suggestion_id:id}});
+      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,image_urls:imgs,channels:channels,suggestion_id:id}});
       if(dr.error) throw dr.error; if(!dr.data||(dr.data.ok===false&&dr.data.status==='failed')) throw new Error('all channels failed');
       res.className='sched-result ok'; res.innerHTML=CK+' Posted ('+esc(channels.join(', '))+')';
     } else {
-      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
+      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
       if(ins.error) throw ins.error;
       await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',id);
       res.className='sched-result ok'; res.innerHTML=CK+' Scheduled for '+esc(fmtWhen(when));
@@ -959,6 +970,7 @@ async function loadQueue(){
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing in the new queue yet.</div>'; host.insertAdjacentHTML('beforeend','<div id="q-draining"></div>'); loadDraining(); return; }
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
     return '<div class="sugg q" data-id="'+it.id+'"><div class="body">'+
+      ((Array.isArray(it.image_urls)&&it.image_urls.length)?'<img class="q-thumb" src="'+esc(it.image_urls[0])+'" alt="">':'')+
       '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
       '<div class="meta" style="margin-top:6px">'+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; <a href="'+esc(it.link)+'" target="_blank" rel="noopener">link</a>':'')+'</div>'+
       '<div class="sched-result" data-res></div></div>'+
@@ -1382,6 +1394,18 @@ function igBoot(){
   if($("#ig-cand-reload")) $("#ig-cand-reload").onclick=loadIGCandidates;
   if($("#ig-cap-copy")) $("#ig-cap-copy").onclick=function(){ navigator.clipboard.writeText($("#ig-caption").value||""); var b=$("#ig-cap-copy"); b.textContent="Copied "+CK; setTimeout(function(){b.textContent="Copy caption";},1400); };
   if($("#ig-create")) $("#ig-create").onclick=async function(){ var b=$("#ig-create"); if(!IG_CUR){ b.textContent="Pick a card first"; setTimeout(function(){b.textContent="Create (save hosted)";},1600); return; } b.disabled=true; b.textContent="Creating..."; try{ var blob=await new Promise(function(r){ canvas.toBlob(r,"image/png"); }); var up=await sb.storage.from("ig-rendered").upload(IG_CUR+".png", blob, {upsert:true, contentType:"image/png"}); if(up.error) throw up.error; var pub=sb.storage.from("ig-rendered").getPublicUrl(IG_CUR+".png"); await sb.from("ig_cards").update({rendered_path:IG_CUR+".png", status:"created", chosen_caption:$("#ig-caption").value||"", template:{blackFrac:state.blackFrac,headOffX:state.headOffX,headOffY:state.headOffY,manualSize:state.manualSize,autofit:state.autofit,tbiScale:state.tbiScale,tbiCirclePos:state.tbiCirclePos,hairline:state.hairline,W:state.W,H:state.H}}).eq("id",IG_CUR); b.textContent="Created "+CK; loadIGCandidates(); setTimeout(function(){b.textContent="Create (save hosted)"; b.disabled=false;},1800); }catch(e){ b.textContent="Error"; b.disabled=false; setTimeout(function(){b.textContent="Create (save hosted)";},2000); } };
+  if($("#ig-send")) $("#ig-send").onclick=async function(){
+    var b=$("#ig-send"), st=$("#ig-post-status");
+    var ratio=canvas.width/canvas.height;
+    if(ratio<0.8||ratio>1.91){ st.innerHTML='<span style="color:var(--red)">Use a 4:5 or 1:1 card for IG/FB feed posts (set it under Format &amp; layout).</span>'; return; }
+    b.disabled=true; b.textContent="Sending..."; st.textContent="Rendering + uploading the image...";
+    try{
+      var blob=await new Promise(function(r){ canvas.toBlob(r,"image/jpeg",0.92); });
+      await igSendToScheduling([blob], ($("#ig-caption").value||""));
+      st.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged) to pick Instagram/Facebook and when.';
+      b.textContent="Sent "+CK; setTimeout(function(){ b.textContent="Send to Scheduling"; b.disabled=false; },2600);
+    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Send to Scheduling"; b.disabled=false; }
+  };
   if($("#ig-post")) $("#ig-post").onclick=async function(){
     var b=$("#ig-post"), st=$("#ig-post-status");
     var ratio=canvas.width/canvas.height;
@@ -1788,6 +1812,21 @@ function cpBoot(){
       b.textContent='Posted '+CK; setTimeout(function(){ b.textContent='Post to Instagram'; b.disabled=false; },3000);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Post to Instagram'; b.disabled=false; }
   };
+  if($('#cp-send')) $('#cp-send').onclick=async function(){
+    var b=$('#cp-send'), stt=$('#cp-post-status');
+    var ready=st.imgs.filter(function(o){return o.img;});
+    if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
+    var ratio=st.W/st.H;
+    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick 4:5, 1:1, or 1.91:1 for IG/FB feed posts (9:16 is Stories-only).</span>'; return; }
+    b.disabled=true; b.textContent='Sending...'; stt.textContent='Rendering + uploading '+ready.length+' image'+(ready.length>1?'s':'')+'...';
+    try{
+      var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d'); var blobs=[];
+      for(var i=0;i<ready.length;i++){ paint(octx, ready[i], st.W, st.H); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); blobs.push(blob); }
+      await igSendToScheduling(blobs, ($('#cp-caption').value||''));
+      stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged) to pick Instagram/Facebook and when.';
+      b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
+  };
   $('#cp-schedule').onclick=async function(){
     var b=$('#cp-schedule'), stt=$('#cp-post-status');
     var ready=st.imgs.filter(function(o){return o.img;});
@@ -1834,6 +1873,18 @@ function igWhenIso(val, statusEl){
 }
 
 // Upload rendered JPEG blob(s) to ig-rendered/sched-* (purge-exempt), then queue an ig_scheduled row.
+async function igSendToScheduling(blobs, caption){
+  var id=crypto.randomUUID(); var urls=[];
+  for(var i=0;i<blobs.length;i++){
+    var path='sched-'+id+'-'+i+'.jpg';
+    var up=await sb.storage.from('ig-rendered').upload(path, blobs[i], {upsert:true, contentType:'image/jpeg'});
+    if(up.error) throw up.error;
+    urls.push(sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl);
+  }
+  var ins=await sb.from('social_suggestions').insert({ kind:'image_post', angle:'Image card', content:caption||'', image_urls:urls, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() });
+  if(ins.error) throw new Error(ins.error.message);
+  return urls.length;
+}
 async function igStageAndSchedule(blobs, opts){
   var id=crypto.randomUUID();
   var urls=[], paths=[];
