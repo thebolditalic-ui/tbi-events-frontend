@@ -212,6 +212,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
   .sugg .acts{flex-direction:row;flex-wrap:wrap;width:100%}
   .sugg .acts .btn{width:auto;flex:1}
 }
+/* ---- unified scheduler ---- */
+.schtab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font-family:inherit;font-size:13px;cursor:pointer;color:#8a8178}
+.schtab.active{color:#1d1b1a;border-bottom-color:#1d1b1a;font-weight:600}
+.ch-ico{display:inline-block;min-width:16px;text-align:center;padding:1px 5px;border-radius:4px;background:#efeae3;font-size:10px;font-weight:700;color:#1d1b1a}
+.cal-item{padding:4px 0;font-size:13px}
+.cal-day{margin-bottom:6px}
+.wopt{font-size:12px;margin-right:12px;white-space:nowrap}
+.sview{margin-top:6px}
 </style>
 </head>
 <body>
@@ -433,19 +441,20 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <!-- SCHEDULE -->
     <section class="panel" id="panel-schedule">
       <h2 class="section">Schedule</h2>
-      <p class="sub">Staged drafts post to Facebook and Threads directly with a link preview and no raw URL, either now or at a time you set. Other channels still queue through Buffer (pick them below). Use <b>Post to Facebook</b>, <b>Post to Threads</b>, or <b>Add to Buffer queue</b> on any draft.</p>
-      <div class="chanbar">
-        <span class="chanbar-label">Post to</span>
-        <span class="chan-chips" id="chan-chips"><span class="run-status">Loading channels...</span></span>
+      <p class="sub">Compose once, pick channels, and post now or schedule into your posting times. Everything lands in one queue, shown once with the networks it goes to.</p>
+      <div class="chanbar" id="sched-subnav">
+        <button class="schtab active" data-sview="staged">Staged</button>
+        <button class="schtab" data-sview="queue">Queue</button>
+        <button class="schtab" data-sview="calendar">Calendar</button>
+        <button class="schtab" data-sview="history">History</button>
+        <button class="schtab" data-sview="slots">Posting times</button>
         <button class="btn btn-outline btn-sm" id="reload-sched" style="margin-left:auto">Reload</button>
       </div>
-      <div id="schedule-list"></div>
-      <h3 class="sched-sub" id="fb-sched-head" style="display:none">Scheduled on Facebook</h3>
-      <div id="fb-sched-list"></div>
-      <h3 class="sched-sub" id="th-sched-head" style="display:none">Scheduled on Threads</h3>
-      <div id="th-sched-list"></div>
-      <h3 class="sched-sub" id="scheduled-head" style="display:none">Already in Buffer</h3>
-      <div id="scheduled-list"></div>
+      <div id="sv-staged" class="sview"></div>
+      <div id="sv-queue" class="sview" style="display:none"></div>
+      <div id="sv-calendar" class="sview" style="display:none"></div>
+      <div id="sv-history" class="sview" style="display:none"></div>
+      <div id="sv-slots" class="sview" style="display:none"></div>
     </section>
 
     <!-- SETTINGS -->
@@ -819,39 +828,189 @@ function schedCard(it){
     '</div></div>';
 }
 async function loadSchedule(force){
-  const host=$('#schedule-list');
-  host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
-  await loadChannels(force); renderChips();
-  const {data,error}=await sb.from('social_suggestions')
-    .select('*').in('status',['staged','scheduled']).order('created_at',{ascending:false}).limit(300);
-  if(error){ host.innerHTML='<div class="empty">Error: '+esc(error.message)+'</div>'; return; }
-  const staged=(data||[]).filter(r=>r.status==='staged');
-  const sched=(data||[]).filter(r=>r.status==='scheduled');
-  STAGED_MAP={}; staged.forEach(it=>{ STAGED_MAP[it.id]=it; });
-  if(!staged.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft to queue it here.</div>'; }
-  else{
-    host.innerHTML='<div class="story-card">'+staged.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+  var nav=$('#sched-subnav');
+  if(nav && !nav.dataset.wired){ nav.dataset.wired='1'; nav.querySelectorAll('.schtab[data-sview]').forEach(function(b){ b.onclick=function(){ schedShow(b.dataset.sview); }; }); }
+  schedShow(window._sview||'staged');
+}
+function schedShow(v){
+  window._sview=v;
+  ['staged','queue','calendar','history','slots'].forEach(function(k){
+    var el=$('#sv-'+k); if(el) el.style.display=(k===v)?'':'none';
+    var tb=document.querySelector('.schtab[data-sview="'+k+'"]'); if(tb) tb.classList.toggle('active',k===v);
+  });
+  if(v==='staged') loadStaged();
+  else if(v==='queue') loadQueue();
+  else if(v==='calendar') loadCalendar();
+  else if(v==='history') loadHistory();
+  else if(v==='slots') loadSlots();
+}
+var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'}];
+function chIcon(k){ var m={facebook:'FB',threads:'TH',bluesky:'BS',x:'X',instagram:'IG'}; return '<span class="ch-ico ch-'+k+'" title="'+esc(k)+'">'+(m[k]||k)+'</span>'; }
+function chTogglesHtml(sel){ sel=sel||[]; return DIRECT_CH.map(function(c){ return '<span class="chan-chip ch-toggle '+(sel.indexOf(c.k)>=0?'on':'')+'" data-ch="'+c.k+'">'+esc(c.l)+'</span>'; }).join(''); }
+
+// ---------- Staged drafts: compose + schedule ----------
+async function loadStaged(){
+  var host=$('#sv-staged'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  var r=await sb.from('social_suggestions').select('*').eq('status','staged').order('created_at',{ascending:false}).limit(200);
+  if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  var rows=r.data||[]; STAGED_MAP={}; rows.forEach(function(it){ STAGED_MAP[it.id]=it; });
+  if(!rows.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft.</div>'; return; }
+  host.innerHTML='<div class="story-card">'+rows.map(function(it){
+    return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
-      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
-      ((it.buffer_post_ids&&Object.keys(it.buffer_post_ids).length)?'<div class="meta" style="font-size:11px;color:var(--green);margin-top:4px">Already in Buffer: '+esc(chNames(Object.keys(it.buffer_post_ids)))+'</div>':'')+
-      '<div class="when-row"><input type="datetime-local" class="when"><span class="when-hint">pick a time to schedule, or leave blank to post now</span></div>'+
+      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+(it.story_url?' &middot; link card':'')+'</div>'+
+      '<div class="chan-chips" style="margin:8px 0">'+chTogglesHtml(['facebook','threads','bluesky','x'])+'</div>'+
+      '<div class="when-row"><label class="wopt"><input type="radio" name="w'+it.id+'" value="now"> Post now</label>'+
+      '<label class="wopt"><input type="radio" name="w'+it.id+'" value="slot" checked> Next slot</label>'+
+      '<label class="wopt"><input type="radio" name="w'+it.id+'" value="time"> At <input type="datetime-local" class="when"></label></div>'+
       '<div class="sched-result" data-res></div></div>'+
-      '<div class="acts">'+
-        '<button class="btn btn-gold btn-sm fbpost">Post to Facebook</button>'+
-        '<button class="btn btn-gold btn-sm thpost">Post to Threads</button>'+
-        '<button class="btn btn-outline btn-sm send">Add to Buffer queue</button>'+
-        '<button class="btn btn-outline btn-sm copy">Copy</button>'+
-        '<button class="btn btn-outline btn-sm unstage">Unstage</button>'+
-      '</div></div>').join('')+'</div>';
+      '<div class="acts"><button class="btn btn-gold btn-sm go">Schedule</button>'+
+      '<button class="btn btn-outline btn-sm copy">Copy</button>'+
+      '<button class="btn btn-outline btn-sm unstage">Unstage</button></div></div>';
+  }).join('')+'</div>';
+  host.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
+  host.querySelectorAll('.comp .copy').forEach(function(b){ b.onclick=function(e){ var t=e.target.closest('.sugg').querySelector('.text').textContent; navigator.clipboard.writeText(t); e.target.textContent='Copied '+CK; setTimeout(function(){e.target.textContent='Copy';},1400); }; });
+  host.querySelectorAll('.comp .unstage').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
+  host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
+}
+async function scheduleStaged(row){
+  var id=row.dataset.id, it=STAGED_MAP[id]||{}, res=row.querySelector('[data-res]'), btn=row.querySelector('.go');
+  var channels=[].map.call(row.querySelectorAll('.ch-toggle.on'),function(c){return c.dataset.ch;});
+  if(!channels.length){ res.className='sched-result err'; res.textContent='Pick at least one channel.'; return; }
+  var link=(it.story_url||'').trim();
+  var msg=link?fbStripLink(it.content):((it.content||'').trim());
+  var mode=(row.querySelector('input[name="w'+id+'"]:checked')||{}).value||'slot';
+  var when=null;
+  if(mode==='now'){ when=new Date().toISOString(); }
+  else if(mode==='slot'){ when=await nextOpenSlot(); if(!when){ res.className='sched-result err'; res.textContent='No posting times set yet (add some under Posting times), or pick a time.'; return; } }
+  else { var el=row.querySelector('.when'); if(!el||!el.value){ res.className='sched-result err'; res.textContent='Pick a date and time.'; return; } var d=new Date(el.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That time is not valid.'; return; } when=d.toISOString(); }
+  btn.disabled=true; btn.textContent=(mode==='now')?'Posting...':'Scheduling...'; res.className='sched-result'; res.textContent='';
+  try{
+    if(mode==='now'){
+      var dr=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:msg,link:link,channels:channels,suggestion_id:id}});
+      if(dr.error) throw dr.error; if(!dr.data||(dr.data.ok===false&&dr.data.status==='failed')) throw new Error('all channels failed');
+      res.className='sched-result ok'; res.innerHTML=CK+' Posted ('+esc(channels.join(', '))+')';
+    } else {
+      var ins=await sb.from('post_queue').insert({text:msg,link:link||null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
+      if(ins.error) throw ins.error;
+      await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',id);
+      res.className='sched-result ok'; res.innerHTML=CK+' Scheduled for '+esc(fmtWhen(when));
+    }
+    btn.textContent='Done '+CK; setTimeout(loadStaged,1500);
+  }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Schedule'; }
+}
+
+// ---------- Queue (upcoming) ----------
+async function loadQueue(){
+  var host=$('#sv-queue'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(300);
+  if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  var rows=r.data||[];
+  if(!rows.length){ host.innerHTML='<div class="empty">Queue is empty. Schedule a staged draft to fill it.</div>'; return; }
+  host.innerHTML='<div class="story-card">'+rows.map(function(it){
+    return '<div class="sugg q" data-id="'+it.id+'"><div class="body">'+
+      '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
+      '<div class="meta" style="margin-top:6px">'+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; link':'')+'</div>'+
+      '<div class="sched-result" data-res></div></div>'+
+      '<div class="acts"><button class="btn btn-outline btn-sm qedit">Edit</button>'+
+      '<button class="btn btn-danger btn-sm qrevoke">Revoke</button></div></div>';
+  }).join('')+'</div>';
+  host.querySelectorAll('.qrevoke').forEach(function(b){ b.onclick=function(e){ revokeQueued(e.target.closest('.sugg')); }; });
+  host.querySelectorAll('.qedit').forEach(function(b){ b.onclick=function(e){ editQueued(e.target.closest('.sugg')); }; });
+}
+async function revokeQueued(row){
+  var id=row.dataset.id, res=row.querySelector('[data-res]'), btn=row.querySelector('.qrevoke');
+  btn.disabled=true; btn.textContent='Revoking...';
+  try{
+    var q=await sb.from('post_queue').select('*').eq('id',id).single(); var it=q.data||{};
+    if(it.source_suggestion_id){ await sb.from('social_suggestions').update({status:'staged'}).eq('id',it.source_suggestion_id); }
+    else { await sb.from('social_suggestions').insert({kind:'story_post',content:it.text||'',story_url:it.link||null,status:'staged'}); }
+    await sb.from('post_queue').delete().eq('id',id);
+    res.className='sched-result ok'; res.textContent=CK+' Back in Staged drafts'; setTimeout(loadQueue,1100);
+  }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); btn.disabled=false; btn.textContent='Revoke'; }
+}
+function editQueued(row){
+  var id=row.dataset.id, body=row.querySelector('.body'); if(row.querySelector('.qe')) return;
+  sb.from('post_queue').select('*').eq('id',id).single().then(function(r){
+    var it=r.data||{}, span=row.querySelector('.text'), res=row.querySelector('[data-res]');
+    var box=document.createElement('div'); box.className='qe'; box.style.marginTop='8px';
+    box.innerHTML='<textarea class="editbox"></textarea><div class="chan-chips" style="margin:6px 0">'+chTogglesHtml(it.channels||[])+'</div><div class="when-row"><input type="datetime-local" class="when"></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-gold btn-sm qsave">Save</button><button class="btn btn-outline btn-sm qcancel">Cancel</button></div>';
+    span.style.display='none'; body.insertBefore(box,res);
+    box.querySelector('.editbox').value=it.text||'';
+    var dt=box.querySelector('.when'); if(it.scheduled_at) dt.value=toLocalInput(new Date(it.scheduled_at));
+    box.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
+    box.querySelector('.qcancel').onclick=function(){ box.remove(); span.style.display=''; };
+    box.querySelector('.qsave').onclick=async function(){
+      var text=box.querySelector('.editbox').value.trim();
+      var channels=[].map.call(box.querySelectorAll('.ch-toggle.on'),function(c){return c.dataset.ch;});
+      var when=it.scheduled_at; if(dt.value){ var d=new Date(dt.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='Bad time.'; return; } when=d.toISOString(); }
+      if(!channels.length){ res.className='sched-result err'; res.textContent='Pick a channel.'; return; }
+      var sv=box.querySelector('.qsave'); sv.disabled=true; sv.textContent='Saving...';
+      try{ var u=await sb.from('post_queue').update({text:text,channels:channels,scheduled_at:when,updated_at:new Date().toISOString()}).eq('id',id); if(u.error) throw u.error; res.className='sched-result ok'; res.textContent=CK+' Updated'; setTimeout(loadQueue,900); }
+      catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); sv.disabled=false; sv.textContent='Save'; }
+    };
+  });
+}
+
+// ---------- Calendar (agenda grouped by day) ----------
+async function loadCalendar(){
+  var host=$('#sv-calendar'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(300);
+  if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  var rows=r.data||[]; if(!rows.length){ host.innerHTML='<div class="empty">Nothing scheduled.</div>'; return; }
+  var byday={}, order=[];
+  rows.forEach(function(it){ var d=new Date(it.scheduled_at); var key=d.toLocaleDateString([], {weekday:'long',month:'short',day:'numeric'}); if(!byday[key]){ byday[key]=[]; order.push(key); } byday[key].push(it); });
+  host.innerHTML=order.map(function(day){
+    return '<div class="cal-day"><div class="sched-sub" style="margin:14px 0 4px">'+esc(day)+'</div>'+
+      byday[day].map(function(it){ var t=new Date(it.scheduled_at).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); return '<div class="cal-item"><b>'+esc(t)+'</b> '+(it.channels||[]).map(chIcon).join(' ')+' <span style="color:#8a8178">'+esc((it.text||it.link||'').slice(0,72))+'</span></div>'; }).join('')+'</div>';
+  }).join('');
+}
+
+// ---------- History (posted / partial / failed) ----------
+async function loadHistory(){
+  var host=$('#sv-history'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  var r=await sb.from('post_queue').select('*').in('status',['posted','partial','failed']).order('scheduled_at',{ascending:false}).limit(100);
+  if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  var rows=r.data||[]; if(!rows.length){ host.innerHTML='<div class="empty">No posts yet.</div>'; return; }
+  host.innerHTML='<div class="story-card">'+rows.map(function(it){
+    var rs=it.results||{};
+    var chs=(it.channels||[]).map(function(k){ var rr=rs[k]||{}; if(rr.ok){ return rr.permalink?('<a href="'+esc(rr.permalink)+'" target="_blank" rel="noopener">'+chIcon(k)+'</a>'):chIcon(k); } return '<span style="opacity:.45" title="'+esc((rr.error||'failed')+'')+'">'+chIcon(k)+' x</span>'; }).join(' ');
+    var anyFail=(it.channels||[]).some(function(k){ return !(rs[k]&&rs[k].ok); });
+    return '<div class="sugg h" data-id="'+it.id+'"><div class="body">'+
+      '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
+      '<div class="meta" style="margin-top:6px">'+chs+' &middot; '+esc(it.status)+' &middot; '+esc(fmtWhen(it.posted_at||it.scheduled_at))+'</div>'+
+      '<div class="sched-result" data-res></div></div>'+
+      (anyFail?'<div class="acts"><button class="btn btn-outline btn-sm hretry">Retry failed</button></div>':'')+'</div>';
+  }).join('')+'</div>';
+  host.querySelectorAll('.hretry').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'), res=row.querySelector('[data-res]'); b.disabled=true; b.textContent='Retrying...'; try{ var rr=await sb.functions.invoke('dispatch',{body:{action:'retry',id:row.dataset.id}}); if(rr.error) throw rr.error; res.className='sched-result ok'; res.textContent=CK+' '+esc((rr.data&&rr.data.status)||'done'); setTimeout(loadHistory,1300); }catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); b.disabled=false; b.textContent='Retry failed'; } }; });
+}
+
+// ---------- Posting times (slots) ----------
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+async function loadSlots(){
+  var host=$('#sv-slots'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
+  var r=await sb.from('posting_slots').select('*').order('dow',{ascending:true}).order('minute',{ascending:true});
+  if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  var rows=r.data||[];
+  var list=rows.map(function(s){ var hh=String(Math.floor(s.minute/60)); var mm=String(s.minute%60); if(mm.length<2) mm='0'+mm; if(hh.length<2) hh='0'+hh; return '<div class="cal-item" data-id="'+s.id+'"><b>'+DOW[s.dow]+' '+hh+':'+mm+'</b> <button class="btn btn-outline btn-sm slotdel" style="margin-left:8px">Remove</button></div>'; }).join('');
+  host.innerHTML='<p class="sub">Your standing posting times (Pacific). "Next slot" on a draft fills the next open one.</p><div class="story-card" style="padding:12px">'+(list||'<div class="empty">No times yet.</div>')+'<div class="when-row" style="margin-top:12px"><select class="slotdow">'+DOW.map(function(d,i){return '<option value="'+i+'">'+d+'</option>';}).join('')+'</select> <input type="time" class="slottime" value="10:00"> <button class="btn btn-gold btn-sm slotadd">Add time</button></div></div>';
+  host.querySelector('.slotadd').onclick=async function(){ var dow=parseInt(host.querySelector('.slotdow').value,10); var tv=host.querySelector('.slottime').value||'10:00'; var p=tv.split(':'); var minute=parseInt(p[0],10)*60+parseInt(p[1],10); await sb.from('posting_slots').insert({dow:dow,minute:minute,active:true}); loadSlots(); };
+  host.querySelectorAll('.slotdel').forEach(function(b){ b.onclick=async function(e){ var el=e.target.closest('.cal-item'); await sb.from('posting_slots').delete().eq('id',el.dataset.id); loadSlots(); }; });
+}
+async function nextOpenSlot(){
+  var sr=await sb.from('posting_slots').select('*').eq('active',true);
+  var slots=sr.data||[]; if(!slots.length) return null;
+  var qr=await sb.from('post_queue').select('scheduled_at').eq('status','queued');
+  var taken={}; (qr.data||[]).forEach(function(p){ taken[new Date(p.scheduled_at).getTime()]=1; });
+  var now=Date.now();
+  for(var day=0; day<28; day++){
+    var base=new Date(); base.setDate(base.getDate()+day);
+    var dow=base.getDay();
+    var todays=slots.filter(function(s){return s.dow===dow;}).sort(function(a,b){return a.minute-b.minute;});
+    for(var i=0;i<todays.length;i++){ var d=new Date(base); d.setHours(Math.floor(todays[i].minute/60),todays[i].minute%60,0,0); var t=d.getTime(); if(t>now+60000 && !taken[t]) return d.toISOString(); }
   }
-  wireSchedHandlers(host);
-  const shost=$('#scheduled-list'); $('#scheduled-head').style.display=sched.length?'block':'none';
-  SCHED_MAP={};
-  shost.innerHTML=sched.length?('<div class="story-card">'+sched.map(it=>{ SCHED_MAP[it.id]=it; return schedCard(it); }).join('')+'</div>'):'';
-  wireScheduledHandlers(shost);
-  loadFbScheduled();
-  loadThScheduled();
+  return null;
 }
 function wireSchedHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
