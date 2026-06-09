@@ -739,8 +739,8 @@ async function loadJokes(){
   const byKey={}; data.forEach(r=>{ const k=r.series||r.kind; (byKey[k]=byKey[k]||[]).push(r); });
   host.innerHTML=Object.keys(byKey).map(k=>{
     const m=meta[k]||{}; const label=esc(m.name||k); const kl=(m.kind==='question'?'Questions':'Jokes'); const items=byKey[k];
-    return '<div class="story-card"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+'</div></div>'+
-      items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+    return '<div class="story-card" data-ids="'+items.map(it=>it.id).join(',')+'"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Collapse</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+      '<div class="grp-items">'+items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
         '<span class="angle">'+esc(m.name||k)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
         '<span class="text">'+esc(it.content)+'</span></div>'+
         '<div class="acts">'+
@@ -748,7 +748,7 @@ async function loadJokes(){
           '<button class="btn btn-outline btn-sm edit">Edit</button>'+
           '<button class="btn btn-outline btn-sm copy">Copy</button>'+
           '<button class="btn btn-outline btn-sm discard">Discard</button>'+
-        '</div></div>').join('')+'</div>';
+        '</div></div>').join('')+'</div></div>';
   }).join('');
   wireSuggHandlers(host);
 }
