@@ -228,6 +228,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .slot-x{cursor:pointer;color:#b03a3a;font-weight:700;margin-left:6px}
 .slot-none{color:#c8bfb2;text-align:center;font-size:12px;padding:4px 0}
 @media(max-width:640px){.slot-grid{grid-template-columns:repeat(7,minmax(42px,1fr));overflow-x:auto}}
+.story-search{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap;align-items:center}
+.story-search input[type=text]{flex:1;min-width:220px;border:1px solid var(--border);border-radius:6px;padding:7px 9px;font-family:inherit;font-size:13px;background:var(--bg-alt)}
+.sres{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:7px 10px;border:1px solid var(--border);border-radius:6px;margin-bottom:5px}
+.sres .t{font-size:13px}
+.sres .d{font-size:11px;color:#8a8178;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -285,6 +290,13 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <span class="run-status" id="run-status"></span>
         <span class="spend-pill" id="spend-pill" style="margin-left:auto"></span>
       </div>
+      <div class="story-search">
+        <input type="text" id="story-q" placeholder="Search your Ghost stories by title…">
+        <button class="btn btn-outline btn-sm" id="story-search-btn">Search</button>
+        <button class="btn btn-outline btn-sm" id="hist-btn">Crawled history</button>
+      </div>
+      <div id="story-results"></div>
+      <div id="crawl-history"></div>
       <div id="feed-list"></div>
     </section>
 
@@ -431,6 +443,17 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <button class="btn btn-outline btn-sm" id="jokes-reload">↻ Reload</button>
         <span class="run-status" id="jokes-status"></span>
       </div>
+      <div class="series-row" style="margin:4px 0 8px">
+        <input type="text" id="joke-prompt" class="se-brief" placeholder="Custom prompt, e.g. Being in San Francisco means…">
+        <select id="joke-prompt-kind" class="se-kind"><option value="joke">Jokes</option><option value="question">Questions</option></select>
+        <input type="number" id="joke-prompt-n" value="8" min="1" max="20" style="width:64px">
+        <button class="btn btn-gold btn-sm" id="joke-prompt-gen">Generate from prompt</button>
+      </div>
+      <div class="story-search">
+        <input type="text" id="joke-q" placeholder="Search a Ghost story to make jokes from…">
+        <button class="btn btn-outline btn-sm" id="joke-search-btn">Search</button>
+      </div>
+      <div id="joke-results"></div>
       <div id="jokes-list"></div>
       <div class="set-group" style="margin-top:24px">
         <h3>Series</h3>
@@ -670,6 +693,16 @@ $('#run-btn').onclick=async()=>{
   }catch(e){ $('#run-status').textContent='Error: '+(e.message||e); }
   btn.disabled=false;
 };
+/* ---- Ghost story search (Feed + Jokes) + crawled history ---- */
+async function ghostSearch(q){ try{ const r=await sb.functions.invoke('generate',{body:{search:q}}); if(r.error) throw r.error; if(r.data&&r.data.error) throw new Error(r.data.error); return (r.data&&r.data.results)||[]; }catch(e){ alert('Search error: '+(e.message||e)); return []; } }
+function storyResHtml(list,btnLabel){ if(!list.length) return '<div class="empty">No matching stories.</div>'; return list.map(function(x){ var dt=x.published_at?new Date(x.published_at).toLocaleDateString():''; return '<div class="sres"><div><div class="t">'+esc(x.title||'(untitled)')+'</div><div class="d">'+dt+'</div></div><button class="btn btn-gold btn-sm" data-sid="'+esc(x.id)+'">'+btnLabel+'</button></div>'; }).join(''); }
+if($('#story-search-btn')) $('#story-search-btn').onclick=async function(){ var q=($('#story-q').value||'').trim(); if(!q) return; var host=$('#story-results'); host.innerHTML='<div class="run-status" style="padding:8px">Searching…</div>'; var list=await ghostSearch(q); host.innerHTML=storyResHtml(list,'Mine for ideas'); host.querySelectorAll('[data-sid]').forEach(function(b){ b.onclick=async function(){ b.disabled=true; b.textContent='Mining… (~10–30s)'; try{ var rr=await sb.functions.invoke('generate',{body:{story_id:b.dataset.sid}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); b.textContent='Done ✓ '+((rr.data&&rr.data.suggestions)||0)+' drafts'; loadFeed(); loadSpend(); }catch(e){ b.disabled=false; b.textContent='Mine for ideas'; alert('Error: '+(e.message||e)); } }; }); };
+if($('#story-q')) $('#story-q').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('#story-search-btn').click(); } });
+if($('#hist-btn')) $('#hist-btn').onclick=async function(){ var host=$('#crawl-history'); if(host.dataset.open==='1'){ host.dataset.open='0'; host.innerHTML=''; return; } host.dataset.open='1'; host.innerHTML='<div class="run-status" style="padding:8px">Loading…</div>'; var r=await sb.from('processed_stories').select('story_title,times_processed,last_processed_at').order('last_processed_at',{ascending:false}).limit(200); if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; } var rows=r.data||[]; if(!rows.length){ host.innerHTML='<div class="empty">No crawl history yet.</div>'; return; } host.innerHTML='<div class="story-card" style="padding:10px"><div class="meta" style="margin-bottom:6px">'+rows.length+' stories crawled · most recent first</div>'+rows.map(function(x){ return '<div class="sres"><div class="t">'+esc(x.story_title||'(untitled)')+'</div><div class="d">'+(x.times_processed||1)+'× · '+(x.last_processed_at?new Date(x.last_processed_at).toLocaleDateString():'')+'</div></div>'; }).join('')+'</div>'; };
+/* ---- Jokes: custom prompt + make-from-story ---- */
+if($('#joke-prompt-gen')) $('#joke-prompt-gen').onclick=async function(){ var p=($('#joke-prompt').value||'').trim(); if(!p){ alert('Enter a prompt first.'); return; } var n=parseInt($('#joke-prompt-n').value,10)||8; var kind=$('#joke-prompt-kind').value; var btn=this; btn.disabled=true; $('#jokes-status').textContent='Generating from prompt… (~10–20s)'; try{ var rr=await sb.functions.invoke('generate',{body:{jokes:true,prompt:p,kind:kind,per_batch:n}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); $('#jokes-status').textContent='Done — '+((rr.data&&rr.data.jokes)||0)+' drafts · '+money((rr.data&&rr.data.est_cost_usd)||0); loadJokes(); loadSpend(); }catch(e){ $('#jokes-status').textContent='Error: '+(e.message||e); } btn.disabled=false; };
+if($('#joke-search-btn')) $('#joke-search-btn').onclick=async function(){ var q=($('#joke-q').value||'').trim(); if(!q) return; var host=$('#joke-results'); host.innerHTML='<div class="run-status" style="padding:8px">Searching…</div>'; var list=await ghostSearch(q); host.innerHTML=storyResHtml(list,'Make jokes'); host.querySelectorAll('[data-sid]').forEach(function(b){ b.onclick=async function(){ b.disabled=true; b.textContent='Generating…'; try{ var rr=await sb.functions.invoke('generate',{body:{jokes:true,story_id:b.dataset.sid}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); b.textContent='Done ✓ '+((rr.data&&rr.data.jokes)||0); loadJokes(); loadSpend(); }catch(e){ b.disabled=false; b.textContent='Make jokes'; alert('Error: '+(e.message||e)); } }; }); };
+if($('#joke-q')) $('#joke-q').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('#joke-search-btn').click(); } });
 async function loadFeed(){
   const {data,error}=await sb.from('social_suggestions')
     .select('*').eq('kind','story_post').in('status',['pending','staged'])
