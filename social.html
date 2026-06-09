@@ -712,8 +712,8 @@ async function loadFeed(){
   if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
   const groups={};
   data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,when:r.created_at,items:[]}).items.push(r); });
-  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Collapse</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
-    '<div class="grp-items">'+g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Expand</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+    '<div class="grp-items" style="display:none">'+g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
       '<span class="text">'+esc(it.content)+'</span></div>'+
       '<div class="acts">'+
@@ -772,8 +772,8 @@ async function loadJokes(){
   const byKey={}; data.forEach(r=>{ const k=r.batch_id||r.series||r.kind; (byKey[k]=byKey[k]||[]).push(r); });
   host.innerHTML=Object.keys(byKey).map(k=>{
     const items=byKey[k]; const first=items[0]; const sk=first.series||first.kind; const m=meta[sk]||{}; const label=esc(first.angle||m.name||sk); const kl=((first.kind==='question')?'Questions':'Jokes');
-    return '<div class="story-card" data-ids="'+items.map(it=>it.id).join(',')+'"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Collapse</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
-      '<div class="grp-items">'+items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
+    return '<div class="story-card" data-ids="'+items.map(it=>it.id).join(',')+'"><div class="story-head"><a>'+label+'</a><div class="meta">'+kl+' · '+items.length+' drafts'+(m.brief?' · '+esc(m.brief):'')+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Expand</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+      '<div class="grp-items" style="display:none">'+items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
         '<span class="angle">'+label+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
         '<span class="text">'+esc(it.content)+'</span></div>'+
         '<div class="acts">'+
@@ -903,7 +903,8 @@ async function loadStaged(){
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
-      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+(it.story_url?' &middot; link card':'')+'</div>'+
+      '<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+
+      '<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"></div>'+
       '<div class="chan-chips" style="margin:8px 0">'+chTogglesHtml(['facebook','threads','bluesky','x'])+'</div>'+
       '<div class="when-row"><label class="wopt"><input type="radio" name="w'+it.id+'" value="now"> Post now</label>'+
       '<label class="wopt"><input type="radio" name="w'+it.id+'" value="slot" checked> Slot: <select class="slotsel">'+slotOpts+'</select></label>'+
@@ -922,7 +923,7 @@ async function scheduleStaged(row){
   var id=row.dataset.id, it=STAGED_MAP[id]||{}, res=row.querySelector('[data-res]'), btn=row.querySelector('.go');
   var channels=[].map.call(row.querySelectorAll('.ch-toggle.on'),function(c){return c.dataset.ch;});
   if(!channels.length){ res.className='sched-result err'; res.textContent='Pick at least one channel.'; return; }
-  var link=(it.story_url||'').trim();
+  var link=((row.querySelector('.linkfield')||{}).value||'').trim();
   var msg=link?fbStripLink(it.content):((it.content||'').trim());
   var mode=(row.querySelector('input[name="w'+id+'"]:checked')||{}).value||'slot';
   var when=null;
@@ -955,7 +956,7 @@ async function loadQueue(){
   host.innerHTML='<div class="story-card">'+rows.map(function(it){
     return '<div class="sugg q" data-id="'+it.id+'"><div class="body">'+
       '<span class="text">'+esc(it.text||it.link||'')+'</span>'+
-      '<div class="meta" style="margin-top:6px">'+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; link':'')+'</div>'+
+      '<div class="meta" style="margin-top:6px">'+(it.channels||[]).map(chIcon).join(' ')+' &middot; '+esc(fmtWhen(it.scheduled_at))+(it.link?' &middot; <a href="'+esc(it.link)+'" target="_blank" rel="noopener">link</a>':'')+'</div>'+
       '<div class="sched-result" data-res></div></div>'+
       '<div class="acts"><button class="btn btn-outline btn-sm qedit">Edit</button>'+
       '<button class="btn btn-danger btn-sm qrevoke">Revoke</button></div></div>';
@@ -992,9 +993,9 @@ function editQueued(row){
   sb.from('post_queue').select('*').eq('id',id).single().then(function(r){
     var it=r.data||{}, span=row.querySelector('.text'), res=row.querySelector('[data-res]');
     var box=document.createElement('div'); box.className='qe'; box.style.marginTop='8px';
-    box.innerHTML='<textarea class="editbox"></textarea><div class="chan-chips" style="margin:6px 0">'+chTogglesHtml(it.channels||[])+'</div><div class="when-row"><input type="datetime-local" class="when"></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-gold btn-sm qsave">Save</button><button class="btn btn-outline btn-sm qcancel">Cancel</button></div>';
+    box.innerHTML='<textarea class="editbox"></textarea><input type="text" class="editlink" placeholder="Link (blank = none)" style="width:100%;margin-top:6px;box-sizing:border-box"><div class="chan-chips" style="margin:6px 0">'+chTogglesHtml(it.channels||[])+'</div><div class="when-row"><input type="datetime-local" class="when"></div><div style="display:flex;gap:6px;margin-top:6px"><button class="btn btn-gold btn-sm qsave">Save</button><button class="btn btn-outline btn-sm qcancel">Cancel</button></div>';
     span.style.display='none'; body.insertBefore(box,res);
-    box.querySelector('.editbox').value=it.text||'';
+    box.querySelector('.editbox').value=it.text||''; box.querySelector('.editlink').value=it.link||'';
     var dt=box.querySelector('.when'); if(it.scheduled_at) dt.value=toLocalInput(new Date(it.scheduled_at));
     box.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
     box.querySelector('.qcancel').onclick=function(){ box.remove(); span.style.display=''; };
@@ -1004,7 +1005,7 @@ function editQueued(row){
       var when=it.scheduled_at; if(dt.value){ var d=new Date(dt.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='Bad time.'; return; } when=d.toISOString(); }
       if(!channels.length){ res.className='sched-result err'; res.textContent='Pick a channel.'; return; }
       var sv=box.querySelector('.qsave'); sv.disabled=true; sv.textContent='Saving...';
-      try{ var u=await sb.from('post_queue').update({text:text,channels:channels,scheduled_at:when,updated_at:new Date().toISOString()}).eq('id',id); if(u.error) throw u.error; res.className='sched-result ok'; res.textContent=CK+' Updated'; setTimeout(loadQueue,900); }
+      try{ var u=await sb.from('post_queue').update({text:text,link:(box.querySelector('.editlink').value||'').trim()||null,channels:channels,scheduled_at:when,updated_at:new Date().toISOString()}).eq('id',id); if(u.error) throw u.error; res.className='sched-result ok'; res.textContent=CK+' Updated'; setTimeout(loadQueue,900); }
       catch(err){ res.className='sched-result err'; res.textContent='Error: '+(err.message||err); sv.disabled=false; sv.textContent='Save'; }
     };
   });
