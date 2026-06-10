@@ -552,6 +552,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <button class="schtab" data-sview="calendar">Calendar</button>
         <button class="schtab" data-sview="history">History</button>
         <button class="schtab" data-sview="slots">Posting times</button>
+        <button class="schtab" id="spread-btn" style="margin-left:auto" title="Re-slot everything in the queue at a calmer pace">Spread out…</button>
         <button class="btn btn-outline btn-sm" id="reload-sched" style="margin-left:auto">Reload</button>
       </div>
       <div id="sv-staged" class="sview"></div>
@@ -761,7 +762,7 @@ $('#run-btn').onclick=async()=>{
     const {data,error}=await sb.functions.invoke('generate',{body:{}});
     if(error) throw error;
     if(data.error) throw new Error(data.error);
-    $('#run-status').textContent='Done — '+data.suggestions+' suggestions from '+data.stories+' stories · '+money(data.est_cost_usd)+' this run.';
+    $('#run-status').textContent=(data.stories===0&&data.note)?data.note:('Done — '+data.suggestions+' suggestions from '+data.stories+' stories · '+money(data.est_cost_usd)+' this run.');
     loadFeed(); loadSpend();
   }catch(e){ $('#run-status').textContent='Error: '+(e.message||e); }
   btn.disabled=false;
@@ -948,7 +949,7 @@ function schedCard(it){
 }
 async function loadSchedule(force){
   var nav=$('#sched-subnav');
-  if(nav && !nav.dataset.wired){ nav.dataset.wired='1'; nav.querySelectorAll('.schtab[data-sview]').forEach(function(b){ b.onclick=function(){ schedShow(b.dataset.sview); }; }); }
+  if(nav && !nav.dataset.wired){ nav.dataset.wired='1'; nav.querySelectorAll('.schtab[data-sview]').forEach(function(b){ b.onclick=function(){ schedShow(b.dataset.sview); }; }); var spb=$('#spread-btn'); if(spb) spb.onclick=spreadQueue; }
   schedShow(window._sview||'staged');
 }
 function schedShow(v){
@@ -1196,6 +1197,39 @@ async function upcomingSlots(limit){
   return out;
 }
 async function nextOpenSlot(){ var u=await upcomingSlots(1); return u.length?u[0]:null; }
+// Re-slot every queued post into future slots at a calmer pace (max N per day, order kept).
+async function spreadQueue(){
+  var raw=window.prompt('Spread the queue out. How many posts per day at most?','5');
+  if(raw===null) return;
+  var n=parseInt(raw,10);
+  if(!(n>0)){ alert('Enter a number above zero.'); return; }
+  var qr=await sb.from('post_queue').select('id,scheduled_at').eq('status','queued').order('scheduled_at',{ascending:true});
+  if(qr.error){ alert('Error: '+qr.error.message); return; }
+  var posts=qr.data||[];
+  if(!posts.length){ alert('Nothing in the queue to spread.'); return; }
+  var sr=await sb.from('posting_slots').select('*').eq('active',true);
+  var slots=sr.data||[];
+  if(!slots.length){ alert('No posting times set. Add some under Posting times first.'); return; }
+  var out=[], now=Date.now();
+  for(var day=0; day<120 && out.length<posts.length; day++){
+    var base=new Date(); base.setDate(base.getDate()+day);
+    var dow=base.getDay();
+    var todays=slots.filter(function(s){return s.dow===dow;}).sort(function(a,b){return a.minute-b.minute;}).slice(0,n);
+    for(var i=0;i<todays.length && out.length<posts.length;i++){
+      var d=new Date(base); d.setHours(Math.floor(todays[i].minute/60),todays[i].minute%60,0,0);
+      if(d.getTime()>now+120000) out.push(d.toISOString());
+    }
+  }
+  if(out.length<posts.length){ alert('Only found '+out.length+' usable future slots (next 120 days) for '+posts.length+' posts. Raise the per-day number or add posting times.'); return; }
+  if(!window.confirm('Re-slot '+posts.length+' queued posts at up to '+n+' per day, keeping their order? First: '+fmtWhen(out[0])+'. Last: '+fmtWhen(out[posts.length-1])+'.')) return;
+  var done=0, fail=0;
+  for(var k=0;k<posts.length;k++){
+    var u=await sb.from('post_queue').update({scheduled_at:out[k], updated_at:new Date().toISOString()}).eq('id',posts[k].id);
+    if(u.error) fail++; else done++;
+  }
+  alert('Re-slotted '+done+' post'+(done===1?'':'s')+' across '+Math.ceil(done/n)+' day(s)'+(fail?(' ('+fail+' failed - reload and retry)'):'')+'.');
+  loadQueue();
+}
 function slotOptionsHtml(list){ return '<option value="next">Next available</option>'+(list||[]).map(function(iso){ return '<option value="'+iso+'">'+esc(fmtWhen(iso))+'</option>'; }).join(''); }
 function wireSchedHandlers(host){
   host.querySelectorAll('.copy').forEach(b=>b.onclick=e=>{
