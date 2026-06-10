@@ -4,6 +4,27 @@ const crypto = require('crypto');
 const GHOST_URL = process.env.GHOST_URL || 'https://the-bold-italic.ghost.io';
 const GHOST_ADMIN_KEY_ID = process.env.GHOST_ADMIN_KEY_ID;
 const GHOST_ADMIN_SECRET = process.env.GHOST_ADMIN_SECRET;
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://scawgrjcjgcmvsimvash.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+
+// Validate the caller's Supabase auth token (the admin page forwards it; this
+// endpoint mutates Ghost, so only signed-in admins may call it).
+async function validateAuth(req) {
+  var authHeader = req.headers['authorization'] || '';
+  var token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { status: 401, error: 'Missing Authorization header. Provide Bearer <supabase_access_token>.' };
+  try {
+    var userResp = await fetch(SUPABASE_URL + '/auth/v1/user', {
+      headers: { 'Authorization': 'Bearer ' + token, 'apikey': SUPABASE_ANON_KEY }
+    });
+    if (!userResp.ok) return { status: 401, error: 'Invalid or expired auth token.' };
+    var userData = await userResp.json();
+    if (!userData.id) return { status: 401, error: 'Could not verify user from token.' };
+    return null;
+  } catch (e) {
+    return { status: 500, error: 'Auth check failed: ' + e.message };
+  }
+}
 
 function createGhostAdminJWT() {
   const now = Math.floor(Date.now() / 1000);
@@ -30,6 +51,10 @@ module.exports = async function handler(req, res) {
   if (!GHOST_ADMIN_KEY_ID || !GHOST_ADMIN_SECRET) {
     return res.status(500).json({ error: 'Ghost Admin credentials not configured' });
   }
+
+  // Require a signed-in admin (the page sends the Supabase access token).
+  const authErr = await validateAuth(req);
+  if (authErr) return res.status(authErr.status).json({ error: authErr.error });
 
   const { action, postId } = req.body || {};
 
