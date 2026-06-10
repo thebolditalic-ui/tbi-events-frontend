@@ -109,8 +109,8 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
 .zone-sub { color: #8a8178; font-size: 12.5px; margin-bottom: 12px; line-height: 1.5; }
 @media (max-width: 768px) {
   .admin-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .admin-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 2px; max-width: 100%; }
-  .admin-nav a { white-space: nowrap; flex: 0 0 auto; }
+  .admin-nav { flex-wrap: wrap; overflow: visible; row-gap: 4px; }
+  .admin-nav a { white-space: nowrap; }
   .page-wrap { padding: 20px 14px 60px; }
 }
 </style>
