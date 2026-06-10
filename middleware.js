@@ -42,7 +42,7 @@ const SLUG_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 // These are admin / infra paths shared with the events.thebolditalic.com
 // project. If someone types one on tbi.fyi we just bounce them to the
 // fallback URL rather than serving the admin from the wrong host.
-const ADMIN_PATH_PREFIXES = ['/api', '/admin', '/queue', '/banners', '/analytics', '/links', '/social'];
+const ADMIN_PATH_PREFIXES = ['/api', '/admin', '/queue', '/banners', '/analytics', '/links', '/social', '/news_desk'];
 const ADMIN_EXACT_PATHS = new Set(['/robots.txt', '/sitemap.xml']);
 
 // Standalone static pages (served by vercel.json rewrites) that are NOT event
