@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>TBI Home</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #fff6e6;
+  --dark: #1E1B1B;
+  --gold: #FFD682;
+  --blue: #5b7bd5;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --border: #e0d8cc;
+  --bg-alt: #faf5eb;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --title-font: 'Georgia', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--cream); color: var(--dark); min-height: 100vh; }
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.login-box h1 { font-family: var(--title-font); font-size: 22px; margin-bottom: 6px; }
+.login-box p { color: #888; font-size: 13px; margin-bottom: 24px; }
+.login-box label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+.login-box input[type="email"], .login-box input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 16px; background: var(--bg-alt); }
+.login-box input:focus { outline: none; border-color: var(--blue); }
+.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; font-family: inherit; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--dark); color: #fff; width: 100%; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+#admin-app { display: none; }
+.admin-header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.admin-header-left { display: flex; align-items: center; gap: 20px; }
+.admin-header h1 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
+.admin-nav { display: flex; gap: 4px; }
+.admin-nav a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 4px; }
+.admin-nav a:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.06); }
+.admin-nav a.active { color: #fff; background: rgba(255,255,255,0.12); }
+.user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #aaa; }
+.page-wrap { max-width: 1120px; margin: 0 auto; padding: 28px 24px 80px; }
+.section-title { font-family: var(--title-font); font-size: 24px; margin-bottom: 4px; }
+.section-sub { color: #8a8178; font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
+.statrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.stat { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.stat .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #8a8178; margin-bottom: 4px; }
+.stat .num { font-family: var(--title-font); font-size: 26px; }
+.stat .num small { font-size: 12px; color: #8a8178; font-family: var(--font); margin-left: 6px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.card.wide { grid-column: 1 / -1; }
+.card h3 { font-family: var(--title-font); font-size: 16px; font-weight: 400; margin-bottom: 2px; }
+.card .sub { color: #8a8178; font-size: 12px; margin-bottom: 10px; line-height: 1.45; }
+.card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.card th { text-align: left; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; color: #888; }
+.card th.r, .card td.r { text-align: right; }
+.card td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.card tr:last-child td { border-bottom: none; }
+.card a { color: var(--blue); text-decoration: none; }
+.card a:hover { text-decoration: underline; }
+.emptymsg { color: #8a8178; font-size: 13px; padding: 10px 0; }
+.chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #efe9df; color: #6f6759; margin-right: 3px; }
+.thumb { width: 64px; height: 36px; object-fit: cover; border-radius: 4px; background: var(--bg-alt); display: block; }
+.feat-thumb { width: 52px; height: 36px; object-fit: cover; border-radius: 4px; background: var(--bg-alt); display: block; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 38px; margin-top: 6px; }
+.bars .b { flex: 1; background: var(--gold); border-radius: 2px 2px 0 0; min-height: 2px; }
+.bars-labels { display: flex; gap: 3px; font-size: 9px; color: #8a8178; }
+.bars-labels span { flex: 1; text-align: center; }
+.toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+.run-status { font-size: 12px; color: #8a8178; }
+@media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+  .admin-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .admin-nav { flex-wrap: wrap; overflow: visible; row-gap: 4px; }
+  .admin-nav a { white-space: nowrap; }
+  .page-wrap { padding: 20px 14px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>The Bold Italic</h1>
+    <p>Sign in to your admin home.</p>
+    <div class="login-error" id="login-error"></div>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1>TBI Events Admin</h1>
+      <nav class="admin-nav">
+        <a href="/dashboard" class="active">Home</a>
+        <a href="/admin">Events</a>
+        <a href="/queue">Manual Queue</a>
+        <a href="/banners">Banners</a>
+        <a href="/links">Short Links</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/social">Social</a>
+        <a href="/news_desk">News Desk</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <h2 class="section-title">Good <span id="daypart">day</span>, Saul</h2>
+    <p class="section-sub">The publication at a glance. Live readers refresh every 30 seconds; everything else is as of page load.</p>
+
+    <div class="toolbar"><button class="btn btn-outline btn-sm" id="reload-btn">Reload everything</button><span class="run-status" id="stamp"></span></div>
+
+    <div class="statrow" id="statrow">
+      <div class="stat"><div class="label">Reading right now</div><div class="num" id="st-readers">—</div></div>
+      <div class="stat"><div class="label">Events page, 7 days</div><div class="num" id="st-visitors">—</div></div>
+      <div class="stat"><div class="label">Queued social posts</div><div class="num" id="st-queue">—</div></div>
+      <div class="stat"><div class="label">Active banners</div><div class="num" id="st-banners">—</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="card wide">
+        <h3>Reading right now</h3>
+        <div class="sub">Human readers on story pages over the last couple of minutes (bots and instant bounces filtered). A handy radar for archive stories worth updating or rescheduling on social.</div>
+        <table><thead><tr><th>Story</th><th class="r">Readers</th></tr></thead><tbody id="live-body"><tr><td colspan="2" class="emptymsg">Loading…</td></tr></tbody></table>
+      </div>
+
+      <div class="card">
+        <h3>Upcoming social posts</h3>
+        <div class="sub">Next out of the unified queue. Manage on the <a href="/social">Social</a> tab.</div>
+        <div id="queue-body" class="emptymsg">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h3>Featured events</h3>
+        <div class="sub">Ghost posts carrying #featuredevent. Manage from <a href="/admin">Events</a>.</div>
+        <div id="feat-body" class="emptymsg">Loading…</div>
+      </div>
+
+      <div class="card">
+        <h3>Events page visitors</h3>
+        <div class="sub">Sessions on events.thebolditalic.com, last 7 days.</div>
+        <div class="bars" id="vis-bars"></div>
+        <div class="bars-labels" id="vis-labels"></div>
+      </div>
+
+      <div class="card">
+        <h3>Active banners</h3>
+        <div class="sub">Live on the site right now. Manage on <a href="/banners">Banners</a>.</div>
+        <div id="banner-body" class="emptymsg">Loading…</div>
+      </div>
+
+      <div class="card wide">
+        <h3>Missing-page arrivals <span style="color:#8a8178;font-size:12px">last 7 days</span></h3>
+        <div class="sub">Visitors who hit a dead or missing story, the address they asked for, and the link that sent them.</div>
+        <table><thead><tr><th>Broken address</th><th>Referred by</th><th class="r">Hits</th></tr></thead><tbody id="missing-body"><tr><td colspan="3" class="emptymsg">Loading…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+  var GHOST_URL = 'https://www.thebolditalic.com';
+  var GHOST_CONTENT_KEY = '6e6898c6a63b5488d346a68511';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function fmtWhen(iso) { if (!iso) return ''; var d = new Date(iso); return d.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+
+  async function checkSession() { var s = await sb.auth.getSession(); if (s.data && s.data.session) showAdmin(s.data.session.user); }
+  function showAdmin(user) {
+    $('login-screen').style.display = 'none'; $('admin-app').style.display = 'block';
+    $('user-email').textContent = user.email || '';
+    var h = new Date().getHours();
+    $('daypart').textContent = h < 12 ? 'morning' : (h < 17 ? 'afternoon' : 'evening');
+    loadAll();
+    if (!window.__liveIv) window.__liveIv = setInterval(function () { if (document.visibilityState !== 'hidden') loadLive(); }, 30000);
+  }
+  $('login-btn').addEventListener('click', async function () {
+    var err = $('login-error'); err.style.display = 'none';
+    var email = $('login-email').value.trim(), pass = $('login-pass').value;
+    if (!email || !pass) { err.textContent = 'Enter email and password'; err.style.display = 'block'; return; }
+    var b = $('login-btn'); b.textContent = 'Signing in…'; b.disabled = true;
+    var res = await sb.auth.signInWithPassword({ email: email, password: pass });
+    b.textContent = 'Sign In'; b.disabled = false;
+    if (res.error) { err.textContent = res.error.message; err.style.display = 'block'; return; }
+    showAdmin(res.data.user);
+  });
+  $('login-pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('login-btn').click(); });
+  $('logout-btn').addEventListener('click', async function () { await sb.auth.signOut(); location.reload(); });
+  $('reload-btn').addEventListener('click', function () { loadAll(); });
+
+  function loadAll() {
+    $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    loadLive(); loadQueue(); loadFeatured(); loadVisitors(); loadBanners(); loadMissing();
+  }
+
+  // ---- live readers ----
+  async function loadLive() {
+    var since = new Date(Date.now() - 150000).toISOString();
+    var r = await sb.from('reader_presence').select('session_id,path,title').gte('at', since).limit(2000);
+    var body = $('live-body');
+    if (r.error) { body.innerHTML = '<tr><td colspan="2" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
+    var byPage = {}, sess = {};
+    (r.data || []).forEach(function (x) { sess[x.session_id] = 1; var k = x.path || '?'; (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1; });
+    var rows = Object.keys(byPage).map(function (k) { return { path: k, title: byPage[k].title, n: Object.keys(byPage[k].s).length }; }).sort(function (a, b) { return b.n - a.n; });
+    var total = Object.keys(sess).length;
+    $('st-readers').textContent = total;
+    body.innerHTML = rows.length
+      ? rows.map(function (x) { return '<tr><td><a href="' + esc(GHOST_URL + x.path) + '" target="_blank" rel="noopener">' + esc(x.title || x.path) + '</a></td><td class="r">' + x.n + '</td></tr>'; }).join('')
+      : '<tr><td colspan="2" class="emptymsg">Quiet right now.</td></tr>';
+  }
+
+  // ---- upcoming social posts ----
+  async function loadQueue() {
+    var r = await sb.from('post_queue').select('text,link,channels,scheduled_at,video_url,image_urls').eq('status', 'queued').order('scheduled_at', { ascending: true }).limit(8);
+    var host = $('queue-body');
+    if (r.error) { host.textContent = r.error.message; return; }
+    var rows = r.data || [];
+    var c = await sb.from('post_queue').select('id', { count: 'exact', head: true }).eq('status', 'queued');
+    $('st-queue').textContent = (c.count != null ? c.count : rows.length);
+    if (!rows.length) { host.innerHTML = '<span class="emptymsg">Queue is empty.</span>'; return; }
+    host.innerHTML = '<table><tbody>' + rows.map(function (p) {
+      var kind = p.video_url ? '<span class="chip">REEL</span>' : ((p.image_urls && p.image_urls.length) ? '<span class="chip">PHOTO</span>' : '');
+      var ch = (p.channels || []).map(function (x) { return '<span class="chip">' + esc(String(x).slice(0, 2).toUpperCase()) + '</span>'; }).join('');
+      return '<tr><td style="white-space:nowrap;color:#8a8178;font-size:12px">' + esc(fmtWhen(p.scheduled_at)) + '</td><td>' + kind + ch + ' ' + esc((p.text || p.link || '').slice(0, 64)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+
+  // ---- featured events (Ghost #featuredevent) ----
+  async function loadFeatured() {
+    var host = $('feat-body');
+    try {
+      var u = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY + '&filter=tag:hash-featuredevent&limit=8&fields=id,title,url,feature_image,published_at';
+      var resp = await fetch(u); var d = await resp.json();
+      var posts = (d && d.posts) || [];
+      if (!posts.length) { host.innerHTML = '<span class="emptymsg">Nothing carries #featuredevent right now.</span>'; return; }
+      host.innerHTML = '<table><tbody>' + posts.map(function (p) {
+        var img = p.feature_image ? ('<img class="feat-thumb" src="' + esc(p.feature_image) + '" alt="">') : '';
+        return '<tr><td style="width:60px">' + img + '</td><td><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a></td></tr>';
+      }).join('') + '</tbody></table>';
+    } catch (e) { host.textContent = 'Could not reach Ghost: ' + (e.message || e); }
+  }
+
+  // ---- events page visitors, 7 days ----
+  async function loadVisitors() {
+    var r = await sb.rpc('events_page_daily_stats', { p_days: 7 });
+    var bars = $('vis-bars'), labels = $('vis-labels');
+    if (r.error) { bars.innerHTML = '<span class="emptymsg">' + esc(r.error.message) + '</span>'; return; }
+    var daily = (r.data || []).slice().reverse();
+    var total = daily.reduce(function (s, x) { return s + (Number(x.page_impressions) || 0); }, 0);
+    $('st-visitors').textContent = total.toLocaleString('en-US');
+    var max = Math.max.apply(null, daily.map(function (x) { return Number(x.page_impressions) || 0; }).concat([1]));
+    bars.innerHTML = daily.map(function (x) { var v = Number(x.page_impressions) || 0; return '<div class="b" title="' + esc((x.day || '').slice(0, 10)) + ': ' + v + '" style="height:' + Math.max(4, Math.round(v / max * 100)) + '%"></div>'; }).join('');
+    labels.innerHTML = daily.map(function (x) { var d = new Date(x.day); return '<span>' + ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()] + '</span>'; }).join('');
+  }
+
+  // ---- active banners ----
+  async function loadBanners() {
+    var host = $('banner-body');
+    try {
+      var resp = await fetch('/api/banner-active'); var d = await resp.json();
+      var list = (d && d.banners) || (d && d.banner ? [d.banner] : []);
+      $('st-banners').textContent = list.length;
+      if (!list.length) { host.innerHTML = '<span class="emptymsg">No banner is live right now (the reader feed above still works).</span>'; return; }
+      host.innerHTML = '<table><tbody>' + list.map(function (b) {
+        var ends = b.end_at ? ('ends ' + new Date(b.end_at).toLocaleDateString()) : 'no end date';
+        return '<tr><td style="width:74px"><img class="thumb" src="' + esc(b.creative_url || '') + '" alt=""></td><td>' + esc(b.name || 'banner') + '<br><span style="color:#8a8178;font-size:11.5px">' + esc(ends) + '</span></td></tr>';
+      }).join('') + '</tbody></table>';
+    } catch (e) { host.textContent = 'Could not load banners: ' + (e.message || e); $('st-banners').textContent = '—'; }
+  }
+
+  // ---- missing-page arrivals ----
+  async function loadMissing() {
+    var body = $('missing-body');
+    var r = await sb.from('reader_presence').select('session_id,path,referrer,at').ilike('title', 'missing story%').order('at', { ascending: false }).limit(2000);
+    if (r.error) { body.innerHTML = '<tr><td colspan="3" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
+    var groups = {};
+    (r.data || []).forEach(function (x) {
+      var ref = (x.referrer || '').trim() || '(no referrer - typed, bookmarked, or hidden)';
+      var k = (x.path || '?') + '|' + ref;
+      var g = groups[k] = groups[k] || { path: x.path || '?', ref: ref, s: {} };
+      g.s[x.session_id] = 1;
+    });
+    var rows = Object.keys(groups).map(function (k) { var g = groups[k]; return { path: g.path, ref: g.ref, n: Object.keys(g.s).length }; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 30);
+    body.innerHTML = rows.length
+      ? rows.map(function (x) {
+          var refCell = /^https?:/i.test(x.ref) ? ('<a href="' + esc(x.ref) + '" target="_blank" rel="noopener" style="word-break:break-all">' + esc(x.ref.replace(/^https?:\/\//, '').slice(0, 70)) + '</a>') : ('<span style="color:#888">' + esc(x.ref.slice(0, 70)) + '</span>');
+          return '<tr><td style="font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all">' + esc(x.path) + '</td><td>' + refCell + '</td><td class="r">' + x.n + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3" class="emptymsg">No missing-page hits recorded yet.</td></tr>';
+  }
+
+  checkSession();
+})();
+</script>
+</body>
+</html>
