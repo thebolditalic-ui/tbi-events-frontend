@@ -450,6 +450,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="ig-hint" id="reel-info" style="margin-top:8px;text-align:center"></div>
           <div class="ig-actions">
             <button class="btn btn-gold" id="reel-send">Send to Scheduling</button>
+            <button class="btn btn-outline btn-sm" id="reel-download">Download with edits</button>
             <button class="btn btn-outline btn-sm" id="reel-clear" style="display:none">Remove video</button>
           </div>
           <div class="run-status" id="reel-status" style="width:100%;text-align:center;line-height:1.4"></div>
@@ -2139,16 +2140,23 @@ function reelPaintPreview(){
 }
 // Burn-in export: plays the video into a canvas, draws the overlays per-frame, and
 // re-records it as MP4 (H.264/AAC) via MediaRecorder. Runs at video speed.
+// Two hard-won fixes from the first live reel: (1) the first frame is drawn BEFORE the
+// recorder starts, so the file never opens on a black frame (Instagram took its cover
+// from that black frame); (2) switching tabs PAUSES the burn instead of corrupting it
+// (hidden tabs stop canvas frames, which used to truncate the picture track).
 async function reelBurn(progressCb){
   var cands=['video/mp4;codecs="avc1.640028,mp4a.40.2"','video/mp4;codecs="avc1.42E01E,mp4a.40.2"','video/mp4'];
   var mime=''; for(var i=0;i<cands.length;i++){ try{ if(window.MediaRecorder&&MediaRecorder.isTypeSupported(cands[i])){ mime=cands[i]; break; } }catch(_e){} }
   if(!mime) throw new Error('This browser cannot export MP4 video. Use a current Chrome, or turn the overlays off to upload the original.');
-  var pv=document.createElement('video'); pv.src=REEL_ST.url; pv.playsInline=true; pv.muted=false; pv.volume=1;
+  var pv=document.createElement('video'); pv.src=REEL_ST.url; pv.playsInline=true; pv.preload='auto'; pv.muted=false; pv.volume=1;
   await new Promise(function(res,rej){ pv.onloadedmetadata=res; pv.onerror=function(){ rej(new Error('could not open the video for processing')); }; });
   var vw=pv.videoWidth||REEL_ST.w||1080, vh=pv.videoHeight||REEL_ST.h||1920;
   var sc=Math.min(1, 1080/vw, 1920/vh);
   var W=Math.max(2,Math.round(vw*sc/2)*2), H=Math.max(2,Math.round(vh*sc/2)*2);
   var oc=document.createElement('canvas'); oc.width=W; oc.height=H; var c=oc.getContext('2d');
+  // Prime the canvas with the real first frame BEFORE any recording starts.
+  await new Promise(function(res){ var fired=false; function ok(){ if(fired) return; fired=true; res(); } pv.onseeked=ok; pv.oncanplay=ok; try{ pv.currentTime=0; }catch(_e){} setTimeout(ok,1500); });
+  try{ c.drawImage(pv,0,0,W,H); drawReelOverlay(c,W,H,0); }catch(_e){}
   var stream=oc.captureStream(30);
   var AC=window.AudioContext||window.webkitAudioContext; var actx=new AC();
   try{ if(actx.state==='suspended') await actx.resume(); }catch(_e){}
@@ -2159,18 +2167,31 @@ async function reelBurn(progressCb){
   var rec=new MediaRecorder(stream,{mimeType:mime, videoBitsPerSecond:vbr, audioBitsPerSecond:128000});
   var chunks=[]; rec.ondataavailable=function(ev){ if(ev.data&&ev.data.size) chunks.push(ev.data); };
   var done=new Promise(function(res,rej){ rec.onstop=function(){res();}; rec.onerror=function(ev){ rej((ev&&ev.error)||new Error('recording failed')); }; });
-  var stopped=false; function stopAll(){ if(stopped) return; stopped=true; try{ rec.stop(); }catch(_e){} try{ pv.pause(); }catch(_e){} try{ actx.close(); }catch(_e){} }
+  var stopped=false, hiddenPause=false;
+  function stopAll(){ if(stopped) return; stopped=true; document.removeEventListener('visibilitychange',onVis); try{ rec.stop(); }catch(_e){} try{ pv.pause(); }catch(_e){} try{ actx.close(); }catch(_e){} }
+  function onVis(){
+    if(stopped) return;
+    try{
+      if(document.visibilityState==='hidden'){
+        if(rec.state==='recording'){ hiddenPause=true; rec.pause(); pv.pause(); if(progressCb) progressCb(-1); }
+      } else if(hiddenPause){
+        hiddenPause=false; rec.resume(); pv.play().catch(function(){}); frame();
+      }
+    }catch(_e){}
+  }
+  document.addEventListener('visibilitychange',onVis);
   pv.onended=stopAll;
   function frame(){
+    if(stopped||hiddenPause) return;
     try{ c.drawImage(pv,0,0,W,H); drawReelOverlay(c,W,H,pv.currentTime||0); }catch(_e){}
     if(progressCb) progressCb(Math.min(99,Math.round(((pv.currentTime||0)/dur)*100)));
-    if(!stopped){ if(pv.requestVideoFrameCallback) pv.requestVideoFrameCallback(frame); else requestAnimationFrame(frame); }
+    if(pv.requestVideoFrameCallback) pv.requestVideoFrameCallback(function(){ frame(); }); else requestAnimationFrame(frame);
   }
   rec.start(1000);
   try{ await pv.play(); }catch(e){ stopAll(); throw new Error('could not play the video for processing'); }
   frame();
-  var guard=setTimeout(stopAll,(dur+5)*1000);
-  await done; clearTimeout(guard);
+  var guard=setTimeout(stopAll,(dur*3+20)*1000);
+  await done; clearTimeout(guard); document.removeEventListener('visibilitychange',onVis);
   var blob=new Blob(chunks,{type:'video/mp4'});
   if(progressCb) progressCb(100);
   if(blob.size<1000) throw new Error('Processing produced an empty file. Try again, or turn the overlays off.');
@@ -2192,6 +2213,7 @@ function reelBuildOptions(coverUrl){
   var o={ share_to_feed: !!REEL_ST.ig.grid };
   if(coverUrl) o.cover_url=coverUrl;
   else if(REEL_ST.cover.mode==='frame') o.thumb_offset=Math.max(0,Math.round(REEL_ST.cover.frameMs||0));
+  else o.thumb_offset=Math.min(1000, Math.floor((REEL_ST.dur||3)*500)); // Auto: skip frame zero (insurance against dark first frames)
   var col=(($('#rig-collab')||{}).value||'').split(',').map(function(s){ return s.trim().replace(/^@/,''); }).filter(function(s){ return !!s; }).slice(0,3);
   if(col.length) o.collaborators=col;
   var au=(($('#rig-audio')||{}).value||'').trim(); if(au) o.audio_name=au;
@@ -2284,6 +2306,28 @@ function initReel(){
     }catch(e){ stt.textContent='Error: '+(e&&e.message?e.message:e); }
     b.disabled=false;
   };
+  // -- download the edited video (post it by hand wherever) --
+  if($('#reel-download')) $('#reel-download').onclick=async function(){
+    var b=$('#reel-download'), stt=$('#reel-status');
+    if(!REEL_ST.file){ stt.innerHTML='<span style="color:var(--red)">Add a video first.</span>'; return; }
+    if(REEL_ST.ov.textOn&&!(REEL_ST.ov.text||'').trim()){ stt.innerHTML='<span style="color:var(--red)">Text overlay is on but empty - type the text or turn it off.</span>'; return; }
+    b.disabled=true; b.textContent='Working...';
+    try{
+      var blob=REEL_ST.file, name=(REEL_ST.file.name||'tbi-reel.mp4');
+      if(reelOverlaysActive()){
+        try{ prev.pause(); }catch(_e){}
+        stt.textContent='Burning your edits in (runs at video speed - KEEP THIS TAB VISIBLE; it pauses if you switch away)... 0%';
+        blob=await reelBurn(function(p){ stt.textContent=(p<0)?'Paused - come back to this tab to continue...':('Burning your edits in (keep this tab visible)... '+p+'%'); });
+        name='tbi-reel-edited.mp4';
+      }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ try{ URL.revokeObjectURL(a.href); }catch(_e){} },4000);
+      stt.innerHTML='<span style="color:var(--green)">Downloaded '+CK+' ('+(blob.size/1048576).toFixed(1)+'MB)</span> &middot; check it plays start to finish, then post it anywhere.';
+      b.textContent='Download with edits';
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Download with edits'; }
+    b.disabled=false;
+  };
+
   // -- send to scheduling --
   $('#reel-send').onclick=async function(){
     var b=$('#reel-send'), stt=$('#reel-status');
@@ -2297,8 +2341,8 @@ function initReel(){
       var upBlob=REEL_ST.file; var ext=/[.]mov$/i.test(REEL_ST.file.name||'')?'.mov':'.mp4'; var ctype=REEL_ST.file.type||'video/mp4';
       if(reelOverlaysActive()){
         try{ prev.pause(); }catch(_e){}
-        stt.textContent='Burning the overlays into the video (runs at video speed)... 0%';
-        upBlob=await reelBurn(function(p){ stt.textContent='Burning the overlays into the video (runs at video speed)... '+p+'%'; });
+        stt.textContent='Burning the overlays in (runs at video speed - KEEP THIS TAB VISIBLE; it pauses if you switch away)... 0%';
+        upBlob=await reelBurn(function(p){ stt.textContent=(p<0)?'Paused - come back to this tab to continue the burn...':('Burning the overlays in (keep this tab visible)... '+p+'%'); });
         ext='.mp4'; ctype='video/mp4';
       }
       var id=crypto.randomUUID();
