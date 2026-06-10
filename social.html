@@ -1016,11 +1016,13 @@ async function loadStaged(){
   host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
   var afb=host.querySelector('#autofill-btn'); if(afb) afb.onclick=autoFillSlots;
 }
-// One-click: place staged drafts into upcoming open slots under the house rules:
-// no same category (joke/question/story/photo/reel) and no same story link in
-// back-to-back slots (checked against the REAL timeline, queued posts included);
-// Instagram photo posts max once per day (extras that day go Facebook-only);
-// reels, FB-only photos, and text can repeat daily as long as adjacency holds.
+// One-click: place staged drafts into upcoming open slots under the house rules
+// (checked against the REAL timeline, queued posts included):
+// HARD: the same story LINK never sits in back-to-back slots; jokes/questions/photos/
+// reels never sit next to their own kind; Instagram photo posts max once per day
+// (extras that day go Facebook-only). Two DIFFERENT story links MAY neighbor each other.
+// SOFT (preference): vary the kind vs the previous slot and avoid reusing a link on the
+// same day when an alternative exists; tight alternation is allowed when it is all we have.
 async function autoFillSlots(){
   var st=$('#af-status'); function say(m,c){ if(st){ st.style.color=c||'#8a8178'; st.textContent=m; } }
   say('Working out the schedule...');
@@ -1049,14 +1051,22 @@ async function autoFillSlots(){
     var prev=null,next=null;
     for(var mi=0;mi<timeline.length;mi++){ var m=timeline[mi]; if(m.t<t&&(!prev||m.t>prev.t)) prev=m; if(m.t>t&&(!next||m.t<next.t)) next=m; }
     var dayKey=new Date(t).toDateString();
-    var pickIdx=-1, demote=false;
+    var dayLinks={};
+    for(var di=0;di<timeline.length;di++){ var dm=timeline[di]; if(dm.link&&new Date(dm.t).toDateString()===dayKey) dayLinks[dm.link]=1; }
+    var pickIdx=-1, demote=false, bestScore=-1;
     for(var pi=0; pi<pool.length; pi++){
       var it=pool[pi]; var k=sKind(it); var L=sLink(it);
-      if(prev&&prev.kind===k) continue;
-      if(next&&next.kind===k) continue;
-      if(L&&((prev&&prev.link===L)||(next&&next.link===L))) continue;
+      // hard rules
+      if(L&&((prev&&prev.link===L)||(next&&next.link===L))) continue;          // same link never back-to-back
+      if(k!=='story_post'&&((prev&&prev.kind===k)||(next&&next.kind===k))) continue; // non-story kinds never neighbor their own kind
       var dem=(k==='image_post'&&(igDay[dayKey]||0)>=1);
-      pickIdx=pi; demote=dem; break;
+      // soft preferences: vary kind vs neighbors, avoid same link twice in one day
+      var score=0;
+      if(!(prev&&prev.kind===k)) score+=2;
+      if(!(next&&next.kind===k)) score+=1;
+      if(!L||!dayLinks[L]) score+=2;
+      if(score>bestScore){ bestScore=score; pickIdx=pi; demote=dem; }
+      if(score>=5) break; // can't beat a perfect score; keeps FIFO bias
     }
     if(pickIdx<0) continue;
     var it2=pool.splice(pickIdx,1)[0];
