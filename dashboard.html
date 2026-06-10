@@ -149,8 +149,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       </div>
 
       <div class="card">
-        <h3>Featured events</h3>
-        <div class="sub">Ghost posts carrying #featuredevent. Manage from <a href="/admin">Events</a>.</div>
+        <h3>Featured on the events page</h3>
+        <div class="sub">The three featured slots, then editor's picks (or a snapshot of what's coming up). Manage on <a href="/admin">Events</a>.</div>
         <div id="feat-body" class="emptymsg">Loading…</div>
       </div>
 
@@ -180,9 +180,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 (function () {
   var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
   var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
-  var GHOST_URL = 'https://www.thebolditalic.com';           // public links
-  var GHOST_API = 'https://the-bold-italic.ghost.io';          // API calls (CORS-friendly host)
-  var GHOST_CONTENT_KEY = '6e6898c6a63b5488d346a68511';
+  var GHOST_URL = 'https://www.thebolditalic.com';           // public story links
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
   function $(id) { return document.getElementById(id); }
@@ -249,19 +247,36 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     }).join('') + '</tbody></table>';
   }
 
-  // ---- featured events (Ghost #featuredevent) ----
+  // ---- featured slots (events page top three) + editor's picks / upcoming snapshot ----
+  function evDate(iso) { if (!iso) return ''; return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: 'UTC' }); }
   async function loadFeatured() {
     var host = $('feat-body');
-    try {
-      var u = GHOST_API + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY + '&filter=tag:hash-featuredevent&limit=8&fields=id,title,url,feature_image,published_at';
-      var resp = await fetch(u); var d = await resp.json();
-      var posts = (d && d.posts) || [];
-      if (!posts.length) { host.innerHTML = '<span class="emptymsg">Nothing carries #featuredevent right now.</span>'; return; }
-      host.innerHTML = '<table><tbody>' + posts.map(function (p) {
-        var img = p.feature_image ? ('<img class="feat-thumb" src="' + esc(p.feature_image) + '" alt="">') : '';
-        return '<tr><td style="width:60px">' + img + '</td><td><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.title) + '</a></td></tr>';
-      }).join('') + '</tbody></table>';
-    } catch (e) { host.textContent = 'Could not reach Ghost: ' + (e.message || e); }
+    var out = '';
+    var slots = await sb.from('featured_slots').select('slot,title,image_url,url,source_type,source_id').order('slot', { ascending: true });
+    if (slots.error) { host.textContent = slots.error.message; return; }
+    var srows = slots.data || [];
+    out += '<table><tbody>' + (srows.length ? srows.map(function (s) {
+      var link = s.url || (s.source_type === 'supabase' ? ('https://events.thebolditalic.com/' + s.source_id + '/') : '#');
+      var img = s.image_url ? ('<img class="feat-thumb" src="' + esc(s.image_url) + '" alt="">') : '';
+      return '<tr><td style="width:34px;color:#8a8178;font-size:12px">#' + esc(s.slot) + '</td><td style="width:60px">' + img + '</td><td><a href="' + esc(link) + '" target="_blank" rel="noopener">' + esc(s.title || s.source_id) + '</a></td></tr>';
+    }).join('') : '<tr><td class="emptymsg">All three slots are empty.</td></tr>') + '</tbody></table>';
+
+    var today = new Date().toISOString().slice(0, 10);
+    var picks = await sb.from('events').select('title,slug,event_date,venue').eq('editors_pick', true).gte('event_date', today).order('event_date', { ascending: true }).limit(5);
+    var prows = (picks.data || []);
+    var heading = "Editor's picks";
+    if (!prows.length) {
+      heading = 'Coming up';
+      var up = await sb.from('events').select('title,slug,event_date,venue').gte('event_date', today).order('event_date', { ascending: true }).limit(5);
+      prows = up.data || [];
+    }
+    out += '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#8a8178;margin:12px 0 2px">' + heading + '</div>';
+    out += prows.length
+      ? ('<table><tbody>' + prows.map(function (e) {
+          return '<tr><td style="white-space:nowrap;color:#8a8178;font-size:12px;width:58px">' + esc(evDate(e.event_date)) + '</td><td><a href="https://events.thebolditalic.com/' + esc(e.slug) + '/" target="_blank" rel="noopener">' + esc(e.title) + '</a>' + (e.venue ? ('<span style="color:#8a8178;font-size:12px"> · ' + esc(e.venue) + '</span>') : '') + '</td></tr>';
+        }).join('') + '</tbody></table>')
+      : '<span class="emptymsg">No upcoming events on the calendar.</span>';
+    host.innerHTML = out;
   }
 
   // ---- events page visitors, 7 days ----
