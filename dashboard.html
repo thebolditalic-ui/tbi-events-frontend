@@ -180,7 +180,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 (function () {
   var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
   var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
-  var GHOST_URL = 'https://www.thebolditalic.com';
+  var GHOST_URL = 'https://www.thebolditalic.com';           // public links
+  var GHOST_API = 'https://the-bold-italic.ghost.io';          // API calls (CORS-friendly host)
   var GHOST_CONTENT_KEY = '6e6898c6a63b5488d346a68511';
   var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -252,7 +253,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   async function loadFeatured() {
     var host = $('feat-body');
     try {
-      var u = GHOST_URL + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY + '&filter=tag:hash-featuredevent&limit=8&fields=id,title,url,feature_image,published_at';
+      var u = GHOST_API + '/ghost/api/content/posts/?key=' + GHOST_CONTENT_KEY + '&filter=tag:hash-featuredevent&limit=8&fields=id,title,url,feature_image,published_at';
       var resp = await fetch(u); var d = await resp.json();
       var posts = (d && d.posts) || [];
       if (!posts.length) { host.innerHTML = '<span class="emptymsg">Nothing carries #featuredevent right now.</span>'; return; }
@@ -268,12 +269,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var r = await sb.rpc('events_page_daily_stats', { p_days: 7 });
     var bars = $('vis-bars'), labels = $('vis-labels');
     if (r.error) { bars.innerHTML = '<span class="emptymsg">' + esc(r.error.message) + '</span>'; return; }
-    var daily = (r.data || []).slice().reverse();
+    // RPC rows carry day_offset (days ago); 6 = oldest, 0 = today. Order oldest -> today.
+    var daily = (r.data || []).slice().sort(function (a, b) { return (b.day_offset || 0) - (a.day_offset || 0); });
     var total = daily.reduce(function (s, x) { return s + (Number(x.page_impressions) || 0); }, 0);
     $('st-visitors').textContent = total.toLocaleString('en-US');
     var max = Math.max.apply(null, daily.map(function (x) { return Number(x.page_impressions) || 0; }).concat([1]));
-    bars.innerHTML = daily.map(function (x) { var v = Number(x.page_impressions) || 0; return '<div class="b" title="' + esc((x.day || '').slice(0, 10)) + ': ' + v + '" style="height:' + Math.max(4, Math.round(v / max * 100)) + '%"></div>'; }).join('');
-    labels.innerHTML = daily.map(function (x) { var d = new Date(x.day); return '<span>' + ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()] + '</span>'; }).join('');
+    function dayOf(off) { var d = new Date(); d.setDate(d.getDate() - (Number(off) || 0)); return d; }
+    bars.innerHTML = daily.map(function (x) { var v = Number(x.page_impressions) || 0; var d = dayOf(x.day_offset); return '<div class="b" title="' + esc(d.toLocaleDateString()) + ': ' + v + '" style="height:' + Math.max(4, Math.round(v / max * 100)) + '%"></div>'; }).join('');
+    labels.innerHTML = daily.map(function (x) { var d = dayOf(x.day_offset); return '<span>' + ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()] + '</span>'; }).join('');
   }
 
   // ---- active banners ----
