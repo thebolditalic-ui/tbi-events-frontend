@@ -777,16 +777,31 @@ if($('#hist-btn')) $('#hist-btn').onclick=async function(){ var host=$('#crawl-h
 if($('#joke-prompt-gen')) $('#joke-prompt-gen').onclick=async function(){ var p=($('#joke-prompt').value||'').trim(); if(!p){ alert('Enter a prompt first.'); return; } var n=parseInt($('#joke-prompt-n').value,10)||8; var kind=$('#joke-prompt-kind').value; var btn=this; btn.disabled=true; $('#jokes-status').textContent='Generating from prompt… (~10–20s)'; try{ var rr=await sb.functions.invoke('generate',{body:{jokes:true,prompt:p,kind:kind,per_batch:n}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); $('#jokes-status').textContent='Done — '+((rr.data&&rr.data.jokes)||0)+' drafts · '+money((rr.data&&rr.data.est_cost_usd)||0); loadJokes(); loadSpend(); }catch(e){ $('#jokes-status').textContent='Error: '+(e.message||e); } btn.disabled=false; };
 if($('#joke-search-btn')) $('#joke-search-btn').onclick=async function(){ var q=($('#joke-q').value||'').trim(); if(!q) return; var host=$('#joke-results'); host.innerHTML='<div class="run-status" style="padding:8px">Searching…</div>'; var list=await ghostSearch(q); host.innerHTML=storyResHtml(list,'Make jokes'); host.querySelectorAll('[data-sid]').forEach(function(b){ b.onclick=async function(){ b.disabled=true; b.textContent='Generating…'; try{ var rr=await sb.functions.invoke('generate',{body:{jokes:true,story_id:b.dataset.sid}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); b.textContent='Done ✓ '+((rr.data&&rr.data.jokes)||0); loadJokes(); loadSpend(); }catch(e){ b.disabled=false; b.textContent='Make jokes'; alert('Error: '+(e.message||e)); } }; }); };
 if($('#joke-q')) $('#joke-q').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('#joke-search-btn').click(); } });
-async function loadFeed(){
+var FEED_ROWS=[], FEED_DONE=false;
+async function loadFeed(more){
+  const host=$('#feed-list');
+  if(!more){ FEED_ROWS=[]; FEED_DONE=false; }
+  const from=FEED_ROWS.length;
   const {data,error}=await sb.from('social_suggestions')
     .select('*').eq('kind','story_post').in('status',['pending','staged'])
-    .order('created_at',{ascending:false}).limit(300);
-  const host=$('#feed-list');
+    .order('created_at',{ascending:false}).range(from,from+299);
   if(error){ host.innerHTML='<div class="empty">Error loading: '+esc(error.message)+'</div>'; return; }
-  if(!data||!data.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
+  FEED_ROWS=FEED_ROWS.concat(data||[]);
+  if(!data||data.length<300) FEED_DONE=true;
+  if(!FEED_ROWS.length){ host.innerHTML='<div class="empty">No suggestions yet. Click <b>Run crawl now</b> to generate the first batch.</div>'; return; }
   const groups={};
-  data.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,link:r.link,when:r.created_at,items:[]}).items.push(r); });
-  host.innerHTML=Object.values(groups).map(g=>'<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Expand</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
+  FEED_ROWS.forEach(r=>{ (groups[r.batch_id||r.id]=groups[r.batch_id||r.id]||{title:r.story_title,url:r.story_url,link:r.link,when:r.created_at,items:[]}).items.push(r); });
+  // why groups shrink: count this batch's drafts that moved on (scheduled/posted) or expired (archived)
+  const bids=Object.keys(groups);
+  const gone={};
+  for(let i=0;i<bids.length;i+=50){
+    const rr=await sb.from('social_suggestions').select('batch_id,status').in('batch_id',bids.slice(i,i+50)).in('status',['scheduled','posted','archived']);
+    (rr.data||[]).forEach(function(x){ const e=gone[x.batch_id]=gone[x.batch_id]||{ship:0,exp:0}; if(x.status==='archived') e.exp++; else e.ship++; });
+  }
+  host.innerHTML=Object.entries(groups).map(([gk,g])=>{
+    const e=gone[gk]||{ship:0,exp:0};
+    const extra=(e.ship?(' · '+e.ship+' scheduled/posted'):'')+(e.exp?(' · '+e.exp+' expired'):'');
+    return '<div class="story-card" data-ids="'+g.items.map(it=>it.id).join(',')+'"><div class="story-head"><a href="'+esc(g.url)+'" target="_blank" rel="noopener">'+esc(g.title||'(untitled)')+'</a><div class="meta">'+g.items.length+' drafts'+extra+' · '+new Date(g.when).toLocaleString()+' <button class="btn btn-outline btn-sm grp-toggle" style="margin-left:8px">Expand</button><button class="btn btn-danger btn-sm grp-del" style="margin-left:4px">Delete all</button></div></div>'+
     '<div class="when-row feedlink-row" style="margin:0 0 10px"><span class="when-hint">Link:</span> <input type="text" class="feedlink" value="'+esc(g.link||g.url||'')+'" placeholder="(no link)" style="flex:1;min-width:160px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'+
     '<div class="grp-items" style="display:none">'+g.items.map(it=>'<div class="sugg" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
@@ -796,7 +811,9 @@ async function loadFeed(){
         '<button class="btn btn-outline btn-sm edit">Edit</button>'+
         '<button class="btn btn-outline btn-sm copy">Copy</button>'+
         '<button class="btn btn-outline btn-sm discard">Discard</button>'+
-      '</div></div>').join('')+'</div></div>').join('');
+      '</div></div>').join('')+'</div></div>'; }).join('')+
+    (FEED_DONE?'':'<div style="text-align:center;margin:10px 0"><button class="btn btn-outline btn-sm" id="feed-more">Show older stories</button></div>');
+  var fm=host.querySelector('#feed-more'); if(fm) fm.onclick=function(){ fm.disabled=true; fm.textContent='Loading...'; loadFeed(true); };
   wireSuggHandlers(host);
 }
 function wireSuggHandlers(host){
