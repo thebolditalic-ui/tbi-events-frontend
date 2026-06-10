@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>TBI News Desk</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --cream: #fff6e6;
+  --dark: #1E1B1B;
+  --gold: #FFD682;
+  --blue: #5b7bd5;
+  --red: #e74c3c;
+  --green: #27ae60;
+  --border: #e0d8cc;
+  --bg-alt: #faf5eb;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --title-font: 'Georgia', serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--cream); color: var(--dark); min-height: 100vh; }
+#login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.login-box { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.login-box h1 { font-family: var(--title-font); font-size: 22px; margin-bottom: 6px; }
+.login-box p { color: #888; font-size: 13px; margin-bottom: 24px; }
+.login-box label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #666; margin-bottom: 4px; }
+.login-box input[type="email"], .login-box input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; margin-bottom: 16px; background: var(--bg-alt); }
+.login-box input:focus { outline: none; border-color: var(--blue); }
+.btn { display: inline-block; padding: 10px 20px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; font-family: inherit; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: var(--dark); color: #fff; width: 100%; }
+.btn-gold { background: var(--gold); color: var(--dark); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--dark); }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-sm { padding: 6px 14px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.login-error { color: var(--red); font-size: 13px; margin-bottom: 12px; display: none; }
+#admin-app { display: none; }
+.admin-header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.admin-header-left { display: flex; align-items: center; gap: 20px; }
+.admin-header h1 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
+.admin-nav { display: flex; gap: 4px; }
+.admin-nav a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; padding: 6px 12px; border-radius: 4px; }
+.admin-nav a:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.06); }
+.admin-nav a.active { color: #fff; background: rgba(255,255,255,0.12); }
+.user-info { display: flex; align-items: center; gap: 12px; font-size: 13px; color: #aaa; }
+.page-wrap { max-width: 1060px; margin: 0 auto; padding: 28px 24px 80px; }
+.section-title { font-family: var(--title-font); font-size: 24px; margin-bottom: 4px; }
+.section-sub { color: #8a8178; font-size: 13px; margin-bottom: 18px; line-height: 1.5; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+.pill { font-size: 12px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: #8a8178; }
+.pill.on { border-color: var(--green); color: var(--green); }
+.pill.off { border-color: var(--red); color: var(--red); }
+.pill.warn { border-color: #d8a019; color: #b07d00; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.run-status { font-size: 12px; color: #8a8178; }
+.filterbar { display: flex; gap: 10px; align-items: center; margin: 24px 0 12px; flex-wrap: wrap; }
+.filterbar select { padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-family: inherit; font-size: 13px; }
+.lead { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+.lead-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.badge { font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.04em; }
+.badge.t1 { background: #eee7da; color: #8a8178; }
+.badge.t2 { background: #e4ebfb; color: #3a5bbf; }
+.badge.t3 { background: #def3e3; color: #1d7a35; }
+.badge.opening { background: #def3e3; color: #1d7a35; }
+.badge.closing { background: #fde4e0; color: #b3362a; }
+.badge.transfer { background: #fff0cc; color: #9a6b00; }
+.badge.covered { background: #f3e3fb; color: #7a3ab0; }
+.badge.st { background: #efe9df; color: #6f6759; }
+.lead-name { font-weight: 700; font-size: 15px; }
+.lead-meta { font-size: 12px; color: #8a8178; }
+.lead input.headline { width: 100%; font-family: var(--title-font); font-size: 17px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-alt); margin: 8px 0 6px; }
+.lead textarea.brief { width: 100%; min-height: 130px; font-family: inherit; font-size: 13px; line-height: 1.5; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-alt); resize: vertical; }
+.linkrow { display: flex; gap: 6px; margin-top: 6px; }
+.linkrow input { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: var(--bg-alt); font-family: inherit; }
+.linkrow input.lbl { max-width: 240px; }
+.linkrow button { border: 1px solid var(--border); background: #fff; border-radius: 6px; cursor: pointer; font-size: 12px; padding: 0 9px; }
+.signals { margin-top: 10px; font-size: 12px; color: #6f6759; }
+.signals summary { cursor: pointer; font-weight: 600; color: #8a8178; }
+.signals li { margin: 5px 0 5px 16px; line-height: 1.45; }
+.signals a { color: var(--blue); }
+.lead-actions { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+.gradebar { display: flex; gap: 4px; align-items: center; margin-top: 10px; font-size: 12px; color: #8a8178; flex-wrap: wrap; }
+.gradebar button { border: 1px solid var(--border); background: #fff; border-radius: 999px; padding: 4px 11px; cursor: pointer; font-size: 11.5px; font-family: inherit; }
+.gradebar button.on { background: var(--dark); color: #fff; border-color: var(--dark); }
+.notes { width: 100%; margin-top: 8px; padding: 7px 9px; border: 1px dashed var(--border); border-radius: 6px; font-size: 12px; background: #fffdf8; font-family: inherit; }
+.result { font-size: 12px; margin-top: 8px; }
+.result.ok { color: var(--green); }
+.result.err { color: var(--red); }
+.empty { background: #fff; border: 1px dashed var(--border); border-radius: 10px; padding: 26px; text-align: center; color: #8a8178; font-size: 13px; }
+.radar-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.radar-item .grow { flex: 1; min-width: 220px; }
+.runrow { font-size: 12px; color: #6f6759; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 10px; }
+.set-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; font-size: 13px; }
+.set-card label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #8a8178; margin-bottom: 6px; }
+.set-card input[type=number], .set-card select { width: 100%; padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-alt); font-family: inherit; font-size: 13px; }
+.switchrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; flex: 0 0 auto; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider-sw { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 999px; transition: 0.15s; }
+.slider-sw:before { content: ""; position: absolute; height: 16px; width: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.15s; }
+.switch input:checked + .slider-sw { background: var(--green); }
+.switch input:checked + .slider-sw:before { transform: translateX(18px); }
+h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
+.zone-sub { color: #8a8178; font-size: 12.5px; margin-bottom: 12px; line-height: 1.5; }
+@media (max-width: 768px) {
+  .admin-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .admin-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 2px; max-width: 100%; }
+  .admin-nav a { white-space: nowrap; flex: 0 0 auto; }
+  .page-wrap { padding: 20px 14px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI News Desk</h1>
+    <p>Sign in to review openings and closings briefs.</p>
+    <div class="login-error" id="login-error"></div>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ============ ADMIN APP ============ -->
+<div id="admin-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1>TBI Events Admin</h1>
+      <nav class="admin-nav">
+        <a href="/admin">Events</a>
+        <a href="/queue">Manual Queue</a>
+        <a href="/banners">Banners</a>
+        <a href="/links">Short Links</a>
+        <a href="/analytics">Analytics</a>
+        <a href="/social">Social</a>
+        <a href="/news_desk" class="active">News Desk</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="page-wrap">
+    <h2 class="section-title">News Desk</h2>
+    <p class="section-sub">SF restaurant, bar, and consumer-business openings and closings, gathered from city permit and license records. The code gathers, the model writes a sourced brief, you vet, the system ships. Right now everything lands in Ghost as a <b>draft</b> (shadow mode); closings always need your explicit hand.</p>
+
+    <div class="pills" id="pills">
+      <span class="pill" id="pill-sources">sources: checking...</span>
+      <span class="pill" id="pill-engine">AI engine: checking...</span>
+      <span class="pill" id="pill-ghost">Ghost: checking...</span>
+      <span class="pill" id="pill-shadow">shadow mode</span>
+      <span class="pill" id="pill-kill">kill switch</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-gold btn-sm" id="run-gather">Run gather now</button>
+      <button class="btn btn-outline btn-sm" id="run-generate">Generate briefs</button>
+      <button class="btn btn-outline btn-sm" id="reload-all">Reload</button>
+      <span class="run-status" id="top-status"></span>
+    </div>
+
+    <div class="filterbar">
+      <label for="lead-filter" style="font-size:12px;color:#8a8178;font-weight:600">Show</label>
+      <select id="lead-filter">
+        <option value="review" selected>In review (briefs ready)</option>
+        <option value="shipped">Pushed / scheduled / published</option>
+        <option value="killed">Killed</option>
+      </select>
+      <span class="run-status" id="list-count"></span>
+    </div>
+    <div id="lead-list"><div class="empty">Loading...</div></div>
+
+    <h3 class="zone">On the radar</h3>
+    <p class="zone-sub">Single-signal leads, possible license transfers, and anything the writer judged too thin. No brief is written until a second signal lands (or you force one).</p>
+    <div id="radar-list"><div class="empty">Loading...</div></div>
+
+    <h3 class="zone">Pipeline runs</h3>
+    <div id="runs-list" class="set-card" style="margin-top:6px"></div>
+
+    <h3 class="zone">Settings</h3>
+    <p class="zone-sub">Shadow mode keeps every push a Ghost draft. The kill switch stops gathering, writing, and publishing entirely. Flip shadow off only after grading a few weeks of briefs.</p>
+    <div class="set-grid">
+      <div class="set-card"><div class="switchrow"><span><b>Kill switch</b><br><span style="color:#8a8178;font-size:11.5px">stops the whole pipeline</span></span><label class="switch"><input type="checkbox" id="cfg-kill"><span class="slider-sw"></span></label></div></div>
+      <div class="set-card"><div class="switchrow"><span><b>Shadow mode</b><br><span style="color:#8a8178;font-size:11.5px">all pushes land as Ghost drafts</span></span><label class="switch"><input type="checkbox" id="cfg-shadow" checked><span class="slider-sw"></span></label></div></div>
+      <div class="set-card"><label for="cfg-cap">Daily auto-post cap</label><input type="number" id="cfg-cap" min="1" max="10" value="3"></div>
+      <div class="set-card"><label for="cfg-anom">Anomaly halt threshold</label><input type="number" id="cfg-anom" min="5" max="200" value="25"></div>
+      <div class="set-card"><label for="cfg-window">Gather window (days)</label><input type="number" id="cfg-window" min="1" max="30" value="7"></div>
+      <div class="set-card"><label for="cfg-model">Brief model</label><select id="cfg-model"><option value="claude-sonnet-4-6">Sonnet (default)</option><option value="claude-opus-4-8">Opus</option></select></div>
+    </div>
+    <div class="toolbar" style="margin-top:12px">
+      <button class="btn btn-gold btn-sm" id="cfg-save">Save settings</button>
+      <span class="run-status" id="cfg-status"></span>
+    </div>
+    <p class="zone-sub" style="margin-top:18px" id="ghost-help" hidden><b>Ghost is not connected yet.</b> In Ghost admin go to Settings &rarr; Advanced &rarr; Integrations &rarr; Add custom integration (name it News Desk), copy the <b>Admin API key</b>, and paste it as the <code>GHOST_ADMIN_KEY</code> edge secret in Supabase. Then this page can push drafts.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  var SUPABASE_URL  = 'https://scawgrjcjgcmvsimvash.supabase.co';
+  var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+  var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  var CK = '✓';
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function setStatus(el, msg, ok) { el.className = 'run-status'; el.style.color = ok === false ? 'var(--red)' : (ok ? 'var(--green)' : '#8a8178'); el.textContent = msg; }
+
+  // ---- auth ----
+  async function checkSession() { var s = await sb.auth.getSession(); if (s.data && s.data.session) showAdmin(s.data.session.user); }
+  function showAdmin(user) { $('login-screen').style.display = 'none'; $('admin-app').style.display = 'block'; $('user-email').textContent = user.email || ''; boot(); }
+  $('login-btn').addEventListener('click', async function () {
+    var err = $('login-error'); err.style.display = 'none';
+    var email = $('login-email').value.trim(), pass = $('login-pass').value;
+    if (!email || !pass) { err.textContent = 'Enter email and password'; err.style.display = 'block'; return; }
+    var b = $('login-btn'); b.textContent = 'Signing in...'; b.disabled = true;
+    var res = await sb.auth.signInWithPassword({ email: email, password: pass });
+    b.textContent = 'Sign In'; b.disabled = false;
+    if (res.error) { err.textContent = res.error.message; err.style.display = 'block'; return; }
+    showAdmin(res.data.user);
+  });
+  $('login-pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('login-btn').click(); });
+  $('logout-btn').addEventListener('click', async function () { await sb.auth.signOut(); location.reload(); });
+
+  async function invoke(fn, body) {
+    var r = await sb.functions.invoke(fn, { body: body });
+    var d = r.data || {};
+    if (r.error) {
+      var m = r.error.message || String(r.error);
+      try { var j = r.error.context && r.error.context.json ? await r.error.context.json() : null; if (j && j.error) m = j.error; } catch (_e) {}
+      throw new Error(m);
+    }
+    if (d.error) throw new Error(d.error);
+    return d;
+  }
+
+  var CFG = {};
+  async function loadConfig() {
+    var r = await sb.from('pipeline_config').select('*');
+    CFG = {}; (r.data || []).forEach(function (x) { CFG[x.key] = x.value; });
+    $('cfg-kill').checked = CFG.kill_switch === true;
+    $('cfg-shadow').checked = CFG.shadow_mode !== false;
+    $('cfg-cap').value = CFG.daily_cap || 3;
+    $('cfg-anom').value = CFG.anomaly_threshold || 25;
+    $('cfg-window').value = CFG.window_days || 7;
+    $('cfg-model').value = CFG.brief_model || 'claude-sonnet-4-6';
+    paintModePills();
+  }
+  function paintModePills() {
+    var sh = $('pill-shadow'), ki = $('pill-kill');
+    sh.textContent = 'shadow mode: ' + ($('cfg-shadow').checked ? 'ON (drafts only)' : 'OFF (can schedule)');
+    sh.className = 'pill ' + ($('cfg-shadow').checked ? 'warn' : 'on');
+    ki.textContent = 'kill switch: ' + ($('cfg-kill').checked ? 'ON (pipeline stopped)' : 'off');
+    ki.className = 'pill ' + ($('cfg-kill').checked ? 'off' : 'on');
+  }
+  $('cfg-save').onclick = async function () {
+    var rows = [
+      { key: 'kill_switch', value: $('cfg-kill').checked },
+      { key: 'shadow_mode', value: $('cfg-shadow').checked },
+      { key: 'daily_cap', value: parseInt($('cfg-cap').value, 10) || 3 },
+      { key: 'anomaly_threshold', value: parseInt($('cfg-anom').value, 10) || 25 },
+      { key: 'window_days', value: parseInt($('cfg-window').value, 10) || 7 },
+      { key: 'brief_model', value: $('cfg-model').value },
+    ];
+    if (!$('cfg-shadow').checked && CFG.shadow_mode !== false) {
+      if (!window.confirm('Turn shadow mode OFF? Future pushes of tier-3 OPENINGS can be scheduled to publish on their own (with the morning veto window). Closings still require you.')) { $('cfg-shadow').checked = true; return; }
+    }
+    var b = $('cfg-save'); b.disabled = true;
+    var r = await sb.from('pipeline_config').upsert(rows);
+    b.disabled = false;
+    if (r.error) { setStatus($('cfg-status'), 'Error: ' + r.error.message, false); return; }
+    setStatus($('cfg-status'), 'Saved ' + CK, true); loadConfig();
+  };
+  ['cfg-kill', 'cfg-shadow'].forEach(function (id) { $(id).addEventListener('change', paintModePills); });
+
+  // ---- connection pills ----
+  async function loadPills() {
+    try { var g = await invoke('news-gather', { action: 'check' }); var ok = g.datasf && g.abc; var p = $('pill-sources'); p.textContent = 'sources: ' + (ok ? 'DataSF + ABC reachable' : 'problem (see runs)'); p.className = 'pill ' + (ok ? 'on' : 'off'); } catch (e) { $('pill-sources').textContent = 'sources: ' + e.message; $('pill-sources').className = 'pill off'; }
+    try { var n = await invoke('news-generate', { action: 'check' }); var p2 = $('pill-engine'); p2.textContent = 'AI engine: ' + (n.has_anthropic_key ? ('ready (' + (n.brief_model || '') + ')') : 'no API key'); p2.className = 'pill ' + (n.has_anthropic_key ? 'on' : 'off'); } catch (e2) { $('pill-engine').textContent = 'AI engine: ' + e2.message; $('pill-engine').className = 'pill off'; }
+    try { var h = await invoke('news-publish', { action: 'check' }); var p3 = $('pill-ghost'); p3.textContent = 'Ghost: ' + (h.connected ? ('connected (' + (h.site || '') + ')') : (h.has_admin_key ? ('key set, error: ' + (h.error || '?')) : 'not connected')); p3.className = 'pill ' + (h.connected ? 'on' : 'off'); $('ghost-help').hidden = !!h.connected; } catch (e3) { $('pill-ghost').textContent = 'Ghost: ' + e3.message; $('pill-ghost').className = 'pill off'; }
+  }
+
+  // ---- top actions ----
+  $('run-gather').onclick = async function () {
+    var b = this; b.disabled = true; setStatus($('top-status'), 'Gathering from city records (30 to 90 seconds)...');
+    try { var d = await invoke('news-gather', { action: 'gather' }); setStatus($('top-status'), d.halted ? ('HALTED: ' + d.halt_reason) : ('Done ' + CK + ' ' + d.inserted + ' new, ' + d.updated + ' updated' + (d.generation && d.generation.generated ? (', ' + d.generation.generated + ' briefs written') : '')), !d.halted); loadAll(); }
+    catch (e) { setStatus($('top-status'), 'Error: ' + e.message, false); }
+    b.disabled = false;
+  };
+  $('run-generate').onclick = async function () {
+    var b = this; b.disabled = true; setStatus($('top-status'), 'Writing briefs...');
+    try { var d = await invoke('news-generate', { action: 'generate', limit: 10 }); setStatus($('top-status'), 'Done ' + CK + ' ' + d.generated + ' written, ' + d.insufficient + ' too thin ($' + (d.est_cost_usd || 0) + ')', true); loadAll(); }
+    catch (e) { setStatus($('top-status'), 'Error: ' + e.message, false); }
+    b.disabled = false;
+  };
+  $('reload-all').onclick = function () { loadAll(); };
+  $('lead-filter').onchange = function () { loadLeads(); };
+
+  // ---- leads ----
+  var LEADS = {};
+  function tierBadge(t) { return '<span class="badge t' + t + '">T' + t + '</span>'; }
+  function statusBadge(s) { return '<span class="badge st">' + esc(s.replace(/_/g, ' ')) + '</span>'; }
+  function signalsHtml(sigs) {
+    var li = (sigs || []).map(function (s) { return '<li>[' + esc(s.source) + '] ' + esc(s.date || '') + ' ' + esc(s.detail || '') + (s.url ? (' <a href="' + esc(s.url) + '" target="_blank" rel="noopener">source</a>') : '') + '</li>'; }).join('');
+    return '<details class="signals"><summary>' + (sigs || []).length + ' signal' + ((sigs || []).length === 1 ? '' : 's') + '</summary><ul>' + li + '</ul></details>';
+  }
+  function linksEditor(links) {
+    var rows = (links || []).map(function (l, i) { return '<div class="linkrow" data-i="' + i + '"><input class="lbl" value="' + esc(l.label || '') + '" placeholder="label"><input class="url" value="' + esc(l.url || '') + '" placeholder="https://..."><button class="rmlink" title="remove">&times;</button></div>'; }).join('');
+    return '<div class="linksbox">' + rows + '<div style="margin-top:6px"><button class="btn btn-outline btn-sm addlink">+ link</button></div></div>';
+  }
+  async function loadLeads() {
+    var host = $('lead-list'); host.innerHTML = '<div class="empty">Loading...</div>';
+    var f = $('lead-filter').value;
+    var q = sb.from('business_leads').select('*').order('confidence_tier', { ascending: false }).order('updated_at', { ascending: false }).limit(80);
+    if (f === 'review') q = q.in('status', ['brief_generated', 'in_review', 'draft_written']);
+    else if (f === 'shipped') q = q.in('status', ['pushed_draft', 'scheduled', 'published']);
+    else q = q.eq('status', 'killed');
+    var r = await q;
+    if (r.error) { host.innerHTML = '<div class="empty">Error: ' + esc(r.error.message) + '</div>'; return; }
+    var rows = r.data || [];
+    $('list-count').textContent = rows.length + ' lead' + (rows.length === 1 ? '' : 's');
+    if (!rows.length) { host.innerHTML = '<div class="empty">' + (f === 'review' ? 'Nothing waiting on you. Run gather, or check the radar below.' : 'Nothing here yet.') + '</div>'; return; }
+    LEADS = {};
+    host.innerHTML = rows.map(function (L) {
+      LEADS[L.id] = L;
+      var badges = tierBadge(L.confidence_tier) + '<span class="badge ' + L.lead_type + '">' + L.lead_type + '</span>' + (L.is_transfer ? '<span class="badge transfer">transfer?</span>' : '') + (L.tbi_covered ? '<span class="badge covered">TBI covered?</span>' : '') + statusBadge(L.status);
+      var ghostLink = L.ghost_post_id ? (' &middot; <a href="https://the-bold-italic.ghost.io/ghost/#/editor/post/' + esc(L.ghost_post_id) + '" target="_blank" rel="noopener">open in Ghost</a>') : '';
+      var pushLabel = ($('cfg-shadow').checked || L.lead_type === 'closing') ? 'Push to Ghost (draft)' : 'Push to Ghost';
+      return '<div class="lead" data-id="' + L.id + '">' +
+        '<div class="lead-head">' + badges + '<span class="lead-name">' + esc(L.business_name) + '</span></div>' +
+        '<div class="lead-meta">' + esc(L.address || '') + (L.neighborhood ? (' &middot; ' + esc(L.neighborhood)) : '') + (L.abc_license_type ? (' &middot; ABC type ' + esc(L.abc_license_type)) : '') + (L.generation_note ? (' &middot; <i>' + esc(L.generation_note) + '</i>') : '') + ghostLink + '</div>' +
+        '<input class="headline" value="' + esc(L.headline || '') + '" placeholder="Headline">' +
+        '<textarea class="brief">' + esc(L.draft_html || L.brief_html || '') + '</textarea>' +
+        linksEditor(L.links) +
+        signalsHtml(L.signals) +
+        '<textarea class="notes" placeholder="Editor notes (kept on the lead)">' + esc(L.editor_notes || '') + '</textarea>' +
+        '<div class="gradebar">Grade: <button data-g="as_is"' + (L.grade === 'as_is' ? ' class="on"' : '') + '>publishable as-is</button><button data-g="light_edit"' + (L.grade === 'light_edit' ? ' class="on"' : '') + '>light edit</button><button data-g="heavy_edit"' + (L.grade === 'heavy_edit' ? ' class="on"' : '') + '>heavy edit</button><button data-g="wrong"' + (L.grade === 'wrong' ? ' class="on"' : '') + '>wrong</button></div>' +
+        '<div class="lead-actions">' +
+          '<button class="btn btn-outline btn-sm save">Save edits</button>' +
+          '<button class="btn btn-outline btn-sm fulldraft">Write full draft</button>' +
+          '<button class="btn btn-gold btn-sm push">' + pushLabel + '</button>' +
+          (L.ghost_post_id && (L.status === 'scheduled' || L.status === 'published') ? '<button class="btn btn-outline btn-sm unpub">Unpublish</button>' : '') +
+          '<button class="btn btn-danger btn-sm kill">Kill</button>' +
+        '</div><div class="result" data-res></div></div>';
+    }).join('');
+    wireLeads(host);
+  }
+  function collectEdits(card) {
+    var links = [].map.call(card.querySelectorAll('.linkrow'), function (row) {
+      return { label: row.querySelector('.lbl').value.trim(), url: row.querySelector('.url').value.trim() };
+    }).filter(function (l) { return l.url; });
+    return { headline: card.querySelector('.headline').value.trim(), html: card.querySelector('.brief').value, links: links, notes: card.querySelector('.notes').value };
+  }
+  function wireLeads(host) {
+    host.querySelectorAll('.addlink').forEach(function (b) { b.onclick = function () { var box = b.closest('.linksbox'); var div = document.createElement('div'); div.className = 'linkrow'; div.innerHTML = '<input class="lbl" placeholder="label"><input class="url" placeholder="https://..."><button class="rmlink" title="remove">&times;</button>'; box.insertBefore(div, b.parentNode); div.querySelector('.rmlink').onclick = function () { div.remove(); }; }; });
+    host.querySelectorAll('.rmlink').forEach(function (b) { b.onclick = function () { b.parentNode.remove(); }; });
+    host.querySelectorAll('.gradebar button').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id;
+      var r = await sb.from('business_leads').update({ grade: b.dataset.g, updated_at: new Date().toISOString() }).eq('id', id);
+      if (!r.error) { card.querySelectorAll('.gradebar button').forEach(function (x) { x.classList.toggle('on', x === b); }); }
+    }; });
+    host.querySelectorAll('.save').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id; var res = card.querySelector('[data-res]');
+      var e = collectEdits(card); var L = LEADS[id];
+      var patch = { headline: e.headline, links: e.links, editor_notes: e.notes, status: (L.status === 'brief_generated' ? 'in_review' : L.status), updated_at: new Date().toISOString() };
+      if (L.draft_html) patch.draft_html = e.html; else patch.brief_html = e.html;
+      var r = await sb.from('business_leads').update(patch).eq('id', id);
+      res.className = 'result ' + (r.error ? 'err' : 'ok'); res.textContent = r.error ? ('Error: ' + r.error.message) : ('Saved ' + CK);
+      if (!r.error) Object.assign(L, patch);
+    }; });
+    host.querySelectorAll('.fulldraft').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id; var res = card.querySelector('[data-res]');
+      b.disabled = true; res.className = 'result'; res.textContent = 'Writing a fuller draft (about 30 seconds)...';
+      try { var d = await invoke('news-generate', { action: 'draft', id: id }); res.className = 'result ok'; res.textContent = 'Draft written ' + CK + ' ($' + (d.est_cost_usd || 0) + ')'; loadLeads(); }
+      catch (e) { res.className = 'result err'; res.textContent = 'Error: ' + e.message; }
+      b.disabled = false;
+    }; });
+    host.querySelectorAll('.push').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id; var res = card.querySelector('[data-res]'); var L = LEADS[id];
+      var shadow = $('cfg-shadow').checked;
+      var mode = 'draft';
+      if (!shadow && L.lead_type === 'opening' && L.confidence_tier >= 3) {
+        mode = window.confirm('Schedule this for the next 9am slot (OK), or push as a plain draft (Cancel)?') ? 'scheduled' : 'draft';
+      }
+      if (!window.confirm((mode === 'scheduled' ? 'Schedule' : 'Push as Ghost draft') + ': "' + (card.querySelector('.headline').value || L.business_name) + '"?')) return;
+      b.disabled = true; res.className = 'result'; res.textContent = 'Saving edits, then pushing to Ghost...';
+      try {
+        var e = collectEdits(card);
+        var patch = { headline: e.headline, links: e.links, editor_notes: e.notes, updated_at: new Date().toISOString() };
+        if (L.draft_html) patch.draft_html = e.html; else patch.brief_html = e.html;
+        var sv = await sb.from('business_leads').update(patch).eq('id', id);
+        if (sv.error) throw new Error(sv.error.message);
+        var d = await invoke('news-publish', { action: 'push', id: id, mode: mode });
+        res.className = 'result ok';
+        res.innerHTML = (d.mode === 'scheduled' ? ('Scheduled for ' + esc(new Date(d.published_at).toLocaleString()) + ' ') : 'Pushed as draft ') + CK + (d.ghost_url ? (' &middot; <a href="' + esc(d.ghost_url) + '" target="_blank" rel="noopener">open in Ghost</a>') : '');
+        setTimeout(loadLeads, 1600);
+      } catch (e2) { res.className = 'result err'; res.textContent = 'Error: ' + e2.message; }
+      b.disabled = false;
+    }; });
+    host.querySelectorAll('.unpub').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id; var res = card.querySelector('[data-res]');
+      if (!window.confirm('Unpublish this post (back to Ghost draft) and mark the lead killed?')) return;
+      b.disabled = true;
+      try { await invoke('news-publish', { action: 'unpublish', id: id }); res.className = 'result ok'; res.textContent = 'Unpublished ' + CK; setTimeout(loadLeads, 1200); }
+      catch (e) { res.className = 'result err'; res.textContent = 'Error: ' + e.message; b.disabled = false; }
+    }; });
+    host.querySelectorAll('.kill').forEach(function (b) { b.onclick = async function () {
+      var card = b.closest('.lead'); var id = card.dataset.id;
+      if (!window.confirm('Kill this lead? It moves to the Killed list (nothing is removed from Ghost).')) return;
+      await sb.from('business_leads').update({ status: 'killed', updated_at: new Date().toISOString() }).eq('id', id);
+      loadLeads();
+    }; });
+  }
+
+  // ---- radar (T1 + transfers + insufficient) ----
+  async function loadRadar() {
+    var host = $('radar-list');
+    var r = await sb.from('business_leads').select('id,business_name,address,neighborhood,lead_type,confidence_tier,is_transfer,tbi_covered,signals,generation_note,status').eq('status', 'new').order('created_at', { ascending: false }).limit(120);
+    if (r.error) { host.innerHTML = '<div class="empty">Error: ' + esc(r.error.message) + '</div>'; return; }
+    var rows = (r.data || []).filter(function (L) { return L.confidence_tier < 2 || L.is_transfer || L.tbi_covered || (L.generation_note || '').indexOf('insufficient') === 0; });
+    if (!rows.length) { host.innerHTML = '<div class="empty">Radar is clear.</div>'; return; }
+    host.innerHTML = rows.map(function (L) {
+      return '<div class="radar-item" data-id="' + L.id + '">' +
+        tierBadge(L.confidence_tier) + '<span class="badge ' + L.lead_type + '">' + L.lead_type + '</span>' + (L.is_transfer ? '<span class="badge transfer">transfer?</span>' : '') + (L.tbi_covered ? '<span class="badge covered">TBI covered?</span>' : '') +
+        '<span class="grow"><b>' + esc(L.business_name) + '</b> <span style="color:#8a8178">' + esc(L.address || '') + (L.neighborhood ? (' &middot; ' + esc(L.neighborhood)) : '') + ((L.generation_note || '') ? (' &middot; ' + esc(L.generation_note)) : '') + '</span>' + signalsHtml(L.signals) + '</span>' +
+        '<button class="btn btn-outline btn-sm force">Write brief anyway</button>' +
+        '<button class="btn btn-danger btn-sm rkill">Kill</button>' +
+        '</div>';
+    }).join('');
+    host.querySelectorAll('.force').forEach(function (b) { b.onclick = async function () {
+      var id = b.closest('.radar-item').dataset.id; b.disabled = true; b.textContent = 'Writing...';
+      try { await invoke('news-generate', { action: 'generate', id: id, limit: 1 }); b.textContent = 'Done ' + CK; setTimeout(loadAll, 1200); }
+      catch (e) { b.textContent = 'Error'; alert(e.message); b.disabled = false; }
+    }; });
+    host.querySelectorAll('.rkill').forEach(function (b) { b.onclick = async function () {
+      var id = b.closest('.radar-item').dataset.id;
+      await sb.from('business_leads').update({ status: 'killed', updated_at: new Date().toISOString() }).eq('id', id);
+      loadRadar();
+    }; });
+  }
+
+  // ---- runs ----
+  async function loadRuns() {
+    var host = $('runs-list');
+    var r = await sb.from('pipeline_runs').select('*').order('ran_at', { ascending: false }).limit(10);
+    if (r.error) { host.innerHTML = 'Error: ' + esc(r.error.message); return; }
+    var rows = r.data || [];
+    if (!rows.length) { host.innerHTML = '<span style="color:#8a8178;font-size:12px">No runs yet. The daily gather fires at 5am PT; you can also run it from the button above.</span>'; return; }
+    host.innerHTML = rows.map(function (x) {
+      var bits = [new Date(x.ran_at).toLocaleString(), x.kind, (x.candidates_found || 0) + ' candidates'];
+      if (x.kind === 'gather') bits.push((x.new_leads || 0) + ' new, ' + (x.updated_leads || 0) + ' updated');
+      if (x.kind === 'generate') bits.push((x.briefs_generated || 0) + ' briefs' + ((x.detail && x.detail.est_cost_usd) ? (' ($' + x.detail.est_cost_usd + ')') : ''));
+      var halt = x.halted ? (' <b style="color:var(--red)">HALTED: ' + esc(x.halt_reason || '') + '</b>') : '';
+      return '<div class="runrow">' + esc(bits.join(' · ')) + halt + '</div>';
+    }).join('');
+  }
+
+  function loadAll() { loadLeads(); loadRadar(); loadRuns(); }
+  function boot() { loadConfig().then(function () { loadAll(); loadPills(); }); }
+  checkSession();
+})();
+</script>
+</body>
+</html>
