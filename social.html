@@ -495,7 +495,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           </div></div>
           <div class="set-group"><h3>5 &middot; Instagram options</h3><div class="ig-body">
             <div class="ig-toggle">Also show on the profile grid<label class="switch"><input type="checkbox" id="rig-grid" checked><span class="slider-sw"></span></label></div>
-            <input type="text" id="rig-collab" placeholder="Collaborators: up to 3 usernames, comma separated" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+            <input type="text" id="rig-collab" placeholder="Collaborators: up to 3 Instagram usernames (not emails), comma separated" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
             <input type="text" id="rig-audio" placeholder="Audio name (optional, renames the original audio)" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:8px">
             <input type="text" id="rig-loc" placeholder="Location Page ID (optional, advanced)" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:8px">
             <div class="ig-hint" style="margin-top:8px">Off = Reels tab only, on = Reels tab plus your grid. Collaborators get an invite and appear once they accept. Location wants a Facebook place Page ID; finding IDs by name needs a Meta review we have not filed.</div>
@@ -2290,6 +2290,8 @@ function initReel(){
     if(!REEL_ST.file){ stt.innerHTML='<span style="color:var(--red)">Add a video first.</span>'; return; }
     if(REEL_ST.ov.textOn&&!(REEL_ST.ov.text||'').trim()){ stt.innerHTML='<span style="color:var(--red)">Text overlay is on but empty &mdash; type the text or turn it off.</span>'; return; }
     if(REEL_ST.cover.mode==='upload'&&!REEL_ST.cover.file){ stt.innerHTML='<span style="color:var(--red)">Cover is set to Upload but no image is chosen.</span>'; return; }
+    var badCollab=(($('#rig-collab')||{}).value||'').split(',').map(function(s){return s.trim().replace(/^@/,'');}).filter(function(s){ return s && !/^[A-Za-z0-9._]{1,30}$/.test(s); });
+    if(badCollab.length){ stt.innerHTML='<span style="color:var(--red)">Collaborators must be Instagram usernames (letters, numbers, dots, underscores). Not a username: '+esc(badCollab.join(', '))+'</span>'; return; }
     b.disabled=true; b.textContent='Sending...';
     try{
       var upBlob=REEL_ST.file; var ext=/[.]mov$/i.test(REEL_ST.file.name||'')?'.mov':'.mp4'; var ctype=REEL_ST.file.type||'video/mp4';
