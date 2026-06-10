@@ -171,10 +171,20 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     <!-- Live readers (fed by the banner presence snippet on thebolditalic.com) -->
     <div id="live-card" style="margin-bottom:18px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px">
       <h3 style="font-family:var(--title-font);font-size:16px;font-weight:400">Reading right now <span id="live-total" style="color:var(--green);font-size:14px"></span></h3>
-      <div style="color:#8a8178;font-size:12px;margin:4px 0 10px">Live readers on thebolditalic.com story pages; last 5 minutes, refreshes every 30 seconds. Story pages only, so site-wide reader counts (Ghost's number) will run higher.</div>
+      <div style="color:#8a8178;font-size:12px;margin:4px 0 10px">Live human readers on thebolditalic.com story pages (bots and instant bounces filtered at the source); last ~2 minutes, refreshes every 30 seconds. Story pages only.</div>
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Page</th><th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Readers</th></tr></thead>
         <tbody id="live-body"><tr><td colspan="2" style="padding:12px 0;color:#888">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Broken arrivals: who lands on the missing-content page, and from where -->
+    <div id="missing-card" style="margin-bottom:18px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px">
+      <h3 style="font-family:var(--title-font);font-size:16px;font-weight:400">Missing-page arrivals <span style="color:#8a8178;font-size:12px">last 7 days</span></h3>
+      <div style="color:#8a8178;font-size:12px;margin:4px 0 10px">Visitors who hit a dead or missing story, the broken address they requested, and the link that sent them there.</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Broken address</th><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Referred by</th><th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Hits</th></tr></thead>
+        <tbody id="missing-body"><tr><td colspan="3" style="padding:12px 0;color:#888">Loading…</td></tr></tbody>
       </table>
     </div>
 
@@ -262,7 +272,31 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     $userEmail.textContent = user.email || '';
     refresh();
     loadLive();
+    loadMissing();
     if (!window.__tbiLiveIv) window.__tbiLiveIv = setInterval(function () { if (document.visibilityState !== 'hidden') loadLive(); }, 30000);
+  }
+
+  // ---- Missing-page arrivals: broken path + referrer, grouped, last 7 days ----
+  async function loadMissing() {
+    var body = document.getElementById('missing-body');
+    if (!body) return;
+    var r = await sb.from('reader_presence').select('session_id,path,referrer,at').ilike('title', 'missing story%').order('at', { ascending: false }).limit(2000);
+    if (r.error) { body.innerHTML = '<tr><td colspan="3" style="padding:12px 0;color:var(--red);">' + escapeHTML(r.error.message) + '</td></tr>'; return; }
+    var groups = {};
+    (r.data || []).forEach(function (x) {
+      var ref = (x.referrer || '').trim() || '(no referrer - typed, bookmarked, or referrer hidden)';
+      var k = (x.path || '?') + '|' + ref;
+      var g = groups[k] = groups[k] || { path: x.path || '?', ref: ref, s: {}, last: x.at };
+      g.s[x.session_id] = 1;
+      if (x.at > g.last) g.last = x.at;
+    });
+    var rows = Object.keys(groups).map(function (k) { var g = groups[k]; return { path: g.path, ref: g.ref, n: Object.keys(g.s).length, last: g.last }; }).sort(function (a, b) { return b.n - a.n || (a.last < b.last ? 1 : -1); }).slice(0, 40);
+    body.innerHTML = rows.length
+      ? rows.map(function (x) {
+          var refCell = /^https?:/i.test(x.ref) ? ('<a href="' + escapeAttr(x.ref) + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;word-break:break-all;">' + escapeHTML(x.ref.replace(/^https?:\/\//, '').slice(0, 80)) + '</a>') : ('<span style="color:#888;">' + escapeHTML(x.ref.slice(0, 80)) + '</span>');
+          return '<tr><td style="padding:7px 8px 7px 0;border-bottom:1px solid var(--border);font-family:ui-monospace,Menlo,monospace;font-size:12px;word-break:break-all;">' + escapeHTML(x.path) + '</td><td style="padding:7px 8px 7px 0;border-bottom:1px solid var(--border);">' + refCell + '</td><td style="padding:7px 0;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;">' + x.n + '</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3" style="padding:12px 0;color:#888;">No missing-page hits recorded yet. They will collect here as they happen.</td></tr>';
   }
 
   // ---- Live readers (reader_presence heartbeats from the banner snippet) ----
@@ -270,7 +304,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var body = document.getElementById('live-body');
     var tot = document.getElementById('live-total');
     if (!body) return;
-    var since = new Date(Date.now() - 5 * 60000).toISOString();
+    var since = new Date(Date.now() - 150000).toISOString();
     var r = await sb.from('reader_presence').select('session_id,path,title').gte('at', since).limit(2000);
     if (r.error) { body.innerHTML = '<tr><td colspan="2" style="padding:12px 0;color:var(--red);">' + escapeHTML(r.error.message) + '</td></tr>'; return; }
     var byPage = {}, sess = {};
