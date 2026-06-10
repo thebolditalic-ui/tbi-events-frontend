@@ -61,6 +61,10 @@
       "destination": "/social.html"
     },
     {
+      "source": "/news_desk",
+      "destination": "/news_desk.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
