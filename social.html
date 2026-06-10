@@ -977,7 +977,8 @@ async function loadStaged(){
   var rows=r.data||[]; STAGED_MAP={}; rows.forEach(function(it){ STAGED_MAP[it.id]=it; });
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft.</div>'; return; }
   var slotOpts=slotOptionsHtml(await upcomingSlots(20));
-  host.innerHTML='<div class="story-card">'+rows.map(function(it){
+  host.innerHTML='<div class="toolbar" style="margin:0 0 12px"><button class="btn btn-gold btn-sm" id="autofill-btn" title="Schedule staged drafts into the next open slots, no repeats back-to-back">Auto-fill next slots</button><span class="run-status" id="af-status"></span></div>'+
+  '<div class="story-card">'+rows.map(function(it){
     var isVid=!!it.video_url;
     var isImg=!isVid&&Array.isArray(it.image_urls)&&it.image_urls.length;
     var media=isVid?('<div class="staged-thumbs"><video src="'+esc(it.video_url)+'" controls preload="metadata" playsinline style="width:120px;aspect-ratio:9/16;border-radius:8px;background:#000"></video></div>')
@@ -1013,6 +1014,74 @@ async function loadStaged(){
     }
     await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
   host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
+  var afb=host.querySelector('#autofill-btn'); if(afb) afb.onclick=autoFillSlots;
+}
+// One-click: place staged drafts into upcoming open slots under the house rules:
+// no same category (joke/question/story/photo/reel) and no same story link in
+// back-to-back slots (checked against the REAL timeline, queued posts included);
+// Instagram photo posts max once per day (extras that day go Facebook-only);
+// reels, FB-only photos, and text can repeat daily as long as adjacency holds.
+async function autoFillSlots(){
+  var st=$('#af-status'); function say(m,c){ if(st){ st.style.color=c||'#8a8178'; st.textContent=m; } }
+  say('Working out the schedule...');
+  var sgRes=await sb.from('social_suggestions').select('*').eq('status','staged').order('created_at',{ascending:true}).limit(200);
+  if(sgRes.error){ say('Error: '+sgRes.error.message,'var(--red)'); return; }
+  var staged=sgRes.data||[];
+  if(!staged.length){ say('Nothing staged to fill with.'); return; }
+  var slots=await upcomingSlots(Math.min(staged.length*2+4, 80));
+  if(!slots.length){ say('No open slots ahead. Add posting times, or spread the queue first.','var(--red)'); return; }
+  var qRes=await sb.from('post_queue').select('id,scheduled_at,link,image_urls,video_url,channels,source_suggestion_id').eq('status','queued');
+  var queued=qRes.data||[];
+  var srcIds=queued.map(function(q){return q.source_suggestion_id;}).filter(function(x){return !!x;});
+  var kindBy={};
+  if(srcIds.length){ var kr=await sb.from('social_suggestions').select('id,kind').in('id',srcIds); (kr.data||[]).forEach(function(r){ kindBy[r.id]=r.kind; }); }
+  var timeline=queued.map(function(q){
+    var kind=kindBy[q.source_suggestion_id]||(q.video_url?'reel':((Array.isArray(q.image_urls)&&q.image_urls.length)?'image_post':(q.link?'story_post':'text')));
+    return { t:new Date(q.scheduled_at).getTime(), kind:kind, link:String(q.link||'').trim(), igPhoto: !!(Array.isArray(q.image_urls)&&q.image_urls.length&&(q.channels||[]).indexOf('instagram')>=0) };
+  });
+  var igDay={};
+  timeline.forEach(function(m){ if(m.igPhoto){ var d=new Date(m.t).toDateString(); igDay[d]=(igDay[d]||0)+1; } });
+  function sKind(it){ return it.video_url?'reel':(it.kind||'text'); }
+  function sLink(it){ return (it.video_url||(Array.isArray(it.image_urls)&&it.image_urls.length))?'':String(it.story_url||it.link||'').trim(); }
+  var pool=staged.slice(), plan=[];
+  for(var si=0; si<slots.length && pool.length; si++){
+    var t=new Date(slots[si]).getTime();
+    var prev=null,next=null;
+    for(var mi=0;mi<timeline.length;mi++){ var m=timeline[mi]; if(m.t<t&&(!prev||m.t>prev.t)) prev=m; if(m.t>t&&(!next||m.t<next.t)) next=m; }
+    var dayKey=new Date(t).toDateString();
+    var pickIdx=-1, demote=false;
+    for(var pi=0; pi<pool.length; pi++){
+      var it=pool[pi]; var k=sKind(it); var L=sLink(it);
+      if(prev&&prev.kind===k) continue;
+      if(next&&next.kind===k) continue;
+      if(L&&((prev&&prev.link===L)||(next&&next.link===L))) continue;
+      var dem=(k==='image_post'&&(igDay[dayKey]||0)>=1);
+      pickIdx=pi; demote=dem; break;
+    }
+    if(pickIdx<0) continue;
+    var it2=pool.splice(pickIdx,1)[0];
+    var isVid=!!it2.video_url, isImg=!isVid&&Array.isArray(it2.image_urls)&&it2.image_urls.length;
+    var channels=isVid?['instagram','facebook']:(isImg?(demote?['facebook']:['instagram','facebook']):['facebook','threads','bluesky','x']);
+    var link=(isImg||isVid)?'':sLink(it2);
+    var msg=(isImg||isVid||!link)?String(it2.content||'').trim():fbStripLink(it2.content);
+    plan.push({ sugg:it2, when:slots[si], channels:channels, link:link, msg:msg, demoted:demote });
+    timeline.push({ t:t, kind:sKind(it2), link:sLink(it2), igPhoto:(isImg&&!demote) });
+    if(isImg&&!demote) igDay[dayKey]=(igDay[dayKey]||0)+1;
+  }
+  if(!plan.length){ say('No draft fits the open slots under the rules (everything would repeat a neighbor). Schedule one by hand or add slots.','var(--red)'); return; }
+  var demoN=plan.filter(function(p){return p.demoted;}).length;
+  var leftover=pool.length;
+  if(!window.confirm('Schedule '+plan.length+' of '+staged.length+' staged drafts into the next open slots?'+(demoN?(' '+demoN+' photo post'+(demoN===1?' goes':'s go')+' Facebook-only (Instagram already has its photo that day).'):'')+(leftover?(' '+leftover+' stay'+(leftover===1?'s':'')+' staged.'):'')+' First lands '+fmtWhen(plan[0].when)+'.')){ say(''); return; }
+  var ok=0,fail=0;
+  for(var i=0;i<plan.length;i++){
+    var p=plan[i];
+    var ins=await sb.from('post_queue').insert({ text:p.msg, link:p.link||null, image_urls:(Array.isArray(p.sugg.image_urls)&&p.sugg.image_urls.length)?p.sugg.image_urls:null, video_url:p.sugg.video_url||null, options:(p.sugg.options||null), channels:p.channels, scheduled_at:p.when, status:'queued', source_suggestion_id:p.sugg.id });
+    if(ins.error){ fail++; continue; }
+    await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',p.sugg.id);
+    ok++;
+  }
+  say('Scheduled '+ok+' draft'+(ok===1?'':'s')+(fail?(' ('+fail+' failed)'):'')+' '+CK,'var(--green)');
+  setTimeout(loadStaged,1400);
 }
 async function scheduleStaged(row){
   var id=row.dataset.id, it=STAGED_MAP[id]||{}, res=row.querySelector('[data-res]'), btn=row.querySelector('.go');
