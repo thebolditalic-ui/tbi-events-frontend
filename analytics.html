@@ -108,8 +108,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   .admin-header { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 16px; }
   .admin-header-left { flex-direction: column; align-items: stretch; gap: 8px; }
   .admin-header h1 { font-size: 17px; }
-  .admin-nav { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 2px; }
-  .admin-nav a { white-space: nowrap; flex: 0 0 auto; }
+  .admin-nav { flex-wrap: wrap; overflow: visible; row-gap: 4px; }
+  .admin-nav a { white-space: nowrap; }
   .admin-header .user-info { width: 100%; justify-content: space-between; }
   .top-card { overflow-x: auto; }
 }
@@ -166,6 +166,16 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <option value="90">Last 90 days</option>
       </select>
       <span class="refreshed" id="refreshed-stamp"></span>
+    </div>
+
+    <!-- Live readers (fed by the banner presence snippet on thebolditalic.com) -->
+    <div id="live-card" style="margin-bottom:18px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px">
+      <h3 style="font-family:var(--title-font);font-size:16px;font-weight:400">Reading right now <span id="live-total" style="color:var(--green);font-size:14px"></span></h3>
+      <div style="color:#8a8178;font-size:12px;margin:4px 0 10px">Live readers on thebolditalic.com pages showing an active banner; last 5 minutes, refreshes every 30 seconds.</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr><th style="text-align:left;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Page</th><th style="text-align:right;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;color:#888">Readers</th></tr></thead>
+        <tbody id="live-body"><tr><td colspan="2" style="padding:12px 0;color:#888">Loading…</td></tr></tbody>
+      </table>
     </div>
 
     <!-- Headline numbers -->
@@ -251,6 +261,30 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     $adminApp.style.display = 'block';
     $userEmail.textContent = user.email || '';
     refresh();
+    loadLive();
+    if (!window.__tbiLiveIv) window.__tbiLiveIv = setInterval(function () { if (document.visibilityState !== 'hidden') loadLive(); }, 30000);
+  }
+
+  // ---- Live readers (reader_presence heartbeats from the banner snippet) ----
+  async function loadLive() {
+    var body = document.getElementById('live-body');
+    var tot = document.getElementById('live-total');
+    if (!body) return;
+    var since = new Date(Date.now() - 5 * 60000).toISOString();
+    var r = await sb.from('reader_presence').select('session_id,path,title').gte('at', since).limit(2000);
+    if (r.error) { body.innerHTML = '<tr><td colspan="2" style="padding:12px 0;color:var(--red);">' + escapeHTML(r.error.message) + '</td></tr>'; return; }
+    var byPage = {}, sess = {};
+    (r.data || []).forEach(function (x) {
+      sess[x.session_id] = 1;
+      var k = x.path || '?';
+      (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1;
+    });
+    var rows = Object.keys(byPage).map(function (k) { return { path: k, title: byPage[k].title, n: Object.keys(byPage[k].s).length }; }).sort(function (a, b) { return b.n - a.n; });
+    var total = Object.keys(sess).length;
+    tot.textContent = total ? ('· ' + total + ' reader' + (total === 1 ? '' : 's')) : '';
+    body.innerHTML = rows.length
+      ? rows.map(function (x) { return '<tr><td style="padding:7px 0;border-bottom:1px solid var(--border);"><a href="https://www.thebolditalic.com' + escapeAttr(x.path) + '" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none;">' + escapeHTML(x.title || x.path) + '</a></td><td style="padding:7px 0;border-bottom:1px solid var(--border);text-align:right;font-variant-numeric:tabular-nums;">' + x.n + '</td></tr>'; }).join('')
+      : '<tr><td colspan="2" style="padding:12px 0;color:#888;">Quiet right now (or the site snippet is not installed yet).</td></tr>';
   }
   $loginBtn.addEventListener('click', async function () {
     $loginError.style.display = 'none';
