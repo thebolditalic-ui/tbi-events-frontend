@@ -240,6 +240,14 @@ export default async function middleware(request) {
   const url = new URL(request.url);
   const host = (request.headers.get('host') || '').toLowerCase();
 
+  // admin.thebolditalic.com root -> the dashboard. Middleware runs BEFORE the
+  // filesystem, which otherwise serves index.html for "/" and ignores rewrites.
+  if (host === 'admin.thebolditalic.com' && (url.pathname === '/' || url.pathname === '')) {
+    return new Response(null, {
+      headers: { 'x-middleware-rewrite': new URL('/dashboard.html', request.url).toString() },
+    });
+  }
+
   if (SHORT_LINK_HOSTS.has(host)) {
     return await handleShortLink(request, url);
   }
