@@ -374,7 +374,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Ed's Market (installed)</span></div>
           </div></div>
           <div class="set-group"><h3>4 &middot; Format &amp; layout</h3><div class="ig-body">
-            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440" class="on">3:4</button><button data-w="1080" data-h="1350">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
+            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440">3:4</button><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-fld">Black panel height <span class="val" id="ig-blackVal">33%</span><input type="range" id="ig-black" min="20" max="55" value="33"></div>
             <div class="ig-toggle">White hairline at top of black box<label class="switch"><input type="checkbox" id="ig-hairline"><span class="slider-sw"></span></label></div>
             <div class="ig-toggle">"The Bold Italic" badge<label class="switch"><input type="checkbox" id="ig-badge" checked><span class="slider-sw"></span></label></div>
@@ -1569,7 +1569,7 @@ function initIG(){ if(igReady) return; igReady=true; igBoot(); }
 function igBoot(){
   var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
   var NL=String.fromCharCode(10);
-  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'', autofit:false, manualSize:79, hcolor:'#ffffff', headLH:1.06, zoom:1, posX:0, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'EdsMarket', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false, textBox:defaultTextBox() };
+  var state={ img:null, W:1080, H:1350, blackFrac:0.33, headline:'', autofit:false, manualSize:79, hcolor:'#ffffff', headLH:1.06, zoom:1, posX:0, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'EdsMarket', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false, textBox:defaultTextBox() };
   var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
   function drawCover(img,x,y,w,h,zoom,posY,posX){
     var scale=Math.max(w/img.width,h/img.height)*zoom;
