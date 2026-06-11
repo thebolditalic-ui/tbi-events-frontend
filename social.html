@@ -868,7 +868,7 @@ async function loadFeed(more){
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>':'')+
       '<span class="text">'+esc(it.content)+'</span></div>'+
       '<div class="acts">'+
-        '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged ✓':'Send to Scheduling')+'</button>'+
+        '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged ✓':'Send to Scheduling')+'</button>'+'<button class="btn btn-outline btn-sm toqueue">Send to queue</button>'+
         '<button class="btn btn-outline btn-sm edit">Edit</button>'+
         '<button class="btn btn-outline btn-sm copy">Copy</button>'+
         '<button class="btn btn-outline btn-sm discard">Discard</button>'+
@@ -896,6 +896,22 @@ function wireSuggHandlers(host){
     await sb.from('social_suggestions').update({status:'staged'}).eq('id',row.dataset.id);
     e.target.textContent='Staged ✓';
     if(!row.querySelector('.staged-flag')){ const a=row.querySelector('.angle'); if(a) a.insertAdjacentHTML('afterend','<span class="staged-flag">staged</span>'); }
+  });
+  host.querySelectorAll('.toqueue').forEach(b=>b.onclick=async e=>{
+    const row=e.target.closest('.sugg'), id=row.dataset.id, btn=e.target;
+    btn.disabled=true; btn.textContent='Queuing…';
+    try{
+      const r=await sb.from('social_suggestions').select('content,link,story_url,image_urls').eq('id',id).single();
+      const it=r.data||{}; const link=((it.link||it.story_url)||'').trim();
+      const imgs=Array.isArray(it.image_urls)?it.image_urls:[];
+      const msg=link?fbStripLink(it.content):((it.content||'').trim());
+      const channels=imgs.length?['instagram','facebook']:['facebook','threads','bluesky','x'];
+      const when=(await nextOpenSlot())||new Date(Date.now()+3600000).toISOString();
+      const ins=await sb.from('post_queue').insert({text:msg,link:link||null,image_urls:imgs.length?imgs:null,channels:channels,scheduled_at:when,status:'queued',source_suggestion_id:id}).select().single();
+      if(ins.error) throw ins.error;
+      await sb.from('social_suggestions').update({status:'scheduled'}).eq('id',id);
+      btn.textContent='Queued '+CK; setTimeout(function(){ row.remove(); },700);
+    }catch(err){ btn.disabled=false; btn.textContent='Send to queue'; alert('Could not queue: '+(err.message||err)); }
   });
   host.querySelectorAll('.edit').forEach(b=>b.onclick=e=>{
     const row=e.target.closest('.sugg'), body=row.querySelector('.body'), span=row.querySelector('.text');
@@ -932,7 +948,7 @@ async function loadJokes(){
         '<span class="angle">'+label+'</span>'+(it.status==='staged'?'<span class="staged-flag">staged</span>':'')+'<br>'+
         '<span class="text">'+esc(it.content)+'</span></div>'+
         '<div class="acts">'+
-          '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged '+CK:'Send to Scheduling')+'</button>'+
+          '<button class="btn btn-gold btn-sm stage">'+(it.status==='staged'?'Staged '+CK:'Send to Scheduling')+'</button>'+'<button class="btn btn-outline btn-sm toqueue">Send to queue</button>'+
           '<button class="btn btn-outline btn-sm edit">Edit</button>'+
           '<button class="btn btn-outline btn-sm copy">Copy</button>'+
           '<button class="btn btn-outline btn-sm discard">Discard</button>'+
