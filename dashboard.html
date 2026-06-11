@@ -239,8 +239,27 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var total = Object.keys(sess).length;
     $('st-readers').innerHTML = total + ' <small>reader' + (total === 1 ? '' : 's') + '</small>';
     body.innerHTML = rows.length
-      ? rows.map(function (x) { return '<tr><td><a href="' + esc(GHOST_URL + x.path) + '" target="_blank" rel="noopener">' + esc(x.title || x.path) + '</a></td><td class="r">' + x.n + '</td></tr>'; }).join('')
+      ? rows.map(function (x) {
+          var slug = String(x.path || '').replace(/^\/+|\/+$/g, '');
+          var act = (slug && slug.indexOf('/') < 0)
+            ? ' <a href="#" class="qcrawl" data-slug="' + esc(slug) + '" data-title="' + esc(x.title || slug) + '" data-path="' + esc(x.path) + '" style="font-size:11.5px;color:#8a8178;white-space:nowrap">· queue for social crawl</a>'
+            : '';
+          return '<tr><td><a href="' + esc(GHOST_URL + x.path) + '" target="_blank" rel="noopener">' + esc(x.title || x.path) + '</a>' + act + '</td><td class="r">' + x.n + '</td></tr>';
+        }).join('')
       : '<tr><td colspan="2" class="emptymsg">Quiet right now.</td></tr>';
+    body.querySelectorAll('.qcrawl').forEach(function (a) {
+      a.onclick = async function (e) {
+        e.preventDefault();
+        a.style.pointerEvents = 'none'; a.textContent = '· queueing...';
+        var r = await sb.from('crawl_queue').insert({ slug: a.dataset.slug, title: a.dataset.title, path: a.dataset.path, source: 'dashboard', status: 'flagged' });
+        if (r.error) {
+          if (String(r.error.message || '').indexOf('duplicate') >= 0 || r.error.code === '23505') { a.textContent = '· already in the crawl queue ✓'; a.style.color = 'var(--green)'; }
+          else { a.textContent = '· error: ' + r.error.message; a.style.color = 'var(--red)'; a.style.pointerEvents = ''; }
+          return;
+        }
+        a.textContent = '· sent to the social crawl queue ✓'; a.style.color = 'var(--green)';
+      };
+    });
   }
 
   // ---- upcoming social posts ----
