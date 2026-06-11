@@ -1089,12 +1089,10 @@ body {
       <h1><a href="/admin" style="color:inherit;text-decoration:none" title="Back to the dashboard">TBI Admin</a></h1>
       <nav class="admin-nav">
         <a href="/admin">Home</a>
+        <a href="/social">Social</a>
         <a href="/events" class="active">Events</a>
-        <a href="/queue">Manual Queue</a>
         <a href="/banners">Banners</a>
         <a href="/links">Short Links</a>
-        <a href="/analytics">Analytics</a>
-        <a href="/social">Social</a>
         <a href="/news_desk">News Desk</a>
       </nav>
     </div>
@@ -1104,6 +1102,18 @@ body {
     </div>
   </header>
 
+<style>
+.admin-subnav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;padding:0 24px;background:#fff;border-bottom:1px solid #e7e2d8;}
+.admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
+.admin-subnav a:hover{color:#1a1a1a;}
+.admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
+@media(max-width:768px){.admin-subnav{padding:0 12px;}}
+</style>
+  <nav class="admin-subnav">
+    <a href="/events" class="active">Events</a>
+    <a href="/queue">Manual Queue</a>
+    <a href="/analytics">Analytics</a>
+  </nav>
   <div class="admin-toolbar">
     <input type="text" class="search-box" id="search-input" placeholder="Search events...">
     <div class="toolbar-right">
