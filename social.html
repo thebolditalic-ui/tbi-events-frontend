@@ -242,6 +242,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .gm-seg button.on{background:#2563eb;color:#fff}
 .gm-seg button.gm-cowork.on{background:#7a3ff2}
 .cq-ghost{color:var(--blue,#2563eb);cursor:pointer}
+@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
 </style>
 </head>
 <body>
@@ -303,7 +304,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div>
       <div class="story-search">
         <input type="text" id="story-q" placeholder="Search your Ghost stories by title…">
-        <button class="btn btn-outline btn-sm" id="story-search-btn">Search</button>
+        <button class="btn btn-outline btn-sm" id="story-search-btn">Search</button><button class="btn btn-outline btn-sm" id="story-clear">Clear</button>
         <button class="btn btn-outline btn-sm" id="hist-btn">Crawled history</button>
         <button class="btn btn-outline btn-sm" id="cq-btn">Crawl queue</button>
       </div>
@@ -372,7 +373,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="set-group"><h3>3 &middot; Headline font</h3><div class="ig-body">
             <div class="ig-drop" id="ig-fontdrop"><b>Load your font</b> (.ttf / .otf / .woff)</div>
             <input type="file" id="ig-fontfile" accept=".ttf,.otf,.woff,.woff2,font/*" hidden>
-            <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Drop Ed's Market here once (saves in this browser)</span></div>
+            <div class="ig-hint" style="margin-top:8px">Current: <span id="ig-fontname" style="color:var(--blue);font-weight:700">Ed's Market (installed)</span></div>
           </div></div>
           <div class="set-group"><h3>4 &middot; Format &amp; layout</h3><div class="ig-body">
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="ig-aspect"><button data-w="1080" data-h="1440" class="on">3:4</button><button data-w="1080" data-h="1350">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
@@ -785,6 +786,7 @@ function storyResHtml(list,btnLabel,withQueue){ if(!list.length) return '<div cl
 function wireAddCq(host){ host.querySelectorAll('.addcq').forEach(function(b){ b.onclick=async function(){ b.disabled=true; b.textContent='Adding…'; try{ var url=b.dataset.url||''; var title=b.dataset.title||''; var path=url; try{ path=new URL(url).pathname; }catch(_e){} var slug=path.replace(/^\/+|\/+$/g,''); var ex=await sb.from('crawl_queue').select('id').eq('slug',slug).in('status',['flagged','crawled']).limit(1); if(ex.data&&ex.data.length){ b.textContent='Already queued ✓'; return; } var ins=await sb.from('crawl_queue').insert({slug:slug,title:title,path:path,source:'search',status:'flagged'}); if(ins.error) throw ins.error; b.textContent='Added to queue '+CK; if(typeof cqCount==='function') cqCount(); }catch(e){ b.disabled=false; b.textContent='Add to crawl queue'; alert('Could not add: '+(e.message||e)); } }; }); }
 if($('#story-search-btn')) $('#story-search-btn').onclick=async function(){ var q=($('#story-q').value||'').trim(); if(!q) return; var host=$('#story-results'); host.innerHTML='<div class="run-status" style="padding:8px">Searching…</div>'; var list=await ghostSearch(q); host.innerHTML=storyResHtml(list,'Mine for ideas',true); wireAddCq(host); host.querySelectorAll('[data-sid]').forEach(function(b){ b.onclick=async function(){ b.disabled=true; b.textContent='Mining… (~10–30s)'; try{ var rr=await sb.functions.invoke('generate',{body:{story_id:b.dataset.sid}}); if(rr.error) throw rr.error; if(rr.data&&rr.data.error) throw new Error(rr.data.error); b.textContent='Done ✓ '+((rr.data&&rr.data.suggestions)||0)+' drafts'; loadFeed(); loadSpend(); }catch(e){ b.disabled=false; b.textContent='Mine for ideas'; alert('Error: '+(e.message||e)); } }; }); };
 if($('#story-q')) $('#story-q').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); $('#story-search-btn').click(); } });
+if($('#story-clear')) $('#story-clear').onclick=function(){ var q=$('#story-q'); if(q) q.value=''; var h=$('#story-results'); if(h) h.innerHTML=''; };
 /* ---- Crawl queue: stories Saul flagged OK to crawl (fed by the Home dashboard's
    "queue for social crawl" link on live readers; the future full-auto button runs off
    status='flagged' rows in crawl_queue). Targeted mining bypasses the cooldown. ---- */
@@ -1059,6 +1061,8 @@ function schedShow(v){
   else if(v==='history') loadHistory();
   else if(v==='slots') loadSlots();
 }
+var TBI_MARK_URL='https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/tbi-mark.png';
+try{ document.fonts.load("400 40px 'EdsMarket'"); }catch(_e){}
 var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'}];
 var IMG_CH=[{k:'instagram',l:'Instagram'},{k:'facebook',l:'Facebook'}];
 var CH_SVG={
@@ -1567,7 +1571,7 @@ function initIG(){ if(igReady) return; igReady=true; igBoot(); }
 function igBoot(){
   var canvas=$('#ig-card'), ctx=canvas.getContext('2d');
   var NL=String.fromCharCode(10);
-  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'', autofit:false, manualSize:79, hcolor:'#ffffff', headLH:1.06, zoom:1, posX:0, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'Permanent Marker', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false, textBox:defaultTextBox() };
+  var state={ img:null, W:1080, H:1440, blackFrac:0.33, headline:'', autofit:false, manualSize:79, hcolor:'#ffffff', headLH:1.06, zoom:1, posX:0, posY:0, badge:true, badgeText:'The Bold Italic', bgColor:'#1d1b1a', tbiCircle:true, tbiCirclePos:'tr', tbiCircleColor:'#f5333f', font:'EdsMarket', headOffX:0, headOffY:-0.3, tbiScale:0.7, tbiImg:null, hairline:false, textBox:defaultTextBox() };
   var BG=['#1d1b1a','#000000','#ff4d3d','#0b3d4d','#7a1f2b','#163a2b','#e8d9c4','#3a2f4d'];
   function drawCover(img,x,y,w,h,zoom,posY,posX){
     var scale=Math.max(w/img.width,h/img.height)*zoom;
@@ -1672,7 +1676,7 @@ function igBoot(){
   fontdrop.addEventListener('drop',function(e){ loadFont(e.dataTransfer.files[0]); });
   async function loadFontBuf(buf,label){ try{ var face=new FontFace('EdsMarket',buf); await face.load(); document.fonts.add(face); state.font='EdsMarket'; if(label) $('#ig-fontname').textContent=label; render(); return true; }catch(err){ $('#ig-fontname').textContent='Could not load that font file'; return false; } }
   async function loadFont(file){ if(!file) return; var buf=await file.arrayBuffer(); var ok=await loadFontBuf(buf, file.name+' (saved in this browser)'); if(ok){ try{ var by=new Uint8Array(buf), bin=''; for(var i=0;i<by.length;i++) bin+=String.fromCharCode(by[i]); localStorage.setItem('ig_font_b64', btoa(bin)); localStorage.setItem('ig_font_name', file.name); }catch(e){} } }
-  try{ var _fb=localStorage.getItem('ig_font_b64'); if(_fb){ var _bs=atob(_fb), _u=new Uint8Array(_bs.length); for(var _i=0;_i<_bs.length;_i++) _u[_i]=_bs.charCodeAt(_i); loadFontBuf(_u.buffer, (localStorage.getItem('ig_font_name')||"Ed's Market")+' (saved)'); } }catch(e){}
+  try{ document.fonts.load("400 40px 'EdsMarket'").then(function(){ state.font='EdsMarket'; var _fn=$('#ig-fontname'); if(_fn) _fn.textContent="Ed's Market (installed)"; render(); }); var _fb=localStorage.getItem('ig_font_b64'); if(_fb){ var _bs=atob(_fb), _u=new Uint8Array(_bs.length); for(var _i=0;_i<_bs.length;_i++) _u[_i]=_bs.charCodeAt(_i); loadFontBuf(_u.buffer, (localStorage.getItem('ig_font_name')||"Ed's Market")+' (custom)'); } }catch(e){}
   function loadIconFile(file){ if(!file||!file.type.startsWith('image/')) return; var url=URL.createObjectURL(file); var im=new Image(); im.onload=function(){ state.tbiImg=im; render(); URL.revokeObjectURL(url); }; im.src=url; var rd=new FileReader(); rd.onload=function(){ try{ localStorage.setItem('ig_tbi_b64', rd.result); }catch(e){} }; rd.readAsDataURL(file); }
   var icondrop=$('#ig-icondrop'), iconfile=$('#ig-iconfile');
   icondrop.onclick=function(){ iconfile.click(); };
@@ -1680,7 +1684,7 @@ function igBoot(){
   ['dragenter','dragover'].forEach(function(ev){ icondrop.addEventListener(ev,function(e){ e.preventDefault(); icondrop.classList.add('hot'); }); });
   ['dragleave','drop'].forEach(function(ev){ icondrop.addEventListener(ev,function(e){ e.preventDefault(); icondrop.classList.remove('hot'); }); });
   icondrop.addEventListener('drop',function(e){ loadIconFile(e.dataTransfer.files[0]); });
-  try{ var _ib=localStorage.getItem('ig_tbi_b64'); if(_ib){ var _im=new Image(); _im.onload=function(){ state.tbiImg=_im; render(); }; _im.src=_ib; } }catch(e){}
+  try{ var _is=localStorage.getItem('ig_tbi_b64')||TBI_MARK_URL; var _im=new Image(); _im.crossOrigin='anonymous'; _im.onload=function(){ state.tbiImg=_im; render(); }; _im.src=_is; }catch(e){}
   function slug(){ return (state.headline||'tbi-card').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48)||'tbi-card'; }
   $('#ig-export').onclick=function(){ canvas.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=slug()+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
   $('#ig-copy').onclick=async function(){ try{ var blob=await new Promise(function(r){ canvas.toBlob(r,'image/png'); }); await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]); var b=$('#ig-copy'), t=b.textContent; b.textContent='Copied '+CK; setTimeout(function(){ b.textContent=t; },1400); }catch(e){ var b2=$('#ig-copy'); b2.textContent='Use Download'; setTimeout(function(){ b2.textContent='Copy image'; },1600); } };
@@ -1794,12 +1798,7 @@ function drawTextBox(c, W, H, tb){
   if(bLines.length){ c.font='400 '+bSize+'px '+tbFontStack(b.font||'Georgia'); c.fillStyle=b.color||'#2a2a2a'; for(var j=0;j<bLines.length;j++){ c.fillText(bLines[j],tx,cy); cy+=bLH; } }
 }
 function loadSavedEdsMarket(cb){
-  try{
-    if(document.fonts.check('400 40px "EdsMarket"')){ cb&&cb(); return; }
-    var s=localStorage.getItem('ig_font_b64'); if(!s){ cb&&cb(); return; }
-    var bs=atob(s), u=new Uint8Array(bs.length); for(var i=0;i<bs.length;i++) u[i]=bs.charCodeAt(i);
-    var face=new FontFace('EdsMarket', u.buffer); face.load().then(function(f){ document.fonts.add(f); cb&&cb(); }).catch(function(){ cb&&cb(); });
-  }catch(e){ cb&&cb(); }
+  try{ document.fonts.load('400 40px "EdsMarket"').then(function(){ cb&&cb(); }).catch(function(){ cb&&cb(); }); }catch(e){ cb&&cb(); }
 }
 function defaultCover(){
   return { on:false, blackFrac:0.33, headline:'', hcolor:'#ffffff', autofit:true, manualSize:79, lh:1.06, font:'EdsMarket', headOffX:0, headOffY:-0.3, hairline:false, badge:true, badgeText:'The Bold Italic' };
@@ -1983,7 +1982,7 @@ function initCP(){ if(cpReady) return; cpReady=true; cpBoot(); }
 function cpBoot(){
   var canvas=$('#cp-card'), ctx=canvas.getContext('2d');
   var st={ imgs:[], sel:0, W:1080, H:1350, fit:'cover', bg:'#ffffff', tbiCircle:true, tbiCirclePos:'tr', tbiScale:0.7, tbiImg:null, tbiCircleColor:'#f5333f' };
-  try{ var _ib=localStorage.getItem('ig_tbi_b64'); if(_ib){ var _im=new Image(); _im.onload=function(){ st.tbiImg=_im; cpRender(); }; _im.src=_ib; } }catch(e){}
+  try{ var _is=localStorage.getItem('ig_tbi_b64')||TBI_MARK_URL; var _im=new Image(); _im.crossOrigin='anonymous'; _im.onload=function(){ st.tbiImg=_im; cpRender(); }; _im.src=_is; }catch(e){}
   function cpFont(){ try{ return document.fonts.check('400 40px "EdsMarket"')?'EdsMarket':'Permanent Marker'; }catch(e){ return 'Permanent Marker'; } }
   function paintCircle(c,o,W,H){
     if(!o || !o.tbiCircle) return;
@@ -2298,7 +2297,7 @@ function reelBuildOptions(coverUrl){
 function initReel(){
   if(REEL_ST.wired) return; REEL_ST.wired=true;
   var drop=$('#reel-drop'), inp=$('#reel-file'), prev=$('#reel-preview'), info=$('#reel-info'), clearBtn=$('#reel-clear'), wrap=$('#reel-stagewrap');
-  try{ var b64=localStorage.getItem('ig_tbi_b64'); if(b64){ var im=new Image(); im.onload=function(){ REEL_TBI_IMG=im; }; im.src=b64; } }catch(_e){}
+  try{ var _rs=localStorage.getItem('ig_tbi_b64')||TBI_MARK_URL; var im=new Image(); im.crossOrigin='anonymous'; im.onload=function(){ REEL_TBI_IMG=im; }; im.src=_rs; }catch(_e){}
   if(typeof loadSavedEdsMarket==='function'){ try{ loadSavedEdsMarket(function(){}); }catch(_e){} }
   if(!REEL_ST.rafOn){ REEL_ST.rafOn=true; (function loop(){ reelPaintPreview(); requestAnimationFrame(loop); })(); }
   function setRange(id,max,val){ var el=$(id.charAt(0)==='#'?id:('#'+id)); if(!el) return; el.max=String(max); if(val!==undefined) el.value=String(val); }
