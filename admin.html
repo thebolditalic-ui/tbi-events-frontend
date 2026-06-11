@@ -1493,6 +1493,7 @@ body {
     $userEmail.textContent = user.email;
     loadEvents();
     loadFeaturedManager();
+    loadCrawlSecret();
   }
 
   // ---- Load Events ----
@@ -2536,7 +2537,7 @@ body {
   var CRAWL_LS_URL = 'tbi_crawl_render_url';
   var CRAWL_LS_SECRET = 'tbi_crawl_refresh_secret';
   var CRAWL_SERVER_SECRET = '';
-  async function loadCrawlSecret(){ if(CRAWL_SERVER_SECRET) return CRAWL_SERVER_SECRET; try{ var r=await sb.from('pipeline_config').select('value').eq('key','events_crawl_refresh_secret').maybeSingle(); if(r&&r.data&&r.data.value) CRAWL_SERVER_SECRET=r.data.value; }catch(_e){} return CRAWL_SERVER_SECRET; }
+  async function loadCrawlSecret(){ if(CRAWL_SERVER_SECRET) return CRAWL_SERVER_SECRET; try{ await sb.auth.getSession(); var r=await sb.from('pipeline_config').select('value').eq('key','events_crawl_refresh_secret').maybeSingle(); if(r&&r.data&&r.data.value) CRAWL_SERVER_SECRET=r.data.value; }catch(_e){} return CRAWL_SERVER_SECRET; }
   loadCrawlSecret();
   var $crawlBtn = document.getElementById('run-crawl-btn');
   var $crawlStatus = document.getElementById('crawl-status');
