@@ -1103,12 +1103,16 @@ async function loadStaged(){
       '<label class="wopt"><input type="radio" name="w'+it.id+'" value="time"> At <input type="datetime-local" class="when"></label></div>'+
       '<div class="sched-result" data-res></div></div>'+
       '<div class="acts"><button class="btn btn-gold btn-sm go">Schedule</button>'+
+      '<button class="btn btn-outline btn-sm editbtn">Edit</button>'+
       '<button class="btn btn-outline btn-sm copy">Copy</button>'+
       '<button class="btn btn-outline btn-sm unstage">Unstage</button></div></div>';
   }).join('')+'</div>';
   host.querySelectorAll('.ch-toggle').forEach(function(ch){ ch.onclick=function(){ ch.classList.toggle('on'); }; });
   host.querySelectorAll('.linkopen').forEach(function(a){ a.onclick=function(e){ e.preventDefault(); var inp=a.parentNode.querySelector('.linkfield'); var u=inp?(inp.value||'').trim():''; if(u) window.open(u,'_blank','noopener'); }; });
   host.querySelectorAll('.comp .copy').forEach(function(b){ b.onclick=function(e){ var t=e.target.closest('.sugg').querySelector('.text').textContent; navigator.clipboard.writeText(t); e.target.textContent='Copied '+CK; setTimeout(function(){e.target.textContent='Copy';},1400); }; });
+  host.querySelectorAll('.comp .editbtn').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); var id=row.dataset.id; var it=STAGED_MAP[id]||{};
+    if(b.dataset.ed==='1'){ var ta=row.querySelector('.editbox'); var val=ta?ta.value:''; b.disabled=true; b.textContent='Saving...'; try{ var r=await sb.from('social_suggestions').update({content:val}).eq('id',id); if(r.error) throw r.error; if(STAGED_MAP[id]) STAGED_MAP[id].content=val; var sp=document.createElement('span'); sp.className='text'; sp.textContent=val; if(ta) ta.replaceWith(sp); b.dataset.ed=''; b.disabled=false; b.textContent='Edit'; }catch(err){ b.disabled=false; b.textContent='Save'; alert('Could not save: '+(err.message||err)); } }
+    else { var sp=row.querySelector('.text'); if(!sp) return; var cur=(it.content!=null?it.content:sp.textContent)||''; var ta=document.createElement('textarea'); ta.className='editbox'; ta.value=cur; ta.setAttribute('style','width:100%;min-height:130px;font:inherit;line-height:1.45;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg-alt);resize:vertical'); sp.replaceWith(ta); ta.focus(); b.dataset.ed='1'; b.textContent='Save'; } }; });
   host.querySelectorAll('.comp .unstage').forEach(function(b){ b.onclick=async function(e){ var row=e.target.closest('.sugg'); var it=STAGED_MAP[row.dataset.id]||{};
     if(it.video_url){
       if(!window.confirm('Remove this reel from Staged? The uploaded video file is deleted too.')) return;
