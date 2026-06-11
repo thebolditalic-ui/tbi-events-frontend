@@ -2535,6 +2535,9 @@ body {
   // =================================================================
   var CRAWL_LS_URL = 'tbi_crawl_render_url';
   var CRAWL_LS_SECRET = 'tbi_crawl_refresh_secret';
+  var CRAWL_SERVER_SECRET = '';
+  async function loadCrawlSecret(){ if(CRAWL_SERVER_SECRET) return CRAWL_SERVER_SECRET; try{ var r=await sb.from('pipeline_config').select('value').eq('key','events_crawl_refresh_secret').maybeSingle(); if(r&&r.data&&r.data.value) CRAWL_SERVER_SECRET=r.data.value; }catch(_e){} return CRAWL_SERVER_SECRET; }
+  loadCrawlSecret();
   var $crawlBtn = document.getElementById('run-crawl-btn');
   var $crawlStatus = document.getElementById('crawl-status');
   var $crawlSettingsBtn = document.getElementById('crawl-settings-btn');
@@ -2547,8 +2550,8 @@ body {
 
   function getCrawlConfig() {
     return {
-      url: (localStorage.getItem(CRAWL_LS_URL) || '').trim().replace(/\/+$/, ''),
-      secret: (localStorage.getItem(CRAWL_LS_SECRET) || '').trim()
+      url: (localStorage.getItem(CRAWL_LS_URL) || 'https://tbi-content-engine.onrender.com').trim().replace(/\/+$/, ''),
+      secret: (localStorage.getItem(CRAWL_LS_SECRET) || CRAWL_SERVER_SECRET || '').trim()
     };
   }
 
@@ -2665,7 +2668,8 @@ body {
     crawlPollTimer = setTimeout(refreshCrawlHealth, delay || 4000);
   }
 
-  $crawlBtn && $crawlBtn.addEventListener('click', function() {
+  $crawlBtn && $crawlBtn.addEventListener('click', async function() {
+    await loadCrawlSecret();
     var cfg = getCrawlConfig();
     if (!cfg.url || !cfg.secret) {
       openCrawlSettings();
