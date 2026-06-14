@@ -1338,7 +1338,7 @@ async function scheduleStaged(row){
 // ---------- Queue (upcoming) ----------
 async function loadQueue(){
   var host=$('#sv-queue'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
-  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(300);
+  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(2000);
   if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
   var rows=r.data||[];
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing in the new queue yet.</div>'; host.insertAdjacentHTML('beforeend','<div id="q-draining"></div>'); loadDraining(); return; }
@@ -1404,7 +1404,7 @@ function editQueued(row){
 // ---------- Calendar (agenda grouped by day) ----------
 async function loadCalendar(){
   var host=$('#sv-calendar'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
-  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(300);
+  var r=await sb.from('post_queue').select('*').eq('status','queued').order('scheduled_at',{ascending:true}).limit(2000);
   if(r.error){ host.innerHTML='<div class="empty">Error: '+esc(r.error.message)+'</div>'; return; }
   var rows=r.data||[]; if(!rows.length){ host.innerHTML='<div class="empty">Nothing scheduled.</div>'; return; }
   var byday={}, order=[];
