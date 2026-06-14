@@ -320,7 +320,37 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <button class="ig-viewbtn active" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="custom">Custom post</button>
         <button class="ig-viewbtn" data-igview="reel">Reel</button>
+        <button class="ig-viewbtn" data-igview="jokecard">Joke / question card</button>
       </div>
+      <div class="ig-view" id="ig-view-jokecard">
+        <p class="sub" style="margin:0 0 10px">Black text cards for jokes and questions. Send items here from the <b>Jokes &amp; Questions</b> tab (one or more at a time), or type your own below. Posts a 9:16 to Instagram Stories and a 4:5 to Facebook.</p>
+        <div id="jk-queue" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
+          <div style="flex:0 0 auto;text-align:center">
+            <canvas id="jk-card" width="1080" height="1920" style="width:240px;max-width:46vw;height:auto;border-radius:12px;background:#141414;display:block"></canvas>
+            <div class="ig-seg" id="jk-aspect" style="margin-top:8px;justify-content:center"><button data-a="916" class="on">Story 9:16</button><button data-a="45">FB 4:5</button></div>
+          </div>
+          <div style="flex:1 1 320px;min-width:280px">
+            <textarea id="jk-text" placeholder="Type a joke or question, or send items from the Jokes tab..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <div class="ig-fld" style="margin-top:10px">Text alignment<div class="ig-seg" id="jk-align"><button data-v="left" class="on">Left</button><button data-v="center">Center</button><button data-v="right">Right</button></div></div>
+            <div class="ig-fld">Vertical position<div class="ig-seg" id="jk-valign"><button data-v="top">Top</button><button data-v="middle" class="on">Middle</button><button data-v="bottom">Bottom</button></div></div>
+            <div class="ig-fld">Font<div class="ig-seg" id="jk-font"><button data-v="serif" class="on">Serif</button><button data-v="bold">Bold</button><button data-v="italic">Italic</button><button data-v="eds">Eds Market</button></div></div>
+            <div class="ig-fld">Size <span class="val" id="jk-sizeVal">64</span><input type="range" id="jk-size" min="30" max="170" value="64"></div>
+            <div class="ig-fld">Line height <span class="val" id="jk-lhVal">1.30</span><input type="range" id="jk-lh" min="100" max="220" value="130"></div>
+            <div class="ig-fld">Branding<div class="ig-seg" id="jk-brand"><button data-v="sign" class="on">Signature</button><button data-v="badge">Red badge</button><button data-v="both">Both</button><button data-v="none">None</button></div></div>
+            <div class="ig-fld">Branding corner<div class="ig-seg" id="jk-brandpos"><button data-v="tl">TL</button><button data-v="tr">TR</button><button data-v="bl">BL</button><button data-v="br" class="on">BR</button></div></div>
+            <textarea id="jk-caption" placeholder="Optional Facebook caption (Stories don't take post text)..." style="width:100%;min-height:54px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4;margin-top:10px"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+              <button class="btn btn-gold" id="jk-send">Send to Scheduling</button>
+              <button class="btn btn-outline btn-sm" id="jk-savedef">Save as default</button>
+              <button class="btn btn-outline btn-sm" id="jk-dl">Download 9:16</button>
+              <button class="btn btn-outline btn-sm" id="jk-dl45">Download 4:5</button>
+              <span class="run-status" id="jk-status"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="ig-view active" id="ig-view-story">
       <div class="ig-cand">
         <button class="btn btn-gold btn-sm" id="ig-gen">Generate cards from stories</button>
@@ -537,37 +567,6 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div>
       <div id="joke-results"></div>
       <div id="jokes-list"></div>
-      <div class="set-group" id="jk-builder" style="margin-top:24px">
-        <h3>Image card (jokes &amp; questions)</h3>
-        <div class="set-body">
-          <p class="sub" style="margin:0 0 10px">Turn any joke or question into a black card. Click <b>Make card</b> on an item above, or type below. Sends a 9:16 to Instagram Stories and a 4:5 to Facebook.</p>
-          <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">
-            <div style="flex:0 0 auto;text-align:center">
-              <canvas id="jk-card" width="1080" height="1920" style="width:240px;max-width:46vw;height:auto;border-radius:12px;background:#141414;display:block"></canvas>
-              <div class="ig-seg" id="jk-aspect" style="margin-top:8px;justify-content:center"><button data-a="916" class="on">Story 9:16</button><button data-a="45">FB 4:5</button></div>
-            </div>
-            <div style="flex:1 1 320px;min-width:280px">
-              <textarea id="jk-text" placeholder="Type a joke or question, or click Make card above..." style="width:100%;min-height:70px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
-              <div class="ig-fld" style="margin-top:10px">Text alignment<div class="ig-seg" id="jk-align"><button data-v="left" class="on">Left</button><button data-v="center">Center</button><button data-v="right">Right</button></div></div>
-              <div class="ig-fld">Vertical position<div class="ig-seg" id="jk-valign"><button data-v="top">Top</button><button data-v="middle" class="on">Middle</button><button data-v="bottom">Bottom</button></div></div>
-              <div class="ig-fld">Font<div class="ig-seg" id="jk-font"><button data-v="serif" class="on">Serif</button><button data-v="bold">Bold</button><button data-v="italic">Italic</button><button data-v="eds">Eds Market</button></div></div>
-              <div class="ig-fld">Size <span class="val" id="jk-sizeVal">64</span><input type="range" id="jk-size" min="30" max="170" value="64"></div>
-              <div class="ig-fld">Line height <span class="val" id="jk-lhVal">1.30</span><input type="range" id="jk-lh" min="100" max="220" value="130"></div>
-              <div class="ig-fld">Branding<div class="ig-seg" id="jk-brand"><button data-v="sign" class="on">Signature</button><button data-v="badge">Red badge</button><button data-v="both">Both</button><button data-v="none">None</button></div></div>
-              <div class="ig-fld">Branding corner<div class="ig-seg" id="jk-brandpos"><button data-v="tl">TL</button><button data-v="tr">TR</button><button data-v="bl">BL</button><button data-v="br" class="on">BR</button></div></div>
-              <textarea id="jk-caption" placeholder="Optional Facebook caption (Stories don't take post text)..." style="width:100%;min-height:54px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4;margin-top:10px"></textarea>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                <button class="btn btn-gold" id="jk-send">Send to Scheduling</button>
-                <button class="btn btn-outline btn-sm" id="jk-savedef">Save as default</button>
-                <button class="btn btn-outline btn-sm" id="jk-dl">Download 9:16</button>
-                <button class="btn btn-outline btn-sm" id="jk-dl45">Download 4:5</button>
-                <span class="run-status" id="jk-status"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="set-group" style="margin-top:24px">
         <h3>Series</h3>
         <div class="set-body">
@@ -987,7 +986,7 @@ async function loadJokes(){
         '</div></div>').join('')+'</div></div>';
   }).join('');
   wireSuggHandlers(host);
-  host.querySelectorAll('.sugg').forEach(function(s){ var acts=s.querySelector('.acts'); if(acts&&!acts.querySelector('.mkcard')){ var mk=document.createElement('button'); mk.className='btn btn-outline btn-sm mkcard'; mk.textContent='Make card'; mk.onclick=function(){ var t=s.querySelector('.text'); if(window.jkLoadText) window.jkLoadText(t?t.textContent:''); }; acts.appendChild(mk); } });
+  host.querySelectorAll('.sugg').forEach(function(s){ var acts=s.querySelector('.acts'); if(acts&&!acts.querySelector('.mkcard')){ var mk=document.createElement('button'); mk.className='btn btn-outline btn-sm mkcard'; mk.textContent='Send to cards'; mk.onclick=function(){ var t=s.querySelector('.text'); if(window.jkAddText) window.jkAddText(t?t.textContent:''); }; acts.appendChild(mk); } });
 }
 if($('#jokes-gen')) $('#jokes-gen').onclick=async()=>{
   const btn=$('#jokes-gen'); btn.disabled=true; $('#jokes-status').textContent='Generating… (~10–20s)';
@@ -2483,6 +2482,7 @@ gate();
   var cv=document.getElementById('jk-card'); if(!cv) return;
   var ctx=cv.getContext('2d'); var NL=String.fromCharCode(10);
   var st={text:'',align:'left',valign:'middle',font:'serif',size:64,lh:1.30,brand:'sign',brandpos:'br',aspect:'916',caption:''};
+  var JK_Q=[]; var jkCur=-1;
   function fontMeta(f){ if(f==='eds')return{fam:'EdsMarket, Georgia, serif',w:'400',s:'normal'}; if(f==='bold')return{fam:'Georgia, "Times New Roman", serif',w:'700',s:'normal'}; if(f==='italic')return{fam:'Georgia, "Times New Roman", serif',w:'400',s:'italic'}; return{fam:'Georgia, "Times New Roman", serif',w:'400',s:'normal'}; }
   function wrapLines(c,text,maxW){ var out=[]; String(text||'').split(NL).forEach(function(para){ if(para.trim()===''){ out.push(''); return; } var words=para.split(/ +/),line=''; for(var i=0;i<words.length;i++){ var t=line?line+' '+words[i]:words[i]; if(c.measureText(t).width>maxW&&line){ out.push(line); line=words[i]; } else line=t; } if(line) out.push(line); }); return out.length?out:['']; }
   function drawBrand(c,W,H){ if(st.brand==='none') return; var pad=Math.round(W*0.06); var showSign=(st.brand==='sign'||st.brand==='both'), showBadge=(st.brand==='badge'||st.brand==='both'); if(showBadge){ var D=Math.round(W*0.12), rr=D/2, bp=(st.brand==='both')?'bl':st.brandpos, cx,cy; if(bp==='tl'){cx=pad+rr;cy=pad+rr;}else if(bp==='tr'){cx=W-pad-rr;cy=pad+rr;}else if(bp==='bl'){cx=pad+rr;cy=H-pad-rr;}else{cx=W-pad-rr;cy=H-pad-rr;} c.beginPath(); c.arc(cx,cy,rr,0,Math.PI*2); c.fillStyle='#f5333f'; c.fill(); c.fillStyle='#fff'; c.font='400 '+Math.round(D*0.40)+'px EdsMarket, Arial, sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('TBI',cx,cy+D*0.04); } if(showSign){ var sp=(st.brand==='both')?'br':st.brandpos, ssize=Math.round(W*0.028); c.font='italic 400 '+ssize+'px Georgia, "Times New Roman", serif'; c.fillStyle='#f5333f'; c.textBaseline='alphabetic'; var sx,sy; if(sp==='tl'){c.textAlign='left';sx=pad;sy=pad+ssize;}else if(sp==='tr'){c.textAlign='right';sx=W-pad;sy=pad+ssize;}else if(sp==='bl'){c.textAlign='left';sx=pad;sy=H-pad;}else{c.textAlign='right';sx=W-pad;sy=H-pad;} c.fillText('The Bold Italic',sx,sy); } }
@@ -2492,8 +2492,11 @@ gate();
   function seg(id,fn){ var el=document.getElementById(id); if(!el) return; el.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ el.querySelectorAll('button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); fn(b.dataset.v||b.dataset.a); }; }); }
   function setSeg(id,val){ var el=document.getElementById(id); if(!el) return; el.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on',(b.dataset.v||b.dataset.a)===String(val)); }); }
   function applyUI(){ setSeg('jk-align',st.align); setSeg('jk-valign',st.valign); setSeg('jk-font',st.font); setSeg('jk-brand',st.brand); setSeg('jk-brandpos',st.brandpos); setSeg('jk-aspect',st.aspect); var s=document.getElementById('jk-size'); if(s){s.value=st.size; var sv=document.getElementById('jk-sizeVal'); if(sv) sv.textContent=st.size;} var l=document.getElementById('jk-lh'); if(l){l.value=Math.round(st.lh*100); var lv=document.getElementById('jk-lhVal'); if(lv) lv.textContent=Number(st.lh).toFixed(2);} var t=document.getElementById('jk-text'); if(t) t.value=st.text; }
+  function eschip(s){ try{ return (typeof esc==='function')?esc(s):s; }catch(e){ return s; } }
+  function renderQ(){ var host=document.getElementById('jk-queue'); if(!host) return; if(!JK_Q.length){ host.innerHTML=''; return; } var h='<span style="font-size:11px;color:#8a8178;align-self:center;margin-right:2px">Queued:</span>'; for(var i=0;i<JK_Q.length;i++){ var on=(i===jkCur); var lab=JK_Q[i].length>30?JK_Q[i].slice(0,30)+'…':JK_Q[i]; h+='<button class="jk-chip" data-i="'+i+'" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:12px;background:'+(on?'var(--blue)':'var(--bg-alt)')+';color:'+(on?'#fff':'var(--dark)')+';cursor:pointer;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+eschip(lab)+'</button>'; } host.innerHTML=h; host.querySelectorAll('.jk-chip').forEach(function(b){ b.onclick=function(){ loadIdx(+b.dataset.i); }; }); }
+  function loadIdx(i){ if(i<0||i>=JK_Q.length) return; jkCur=i; st.text=JK_Q[i]; var t=document.getElementById('jk-text'); if(t) t.value=st.text; renderQ(); render(); }
   seg('jk-align',function(v){st.align=v;render();}); seg('jk-valign',function(v){st.valign=v;render();}); seg('jk-font',function(v){st.font=v;render();}); seg('jk-brand',function(v){st.brand=v;render();}); seg('jk-brandpos',function(v){st.brandpos=v;render();}); seg('jk-aspect',function(v){st.aspect=v;render();});
-  var tx=document.getElementById('jk-text'); if(tx) tx.oninput=function(e){ st.text=e.target.value; render(); };
+  var tx=document.getElementById('jk-text'); if(tx) tx.oninput=function(e){ st.text=e.target.value; if(jkCur>=0&&jkCur<JK_Q.length) JK_Q[jkCur]=e.target.value; render(); };
   var cap=document.getElementById('jk-caption'); if(cap) cap.oninput=function(e){ st.caption=e.target.value; };
   var sz=document.getElementById('jk-size'); if(sz) sz.oninput=function(e){ st.size=+e.target.value; var sv=document.getElementById('jk-sizeVal'); if(sv) sv.textContent=e.target.value; render(); };
   var lhEl=document.getElementById('jk-lh'); if(lhEl) lhEl.oninput=function(e){ st.lh=e.target.value/100; var lv=document.getElementById('jk-lhVal'); if(lv) lv.textContent=(e.target.value/100).toFixed(2); render(); };
@@ -2501,10 +2504,11 @@ gate();
   var d1=document.getElementById('jk-dl'); if(d1) d1.onclick=function(){ dl(1080,1920,'story'); };
   var d2=document.getElementById('jk-dl45'); if(d2) d2.onclick=function(){ dl(1080,1350,'fb'); };
   var sd=document.getElementById('jk-savedef'); if(sd) sd.onclick=async function(){ var b=this,t=b.textContent; b.disabled=true; b.textContent='Saving...'; try{ var v={align:st.align,valign:st.valign,font:st.font,size:st.size,lh:st.lh,brand:st.brand,brandpos:st.brandpos}; var r=await sb.from('pipeline_config').upsert({key:'joke_card_defaults',value:v},{onConflict:'key'}); if(r.error) throw r.error; b.textContent='Saved '+(window.CK||'✓'); }catch(e){ b.textContent='Error'; } setTimeout(function(){b.textContent=t;b.disabled=false;},1500); };
-  var snd=document.getElementById('jk-send'); if(snd) snd.onclick=async function(){ var b=this, stt=document.getElementById('jk-status'); if(!(st.text||'').trim()){ if(stt) stt.textContent='Type or pick a joke first.'; return; } b.disabled=true; if(stt) stt.textContent='Rendering and staging...'; try{ var b916=await blobAt(1080,1920), b45=await blobAt(1080,1350); var id=crypto.randomUUID(); var p1='sched-'+id+'-story.jpg', p2='sched-'+id+'-fb.jpg'; var u1=await sb.storage.from('ig-rendered').upload(p1,b916,{upsert:true,contentType:'image/jpeg'}); if(u1.error) throw u1.error; var u2=await sb.storage.from('ig-rendered').upload(p2,b45,{upsert:true,contentType:'image/jpeg'}); if(u2.error) throw u2.error; var url1=sb.storage.from('ig-rendered').getPublicUrl(p1).data.publicUrl; var url2=sb.storage.from('ig-rendered').getPublicUrl(p2).data.publicUrl; var ins=await sb.from('social_suggestions').insert({kind:'image_post',angle:'Card · story + FB',content:(st.caption||''),image_urls:[url2],options:{card_kind:'joke_card',ig_story:true,images:{instagram_story:[url1],facebook:[url2]}},status:'staged',expires_at:new Date(Date.now()+30*864e5).toISOString()}); if(ins.error) throw ins.error; if(stt) stt.textContent='Staged '+(window.CK||'✓')+'. See the Schedule tab.'; }catch(e){ if(stt) stt.textContent='Error: '+(e.message||e); } b.disabled=false; };
-  window.jkLoadText=function(t){ st.text=t||''; if(tx) tx.value=st.text; render(); var sec=document.getElementById('jk-builder'); if(sec) sec.scrollIntoView({behavior:'smooth',block:'center'}); };
+  var snd=document.getElementById('jk-send'); if(snd) snd.onclick=async function(){ var b=this, stt=document.getElementById('jk-status'); if(!(st.text||'').trim()){ if(stt) stt.textContent='Type or send a joke first.'; return; } b.disabled=true; if(stt) stt.textContent='Rendering and staging...'; try{ var b916=await blobAt(1080,1920), b45=await blobAt(1080,1350); var id=crypto.randomUUID(); var p1='sched-'+id+'-story.jpg', p2='sched-'+id+'-fb.jpg'; var u1=await sb.storage.from('ig-rendered').upload(p1,b916,{upsert:true,contentType:'image/jpeg'}); if(u1.error) throw u1.error; var u2=await sb.storage.from('ig-rendered').upload(p2,b45,{upsert:true,contentType:'image/jpeg'}); if(u2.error) throw u2.error; var url1=sb.storage.from('ig-rendered').getPublicUrl(p1).data.publicUrl; var url2=sb.storage.from('ig-rendered').getPublicUrl(p2).data.publicUrl; var ins=await sb.from('social_suggestions').insert({kind:'image_post',angle:'Card · story + FB',content:(st.caption||''),image_urls:[url2],options:{card_kind:'joke_card',ig_story:true,images:{instagram_story:[url1],facebook:[url2]}},status:'staged',expires_at:new Date(Date.now()+30*864e5).toISOString()}); if(ins.error) throw ins.error; if(stt) stt.textContent='Staged '+(window.CK||'✓')+'. See the Schedule tab.'; if(jkCur>=0&&jkCur<JK_Q.length){ JK_Q.splice(jkCur,1); if(JK_Q.length){ jkCur=Math.min(jkCur,JK_Q.length-1); st.text=JK_Q[jkCur]; if(tx) tx.value=st.text; } else { jkCur=-1; st.text=''; if(tx) tx.value=''; } renderQ(); render(); } }catch(e){ if(stt) stt.textContent='Error: '+(e.message||e); } b.disabled=false; };
+  window.jkAddText=function(t){ t=(t||'').trim(); if(!t) return; JK_Q.push(t); try{ var ib=document.querySelector('.subtab[data-tab="instagram"]'); if(ib) ib.click(); }catch(e){} try{ if(typeof showIGView==='function') showIGView('jokecard'); }catch(e){} loadIdx(JK_Q.length-1); var v=document.getElementById('ig-view-jokecard'); if(v&&v.scrollIntoView) v.scrollIntoView({behavior:'smooth',block:'start'}); };
+  window.jkLoadText=window.jkAddText;
   try{ if(document.fonts&&document.fonts.load) document.fonts.load('400 60px "EdsMarket"').then(function(){ render(); }).catch(function(){}); }catch(e){}
-  (async function(){ try{ var r=await sb.from('pipeline_config').select('value').eq('key','joke_card_defaults').maybeSingle(); if(r&&r.data&&r.data.value&&typeof r.data.value==='object'){ var d=r.data.value; ['align','valign','font','brand','brandpos'].forEach(function(k){ if(d[k]!=null) st[k]=d[k]; }); if(d.size!=null) st.size=+d.size; if(d.lh!=null) st.lh=+d.lh; } }catch(e){} applyUI(); render(); })();
+  (async function(){ try{ var r=await sb.from('pipeline_config').select('value').eq('key','joke_card_defaults').maybeSingle(); if(r&&r.data&&r.data.value&&typeof r.data.value==='object'){ var d=r.data.value; ['align','valign','font','brand','brandpos'].forEach(function(k){ if(d[k]!=null) st[k]=d[k]; }); if(d.size!=null) st.size=+d.size; if(d.lh!=null) st.lh=+d.lh; } }catch(e){} applyUI(); renderQ(); render(); })();
 })();
 </script>
 
