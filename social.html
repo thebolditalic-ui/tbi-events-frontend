@@ -134,7 +134,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .ig-seg{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
 .ig-seg button{flex:1;border:0;border-right:1px solid var(--border);border-radius:0;padding:7px 4px;background:var(--bg-alt);color:#8a8178;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
 .ig-seg button:last-child{border-right:0}
-.ig-seg button.on{background:var(--blue);color:#fff}
+.ig-seg button.on{background:var(--dark);color:#fff}
 .ig-fld{display:flex;flex-direction:column;gap:6px;font-size:12px;color:#444;margin-bottom:12px}
 .ig-fld .val{color:var(--dark);font-weight:700}
 .ig-fld input[type=range]{width:100%;accent-color:var(--blue)}
@@ -245,20 +245,28 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .cq-ghost{color:var(--blue,#2563eb);cursor:pointer}
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
 </style>
-<style>/* tbi-nav-normalize-v2 — uniform header bar + centered pill nav + white hairline */
+<style>/* tbi-nav-normalize-v3 — uniform header + centered pill nav + hairline + EdsMarket brand + uniform user box */
+@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
 .admin-header, .page-header .header-top{ border-bottom:1px solid rgba(255,255,255,.9); }
+.admin-header h1, .page-header h1, .header-top h1{ font-family:'EdsMarket', var(--title-font), Georgia, serif; font-weight:400; }
 .admin-header h1 .adm, .page-header h1 .adm, .header-top h1 .adm{
   font-family:'Helvetica Neue',Arial,sans-serif; font-weight:500; font-size:11px;
   text-transform:uppercase; letter-spacing:.18em; color:rgba(255,255,255,.55);
   margin-left:8px; vertical-align:middle;
 }
+.admin-header .user-info{ display:flex; align-items:center; gap:12px; }
+#user-email{ font-size:13px !important; color:rgba(255,255,255,.6) !important; font-weight:400 !important; }
+#logout-btn{ font-size:12px !important; font-weight:500 !important; padding:6px 12px !important; line-height:1.1 !important;
+  background:rgba(255,255,255,.10) !important; color:#e8e2d6 !important;
+  border:1px solid rgba(255,255,255,.24) !important; border-radius:8px !important; white-space:nowrap; }
+#logout-btn:hover{ background:rgba(255,255,255,.18) !important; }
 @media(min-width:769px){
   .admin-header, .page-header .header-top{
     box-sizing:border-box; position:relative;
     display:flex; align-items:center; justify-content:space-between;
     min-height:60px; padding:8px 24px;
   }
-  .admin-header h1, .page-header h1, .header-top h1{ font-size:20px; margin:0; line-height:1.1; }
+  .admin-header h1, .page-header h1, .header-top h1{ font-size:22px; margin:0; line-height:1.1; }
   .admin-nav{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     display:flex; gap:6px; flex-wrap:nowrap; width:auto;
@@ -330,19 +338,19 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <h2 class="section">Compose</h2>
       <p class="sub">Write a post, add an optional link (rides as a clean preview card) and optional image(s), pick channels, then post now or schedule. Everything lands in the same queue.</p>
       <div class="set-group">
-        <div class="set-body">
-          <textarea id="cmp-text" placeholder="Write your post... (keep the link out of the text; add it below so it rides as a clean preview card)" style="width:100%;min-height:120px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;background:var(--bg-alt);resize:vertical;line-height:1.5"></textarea>
-          <div class="series-row" style="margin-top:12px">
+        <div class="set-body" style="display:block">
+          <textarea id="cmp-text" placeholder="Write your post... (keep the link out of the text; add it below so it rides as a clean preview card)" style="width:100%;min-height:140px;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:inherit;font-size:14px;background:var(--bg-alt);resize:vertical;line-height:1.5"></textarea>
+          <div class="series-row" style="margin-top:14px">
             <div style="flex:1;min-width:240px"><label class="fld" style="display:block;font-size:12px;color:#8a8178;margin-bottom:3px">Link (optional, becomes a preview card)</label><input type="url" id="cmp-link" placeholder="https://www.thebolditalic.com/..." style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"></div>
             <div style="flex:1;min-width:200px"><label class="fld" style="display:block;font-size:12px;color:#8a8178;margin-bottom:3px">Add image(s) (optional)</label><input type="file" id="cmp-file" accept="image/*" multiple style="width:100%;border:1px dashed var(--border);border-radius:6px;padding:7px;background:var(--bg-alt);font-size:12px"></div>
           </div>
           <div id="cmp-thumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
-          <div class="ig-fld" style="margin-top:14px">Post to<div id="cmp-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div></div>
-          <div class="ig-fld" style="margin-top:14px">When<div class="ig-seg" id="cmp-when" style="margin-top:6px"><button data-v="now" class="on">Now</button><button data-v="later">Schedule</button></div></div>
-          <input type="datetime-local" id="cmp-at" style="display:none;margin-top:8px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)">
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center">
+          <div class="ig-fld" style="margin-top:16px;margin-bottom:0">Post to<div id="cmp-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div></div>
+          <div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:18px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="ig-fld" style="margin-bottom:0;flex:0 0 auto;min-width:200px;max-width:260px">When<div class="ig-seg" id="cmp-when" style="margin-top:6px"><button data-v="now" class="on">Now</button><button data-v="later">Schedule</button></div></div>
+            <input type="datetime-local" id="cmp-at" style="display:none;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)">
+            <span class="run-status" id="cmp-status" style="flex:1;min-width:80px"></span>
             <button class="btn btn-gold" id="cmp-send">Post now</button>
-            <span class="run-status" id="cmp-status"></span>
           </div>
         </div>
       </div>
