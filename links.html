@@ -177,20 +177,28 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 }
 
 </style>
-<style>/* tbi-nav-normalize-v2 — uniform header bar + centered pill nav + white hairline */
+<style>/* tbi-nav-normalize-v3 — uniform header + centered pill nav + hairline + EdsMarket brand + uniform user box */
+@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
 .admin-header, .page-header .header-top{ border-bottom:1px solid rgba(255,255,255,.9); }
+.admin-header h1, .page-header h1, .header-top h1{ font-family:'EdsMarket', var(--title-font), Georgia, serif; font-weight:400; }
 .admin-header h1 .adm, .page-header h1 .adm, .header-top h1 .adm{
   font-family:'Helvetica Neue',Arial,sans-serif; font-weight:500; font-size:11px;
   text-transform:uppercase; letter-spacing:.18em; color:rgba(255,255,255,.55);
   margin-left:8px; vertical-align:middle;
 }
+.admin-header .user-info{ display:flex; align-items:center; gap:12px; }
+#user-email{ font-size:13px !important; color:rgba(255,255,255,.6) !important; font-weight:400 !important; }
+#logout-btn{ font-size:12px !important; font-weight:500 !important; padding:6px 12px !important; line-height:1.1 !important;
+  background:rgba(255,255,255,.10) !important; color:#e8e2d6 !important;
+  border:1px solid rgba(255,255,255,.24) !important; border-radius:8px !important; white-space:nowrap; }
+#logout-btn:hover{ background:rgba(255,255,255,.18) !important; }
 @media(min-width:769px){
   .admin-header, .page-header .header-top{
     box-sizing:border-box; position:relative;
     display:flex; align-items:center; justify-content:space-between;
     min-height:60px; padding:8px 24px;
   }
-  .admin-header h1, .page-header h1, .header-top h1{ font-size:20px; margin:0; line-height:1.1; }
+  .admin-header h1, .page-header h1, .header-top h1{ font-size:22px; margin:0; line-height:1.1; }
   .admin-nav{
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     display:flex; gap:6px; flex-wrap:nowrap; width:auto;
