@@ -40,13 +40,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
 /* ---- Header / nav ---- */
-.admin-header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between}
+.admin-header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:relative}
 .admin-header-left{display:flex;align-items:center;gap:20px}
 .admin-header h1{font-family:var(--title-font);font-size:20px;margin:0;font-weight:400}
-.admin-nav{display:flex;gap:4px}
-.admin-nav a{color:rgba(255,255,255,.5);text-decoration:none;font-size:13px;font-weight:500;padding:5px 12px;border-radius:6px;transition:all .15s}
-.admin-nav a:hover{background:rgba(255,255,255,.1)}
-.admin-nav a.active{color:var(--gold);background:rgba(255,214,130,.12)}
+.admin-nav{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.admin-nav a{color:rgba(255,255,255,.62);text-decoration:none;font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid transparent;transition:all .15s}
+.admin-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.admin-nav a.active{color:var(--gold);background:rgba(255,214,130,.14);border-color:rgba(255,214,130,.34)}
 .admin-header .user-info{display:flex;align-items:center;gap:12px;font-size:13px;color:#ccc}
 
 #social-app{display:none}
@@ -199,7 +199,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
   .admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px}
   .admin-header-left{flex-direction:column;align-items:stretch;gap:8px}
   .admin-header h1{font-size:17px}
-  .admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px}
+  .admin-header{flex-wrap:wrap;gap:8px}
+  .admin-nav{position:static;transform:none;flex-wrap:wrap;justify-content:center;overflow:visible;row-gap:4px;width:100%}
   .admin-nav a{white-space:nowrap}
   .admin-header .user-info{width:100%;justify-content:space-between}
   .wrap{padding:16px}
@@ -283,7 +284,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 
   <div class="wrap">
     <div class="subtabs">
-      <button class="subtab active" data-tab="feed">Feed / Suggestions</button>
+      <button class="subtab active" data-tab="compose">Compose</button>
+      <button class="subtab" data-tab="feed">Feed / Suggestions</button>
       <button class="subtab" data-tab="instagram">Image / Video</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
       <button class="subtab" data-tab="schedule">Schedule</button>
@@ -291,7 +293,30 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     </div>
 
     <!-- FEED -->
-    <section class="panel active" id="panel-feed">
+    <!-- COMPOSE -->
+    <section class="panel active" id="panel-compose">
+      <h2 class="section">Compose</h2>
+      <p class="sub">Write a post, add an optional link (rides as a clean preview card) and optional image(s), pick channels, then post now or schedule. Everything lands in the same queue.</p>
+      <div class="set-group">
+        <div class="set-body">
+          <textarea id="cmp-text" placeholder="Write your post... (keep the link out of the text; add it below so it rides as a clean preview card)" style="width:100%;min-height:120px;border:1px solid var(--border);border-radius:8px;padding:10px;font-family:inherit;font-size:14px;background:var(--bg-alt);resize:vertical;line-height:1.5"></textarea>
+          <div class="series-row" style="margin-top:12px">
+            <div style="flex:1;min-width:240px"><label class="fld" style="display:block;font-size:12px;color:#8a8178;margin-bottom:3px">Link (optional, becomes a preview card)</label><input type="url" id="cmp-link" placeholder="https://www.thebolditalic.com/..." style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"></div>
+            <div style="flex:1;min-width:200px"><label class="fld" style="display:block;font-size:12px;color:#8a8178;margin-bottom:3px">Add image(s) (optional)</label><input type="file" id="cmp-file" accept="image/*" multiple style="width:100%;border:1px dashed var(--border);border-radius:6px;padding:7px;background:var(--bg-alt);font-size:12px"></div>
+          </div>
+          <div id="cmp-thumbs" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+          <div class="ig-fld" style="margin-top:14px">Post to<div id="cmp-chans" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"></div></div>
+          <div class="ig-fld" style="margin-top:14px">When<div class="ig-seg" id="cmp-when" style="margin-top:6px"><button data-v="now" class="on">Now</button><button data-v="later">Schedule</button></div></div>
+          <input type="datetime-local" id="cmp-at" style="display:none;margin-top:8px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center">
+            <button class="btn btn-gold" id="cmp-send">Post now</button>
+            <span class="run-status" id="cmp-status"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-feed">
       <h2 class="section">Story suggestions</h2>
       <p class="sub">Drafts the engine wrote from recent stories. Edit any one in place, then <b>Send to Scheduling</b> to move it to the Schedule tab (Buffer wiring arrives in Phase 3). Discard the rest.</p>
       <div class="toolbar">
@@ -607,6 +632,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <p class="sub">Every adjustable knob. Saved to <code>social_config</code>. The voice prompt is the stable system prompt the engine uses (prompt-cached).</p>
 
       <div class="set-group">
+        <h3>Channel connections</h3>
+        <div class="set-body" id="chan-conns"><div class="hint">Checking...</div></div>
+        <div class="set-body" style="padding-top:0"><div class="hint">Green means that channel's secret is set and the account is reachable. You can post to whichever are green.</div><div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="chan-recheck">Re-check</button></div></div>
+      </div>
+      <div class="set-group">
         <h3>Connections</h3>
         <div class="set-body" id="conn-status">
           <div class="toggle-row"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
@@ -728,7 +758,7 @@ document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); $('#panel-'+b.dataset.tab).classList.add('active');
   if(b.dataset.tab==='schedule') loadSchedule();
-  if(b.dataset.tab==='settings'){ loadSpend(); }
+  if(b.dataset.tab==='settings'){ loadSpend(); checkChannels(); }
   if(b.dataset.tab==='jokes') loadJokesTab();
 });
 
@@ -779,6 +809,17 @@ async function checkConnections(){
 function setPill(sel,ok,noText){
   const el=$(sel); el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':(noText||'not set');
 }
+async function checkChannels(){
+  var host=$('#chan-conns'); if(!host) return;
+  var defs=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X']];
+  host.innerHTML=defs.map(function(d){return '<div class="toggle-row"><span>'+d[1]+'</span><span class="statuspill no" id="cc-'+d[0]+'">checking...</span></div>';}).join('');
+  function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
+  async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
+  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky');
+  try{ var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}}); setc('x', !!(rx.data&&rx.data.connected)); }catch(e){ setc('x',false); }
+}
+if($('#chan-recheck')) $('#chan-recheck').onclick=checkChannels;
+
 
 /* ---- spend ---- */
 async function loadSpend(){
@@ -2509,6 +2550,24 @@ gate();
   window.jkLoadText=window.jkAddText;
   try{ if(document.fonts&&document.fonts.load) document.fonts.load('400 60px "EdsMarket"').then(function(){ render(); }).catch(function(){}); }catch(e){}
   (async function(){ try{ var r=await sb.from('pipeline_config').select('value').eq('key','joke_card_defaults').maybeSingle(); if(r&&r.data&&r.data.value&&typeof r.data.value==='object'){ var d=r.data.value; ['align','valign','font','brand','brandpos'].forEach(function(k){ if(d[k]!=null) st[k]=d[k]; }); if(d.size!=null) st.size=+d.size; if(d.lh!=null) st.lh=+d.lh; } }catch(e){} applyUI(); renderQ(); render(); })();
+})();
+</script>
+
+<script>
+(function(){
+  var P=document.getElementById('panel-compose'); if(!P) return;
+  var CH=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X']];
+  var sel={facebook:true,instagram:true,threads:true,bluesky:true,x:true};
+  var imgs=[]; var when='now';
+  var chans=document.getElementById('cmp-chans');
+  function renderChans(){ chans.innerHTML=''; CH.forEach(function(c){ var on=sel[c[0]]; var b=document.createElement('button'); b.textContent=c[1]; b.style.cssText='font-size:13px;font-weight:600;padding:7px 13px;border-radius:18px;border:1px solid '+(on?'var(--dark)':'var(--border)')+';background:'+(on?'var(--dark)':'var(--bg-alt)')+';color:'+(on?'#fff':'var(--dark)')+';cursor:pointer'; b.onclick=function(){ sel[c[0]]=!sel[c[0]]; renderChans(); }; chans.appendChild(b); }); }
+  renderChans();
+  function renderThumbs(){ var t=document.getElementById('cmp-thumbs'); if(!t) return; t.innerHTML=''; imgs.forEach(function(im,i){ var d=document.createElement('div'); d.style.cssText='position:relative;width:60px;height:60px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#000'; var g=document.createElement('img'); g.src=im.url; g.style.cssText='width:100%;height:100%;object-fit:cover'; d.appendChild(g); var x=document.createElement('span'); x.textContent='x'; x.style.cssText='position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;width:18px;height:18px;line-height:17px;text-align:center;cursor:pointer;font-size:12px'; x.onclick=function(){ imgs.splice(i,1); renderThumbs(); }; d.appendChild(x); t.appendChild(d); }); }
+  var file=document.getElementById('cmp-file');
+  if(file) file.onchange=async function(e){ var st=document.getElementById('cmp-status'); var fs=Array.prototype.slice.call(e.target.files||[]); for(var i=0;i<fs.length;i++){ var f=fs[i]; if(st) st.textContent='Uploading '+f.name+'...'; try{ var id=crypto.randomUUID(); var path='sched-'+id+'-'+i+'.jpg'; var up=await sb.storage.from('ig-rendered').upload(path,f,{upsert:true,contentType:f.type||'image/jpeg'}); if(up.error) throw up.error; imgs.push({url:sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl}); renderThumbs(); }catch(err){ if(st) st.textContent='Upload error: '+(err.message||err); } } if(st) st.textContent=''; e.target.value=''; };
+  document.querySelectorAll('#cmp-when button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cmp-when button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); when=b.dataset.v; var at=document.getElementById('cmp-at'); if(at) at.style.display=(when==='later')?'block':'none'; var s=document.getElementById('cmp-send'); if(s) s.textContent=(when==='later')?'Schedule':'Post now'; }; });
+  var send=document.getElementById('cmp-send');
+  if(send) send.onclick=async function(){ var st=document.getElementById('cmp-status'); var text=(document.getElementById('cmp-text').value||'').trim(); var link=(document.getElementById('cmp-link').value||'').trim(); var image_urls=imgs.map(function(i){return i.url;}); var channels=CH.map(function(c){return c[0];}).filter(function(k){return sel[k];}); if(!image_urls.length) channels=channels.filter(function(k){return k!=='instagram';}); if(!text && !link && !image_urls.length){ if(st) st.textContent='Write something, add a link, or attach an image.'; return; } if(!channels.length){ if(st) st.textContent='Pick at least one channel (Instagram needs an image).'; return; } send.disabled=true; try{ if(when==='later'){ var atv=document.getElementById('cmp-at').value; if(!atv){ if(st) st.textContent='Pick a date and time.'; send.disabled=false; return; } var ins=await sb.from('post_queue').insert({text:text,link:link||null,image_urls:image_urls.length?image_urls:null,channels:channels,scheduled_at:new Date(atv).toISOString(),status:'queued'}); if(ins.error) throw ins.error; if(st) st.textContent='Scheduled for '+new Date(atv).toLocaleString()+'.'; } else { var r=await sb.functions.invoke('dispatch',{body:{action:'post_now',text:text,link:link,image_urls:image_urls,channels:channels}}); if(r.error) throw r.error; if(r.data&&r.data.ok===false) throw new Error('post failed: '+JSON.stringify((r.data&&r.data.results)||{})); if(st) st.textContent='Posted '+(window.CK||'✓')+' to '+channels.join(', ')+'.'; } document.getElementById('cmp-text').value=''; document.getElementById('cmp-link').value=''; imgs=[]; renderThumbs(); }catch(e){ if(st) st.textContent='Error: '+(e.message||e); } send.disabled=false; };
 })();
 </script>
 
