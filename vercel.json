@@ -83,6 +83,18 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/astrology",
+      "destination": "/astrology.html"
+    },
+    {
+      "source": "/games",
+      "destination": "/games.html"
+    },
+    {
+      "source": "/social-analytics",
+      "destination": "/social-analytics.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
