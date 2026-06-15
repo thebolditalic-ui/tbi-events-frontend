@@ -118,7 +118,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
   .page-wrap { padding: 20px 14px 60px; }
 }
 </style>
-<style>/* tbi-nav-normalize-v4 — uniform header + centered pill nav + hairline + EdsMarket brand + fully-pinned user box */
+<style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
 .admin-header, .page-header .header-top{ border-bottom:1px solid rgba(255,255,255,.9); }
 .admin-header h1, .page-header h1, .header-top h1{ font-family:'EdsMarket', var(--title-font), Georgia, serif; font-weight:400; }
@@ -127,6 +127,13 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
   text-transform:uppercase; letter-spacing:.18em; color:rgba(255,255,255,.55);
   margin-left:8px; vertical-align:middle;
 }
+.admin-nav a{
+  padding:7px 14px; font-size:13px; font-weight:500;
+  border-radius:8px; border:1px solid transparent; color:rgba(255,255,255,.62);
+  text-decoration:none; white-space:nowrap; transition:all .15s;
+}
+.admin-nav a:hover{ color:#fff; background:rgba(255,255,255,.08); }
+.admin-nav a.active{ color:var(--gold); background:rgba(255,214,130,.14); border-color:rgba(255,214,130,.34); }
 .user-info{ display:flex; align-items:center; gap:12px; }
 #user-email{ font-family:'Helvetica Neue',Arial,sans-serif !important; font-size:13px !important;
   font-weight:400 !important; color:rgba(255,255,255,.6) !important;
@@ -150,18 +157,19 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
     position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
     display:flex; gap:6px; flex-wrap:nowrap; width:auto;
   }
-  .admin-nav a{
-    padding:7px 14px; font-size:13px; font-weight:500;
-    border-radius:8px; border:1px solid transparent; color:rgba(255,255,255,.62);
-    text-decoration:none; white-space:nowrap; transition:all .15s;
-  }
-  .admin-nav a:hover{ color:#fff; background:rgba(255,255,255,.08); }
-  .admin-nav a.active{ color:var(--gold); background:rgba(255,214,130,.14); border-color:rgba(255,214,130,.34); }
   .admin-subnav{ justify-content:center; }
 }
 @media(max-width:768px){
-  .admin-nav{ position:static; transform:none; }
-  .admin-subnav{ justify-content:center; }
+  .admin-header, .page-header .header-top{
+    position:static !important; min-height:0 !important; box-sizing:border-box;
+    display:flex !important; flex-direction:column !important; align-items:stretch !important;
+    gap:10px !important; padding:12px 14px !important;
+  }
+  .admin-header-left, .page-header .header-left{ display:flex !important; flex-direction:column !important; align-items:stretch !important; gap:10px !important; }
+  .admin-header h1, .page-header h1, .header-top h1{ font-size:20px !important; line-height:1.1 !important; margin:0 !important; text-align:center; }
+  .admin-nav{ position:static !important; transform:none !important; display:flex !important; flex-wrap:wrap !important; justify-content:center !important; gap:6px !important; width:100% !important; }
+  .user-info, .page-header .header-top > div:last-child{ width:100% !important; justify-content:space-between !important; }
+  .admin-subnav{ justify-content:center !important; flex-wrap:wrap; }
 }
 </style>
 </head>
