@@ -720,6 +720,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
       </div>
       <div class="set-group">
+        <h3>Reconnect Threads</h3>
+        <div class="set-body">
+          <div class="hint">To pull Threads views, likes and replies (account insights), paste a fresh Threads <b>user</b> token minted with the <b>threads_manage_insights</b> permission. Not the app id|secret &mdash; a long single-string user token. The system extends it to a long-lived token automatically.</div>
+          <input type="text" id="th-recon-token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Paste a Threads user access token" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gold btn-sm" id="th-recon-btn">Reconnect Threads</button><span class="run-status" id="th-recon-status"></span></div>
+        </div>
+      </div>
+      <div class="set-group">
         <h3>Connections</h3>
         <div class="set-body" id="conn-status">
           <div class="toggle-row"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
@@ -2673,6 +2681,29 @@ gate();
         if(inp) inp.value='';
         var ok=(d.never_expires&&d.can_comment);
         var bits=['Connected as '+(d.page||'the Page'), d.never_expires?'permanent token '+(window.CK||'\u2713'):'token still expires (re-check)', d.can_comment?'comments on '+(window.CK||'\u2713'):'missing pages_manage_engagement'];
+        if(st){ st.style.color=ok?'var(--green)':'var(--red)'; st.textContent=bits.join(' \u00b7 '); }
+      } else { if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((d&&d.error)||'failed'); } }
+    }catch(e){ if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((e&&e.message)||e); } }
+    btn.disabled=false;
+  };
+})();
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('th-recon-btn'); if(!btn) return;
+  btn.onclick=async function(){
+    var st=document.getElementById('th-recon-status'), inp=document.getElementById('th-recon-token');
+    var tok=((inp&&inp.value)||'').trim();
+    if(!tok){ if(st){ st.style.color='var(--red)'; st.textContent='Paste a Threads user token first.'; } return; }
+    btn.disabled=true; if(st){ st.style.color='#8a8178'; st.textContent='Connecting...'; }
+    try{
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'threads_connect',user_token:tok}});
+      if(r.error) throw r.error;
+      var d=r.data||{};
+      if(d&&d.ok){
+        if(inp) inp.value='';
+        var ok=!!d.can_insights;
+        var bits=['Connected as @'+(d.username||'threads'), d.can_insights?('insights on '+(window.CK||'\u2713')):('insights still blocked'+(d.insights_error?(': '+d.insights_error):''))];
         if(st){ st.style.color=ok?'var(--green)':'var(--red)'; st.textContent=bits.join(' \u00b7 '); }
       } else { if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((d&&d.error)||'failed'); } }
     }catch(e){ if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((e&&e.message)||e); } }
