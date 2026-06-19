@@ -198,7 +198,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           <div class="sa-metricsel" id="sa-metricsel"></div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap">Daily trend. Views and reach are charted for Instagram and Threads; reactions, comments and shares for Facebook and Bluesky. The tiles and table above/below hold the accurate account totals for the window.</p>
+        <p class="sa-chart-cap">Totals by channel for the selected window. Pick a metric above; toggle channels on the right. (Per-day trends aren't shown because Instagram and Threads only expose account-level totals, not daily engagement.)</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -312,20 +312,16 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   };
 
   SA.renderChart=function(){
-    var rows=SA.seriesDays();
-    var labels=rows.map(function(d){ return d.date.slice(5); });
-    var ds=[];
-    CH.forEach(function(c){ if(!SA.on[c[0]]) return;
-      var data=rows.map(function(d){ return (d[c[0]]&&d[c[0]][SA.metric])||0; });
-      if(data.reduce(function(a,b){return a+b;},0)===0) return; // skip flat-zero lines (channel has no per-day data for this metric)
-      ds.push({label:c[1],data:data,borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:rows.length>30?0:3,borderWidth:2,fill:false});
-    });
+    var tot=(SA.raw&&SA.raw.totals)||{};
+    var labels=[],data=[],colors=[];
+    CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
+    var mlabel=((METRICS.filter(function(x){return x[0]===SA.metric;})[0])||['',''])[1];
     if(SA.chart) SA.chart.destroy();
     var ctx=$('sa-chart').getContext('2d');
-    SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
-      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label:'';}}}},
-      scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
+    SA.chart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:mlabel,data:data,backgroundColor:colors,borderRadius:6,maxBarThickness:96}]},options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0,callback:function(v){return fmt(v);}},grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
     }});
   };
 
