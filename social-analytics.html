@@ -7,6 +7,7 @@
 <title>TBI Social — Analytics</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{--cream:#fff6e6;--dark:#1E1B1B;--gold:#FFD682;--blue:#5b7bd5;--red:#e74c3c;--green:#27ae60;--border:#e0d8cc;--bg-alt:#faf5eb;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;--title-font:'Georgia',serif;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -40,11 +41,47 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
 .admin-subnav a:hover{color:#1a1a1a;}
 .admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
-.coming-soon{background:#fff;border:1px solid var(--border);border-radius:12px;padding:56px 32px;text-align:center;max-width:560px;margin:32px auto;}
-.coming-soon .cs-badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:#8a6d1f;background:rgba(255,214,130,.4);padding:4px 12px;border-radius:999px;margin-bottom:16px;}
-.coming-soon h3{font-family:var(--title-font);font-size:24px;margin:0 0 8px;}
-.coming-soon p{color:#8a8178;font-size:14px;margin:0;}
-@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}}
+/* ---- analytics dashboard ---- */
+.sa-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;}
+.sa-windows{display:flex;flex-wrap:wrap;gap:4px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:3px;}
+.sa-windows button{border:none;background:transparent;color:#6b6258;font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:6px;cursor:pointer;transition:all .12s;}
+.sa-windows button:hover{background:var(--bg-alt);}
+.sa-windows button.on{background:var(--dark);color:#fff;}
+.sa-custom{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#6b6258;}
+.sa-custom input{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12.5px;font-family:inherit;background:#fff;}
+.sa-spacer{flex:1;}
+#sa-refresh{background:var(--gold);color:var(--dark);border:none;}
+#sa-updated{font-size:12px;color:#a99;}
+.sa-loading,.sa-error{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;color:#8a8178;font-size:14px;}
+.sa-error{color:var(--red);}
+.sa-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.sa-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 16px 14px;}
+.sa-tile .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#a0968a;margin-bottom:7px;}
+.sa-tile .val{font-family:var(--title-font);font-size:27px;line-height:1;color:var(--dark);}
+.sa-tile .sub{font-size:11px;color:#b3a99c;margin-top:5px;height:13px;}
+.sa-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px;}
+.sa-chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.sa-metricsel{display:flex;gap:4px;flex-wrap:wrap;}
+.sa-metricsel button{border:1px solid var(--border);background:#fff;color:#6b6258;font-size:12px;font-weight:600;padding:6px 11px;border-radius:7px;cursor:pointer;}
+.sa-metricsel button.on{background:var(--dark);color:#fff;border-color:var(--dark);}
+.sa-toggles{display:flex;gap:12px;flex-wrap:wrap;}
+.sa-toggles label{display:flex;align-items:center;gap:5px;font-size:12.5px;color:#5a5249;cursor:pointer;user-select:none;}
+.sa-toggles .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.sa-chart-wrap{position:relative;height:300px;}
+.sa-table{width:100%;border-collapse:collapse;font-size:13px;}
+.sa-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#a0968a;font-weight:700;padding:6px 10px;border-bottom:1px solid var(--border);}
+.sa-table td{padding:9px 10px;border-bottom:1px solid #f0ebe1;}
+.sa-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.sa-table tr:last-child td{border-bottom:none;}
+.sa-ch{display:flex;align-items:center;gap:8px;font-weight:600;}
+.sa-ch .dot{width:9px;height:9px;border-radius:50%;}
+.sa-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+.sa-pill.live{background:rgba(39,174,96,.13);color:#1e8c4f;}
+.sa-pill.warn{background:rgba(255,184,0,.18);color:#8a6d1f;}
+.sa-pill.na{background:#f0ebe1;color:#a0968a;}
+.sa-note{font-size:12px;color:#a0968a;margin-top:12px;line-height:1.5;}
+.sa-note b{color:#8a6d1f;font-weight:700;}
+@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(2,1fr);}.sa-table{font-size:12px;}.sa-table .hide-sm{display:none;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
@@ -139,11 +176,33 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   </nav>
   <div class="page-wrap">
     <h2 class="section-title">Social analytics</h2>
-    <p class="section-sub">How posts perform across channels.</p>
-    <div class="coming-soon">
-      <div class="cs-badge">In the works</div>
-      <h3>Coming soon</h3>
-      <p>The Social analytics section will be built out here.</p>
+    <p class="section-sub">How your posts perform across channels. <span id="sa-updated"></span></p>
+
+    <div class="sa-controls">
+      <div class="sa-windows" id="sa-windows"></div>
+      <div class="sa-custom" id="sa-custom" style="display:none">
+        <input type="date" id="sa-from"><span>to</span><input type="date" id="sa-to">
+      </div>
+      <div class="sa-spacer"></div>
+      <button class="btn btn-sm" id="sa-refresh">&#8635; Refresh</button>
+    </div>
+
+    <div id="sa-loading" class="sa-loading">Loading metrics&hellip;</div>
+    <div id="sa-error" class="sa-error" style="display:none"></div>
+
+    <div id="sa-body" style="display:none">
+      <div class="sa-tiles" id="sa-tiles"></div>
+      <div class="sa-card">
+        <div class="sa-chart-head">
+          <div class="sa-metricsel" id="sa-metricsel"></div>
+          <div class="sa-toggles" id="sa-toggles"></div>
+        </div>
+        <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
+      </div>
+      <div class="sa-card">
+        <table class="sa-table" id="sa-table"></table>
+        <p class="sa-note" id="sa-note"></p>
+      </div>
     </div>
   </div>
 </div>
@@ -157,11 +216,145 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $em=document.getElementById('login-email'),$pw=document.getElementById('login-pass');
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; }
+  var started=false;
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; if(!started){ started=true; SA.init(); } }
   async function checkSession(){ var s=await sb.auth.getSession(); if(s.data&&s.data.session) showAdmin(s.data.session.user); }
   $bt.addEventListener('click', async function(){ $er.style.display='none'; var e=$em.value.trim(),p=$pw.value; if(!e||!p){ $er.textContent='Enter email and password'; $er.style.display='block'; return; } $bt.textContent='Signing in...'; $bt.disabled=true; var r=await sb.auth.signInWithPassword({email:e,password:p}); $bt.textContent='Sign In'; $bt.disabled=false; if(r.error){ $er.textContent=r.error.message; $er.style.display='block'; return; } showAdmin(r.data.user); });
   $pw.addEventListener('keydown', function(ev){ if(ev.key==='Enter') $bt.click(); });
   $out.addEventListener('click', async function(){ await sb.auth.signOut(); location.reload(); });
+
+  // ---------------- analytics dashboard ----------------
+  var CH=[['facebook','Facebook','#1877f2'],['instagram','Instagram','#d6336c'],['threads','Threads','#111111'],['bluesky','Bluesky','#0a7aff']];
+  var METRICS=[['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts'],['impressions','Views / Impressions']];
+  var WINDOWS=[1,3,7,14,30,45,60,90];
+  var SA={ raw:null, win:30, custom:null, metric:'reactions', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
+  var $=function(id){return document.getElementById(id);};
+  function fmt(n){ n=n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(n); }
+
+  SA.init=function(){
+    // window pills
+    var w=$('sa-windows'), html='';
+    WINDOWS.forEach(function(d){ html+='<button data-w="'+d+'">'+d+'d</button>'; });
+    html+='<button data-w="custom">Custom</button>';
+    w.innerHTML=html;
+    w.querySelectorAll('button').forEach(function(b){ b.onclick=function(){
+      if(b.dataset.w==='custom'){ $('sa-custom').style.display='flex'; SA.applyCustomIfReady(); }
+      else { SA.custom=null; SA.win=parseInt(b.dataset.w,10); $('sa-custom').style.display='none'; SA.paintControls(); SA.render(); }
+    };});
+    $('sa-from').onchange=$('sa-to').onchange=SA.applyCustomIfReady;
+    // metric selector
+    var m=$('sa-metricsel'), mh='';
+    METRICS.forEach(function(x){ mh+='<button data-m="'+x[0]+'">'+x[1]+'</button>'; });
+    m.innerHTML=mh;
+    m.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ SA.metric=b.dataset.m; SA.paintControls(); SA.renderChart(); };});
+    // channel toggles
+    var t=$('sa-toggles'), th='';
+    CH.forEach(function(c){ th+='<label><input type="checkbox" data-c="'+c[0]+'" checked><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</label>'; });
+    t.innerHTML=th;
+    t.querySelectorAll('input').forEach(function(cb){ cb.onchange=function(){ SA.on[cb.dataset.c]=cb.checked; SA.render(); };});
+    $('sa-refresh').onclick=function(){ SA.load(true); };
+    SA.paintControls();
+    SA.load(false);
+  };
+
+  SA.applyCustomIfReady=function(){
+    var f=$('sa-from').value, t=$('sa-to').value;
+    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; SA.paintControls(); SA.render(); }
+  };
+
+  SA.paintControls=function(){
+    document.querySelectorAll('#sa-windows button').forEach(function(b){
+      var on=(b.dataset.w==='custom')?!!SA.custom:(!SA.custom&&parseInt(b.dataset.w,10)===SA.win);
+      b.classList.toggle('on',on);
+    });
+    document.querySelectorAll('#sa-metricsel button').forEach(function(b){ b.classList.toggle('on',b.dataset.m===SA.metric); });
+  };
+
+  SA.load=async function(refresh){
+    $('sa-loading').style.display='block'; $('sa-loading').textContent=refresh?'Refreshing live metrics (this can take a moment)…':'Loading metrics…';
+    $('sa-error').style.display='none'; $('sa-body').style.display='none';
+    try{
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:90,refresh:!!refresh}});
+      if(r.error) throw r.error;
+      if(!r.data||!r.data.ok) throw new Error((r.data&&r.data.error)||'No data');
+      SA.raw=r.data;
+      $('sa-loading').style.display='none'; $('sa-body').style.display='block';
+      var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+      $('sa-updated').textContent='Updated '+when+'.';
+      SA.render();
+    }catch(e){
+      $('sa-loading').style.display='none';
+      $('sa-error').style.display='block';
+      $('sa-error').textContent='Could not load analytics: '+((e&&e.message)||e);
+    }
+  };
+
+  SA.days=function(){
+    var rows=(SA.raw&&SA.raw.series)||[];
+    if(SA.custom) return rows.filter(function(d){ return d.date>=SA.custom.from && d.date<=SA.custom.to; });
+    var cutoff=new Date(Date.now()-(SA.win-1)*864e5).toISOString().slice(0,10);
+    return rows.filter(function(d){ return d.date>=cutoff; });
+  };
+
+  SA.totals=function(){
+    var per={}; CH.forEach(function(c){ per[c[0]]={impressions:0,reactions:0,comments:0,shares:0,posts:0}; });
+    SA.days().forEach(function(d){ CH.forEach(function(c){ var v=d[c[0]]||{}; ['impressions','reactions','comments','shares','posts'].forEach(function(k){ per[c[0]][k]+=(v[k]||0); }); }); });
+    var grand={impressions:0,reactions:0,comments:0,shares:0,posts:0};
+    CH.forEach(function(c){ if(SA.on[c[0]]){ ['impressions','reactions','comments','shares','posts'].forEach(function(k){ grand[k]+=per[c[0]][k]; }); } });
+    return {per:per,grand:grand};
+  };
+
+  SA.render=function(){ if(!SA.raw) return; var t=SA.totals(); SA.renderTiles(t.grand); SA.renderChart(); SA.renderTable(t.per); };
+
+  SA.renderTiles=function(g){
+    var defs=[['posts','Posts',''],['impressions','Views / Impressions','partial'],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
+    var html='';
+    defs.forEach(function(d){
+      var sub=(d[2]==='partial')?'FB + Threads need reconnect':'&nbsp;';
+      html+='<div class="sa-tile"><div class="lbl">'+d[1]+'</div><div class="val">'+fmt(g[d[0]])+'</div><div class="sub">'+sub+'</div></div>';
+    });
+    $('sa-tiles').innerHTML=html;
+  };
+
+  SA.renderChart=function(){
+    var rows=SA.days();
+    var labels=rows.map(function(d){ return d.date.slice(5); });
+    var ds=[];
+    CH.forEach(function(c){ if(!SA.on[c[0]]) return;
+      ds.push({label:c[1],data:rows.map(function(d){ return (d[c[0]]&&d[c[0]][SA.metric])||0; }),borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:rows.length>30?0:3,borderWidth:2,fill:false});
+    });
+    if(SA.chart) SA.chart.destroy();
+    var ctx=$('sa-chart').getContext('2d');
+    SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label:'';}}}},
+      scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
+    }});
+  };
+
+  SA.renderTable=function(per){
+    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
+    CH.forEach(function(c){
+      var p=per[c[0]], k=c[0];
+      var anyEng=(p.reactions+p.comments+p.shares)>0;
+      var status,cls;
+      if(k==='threads'){ if(p.posts>0&&!anyEng&&p.impressions===0){ status='Reconnect for insights'; cls='warn'; } else { status='Live'; cls='live'; } }
+      else if(k==='bluesky'){ status=p.posts>0?'Live':'No posts'; cls=p.posts>0?'live':'na'; }
+      else if(k==='facebook'){ status=anyEng?'Live':(p.posts>0?'No engagement':'No posts'); cls=anyEng?'live':'na'; }
+      else { status=p.posts>0?(anyEng||p.impressions?'Live':'Stories expire'):'No posts'; cls=(anyEng||p.impressions)?'live':'na'; }
+      var views=(k==='bluesky')?'&mdash;':(p.impressions||((k==='facebook'||k==='threads')?'&mdash;':0));
+      html+='<tr><td><span class="sa-ch"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
+        +'<td class="num">'+p.posts+'</td>'
+        +'<td class="num">'+(typeof views==='number'?fmt(views):views)+'</td>'
+        +'<td class="num">'+fmt(p.reactions)+'</td>'
+        +'<td class="num">'+fmt(p.comments)+'</td>'
+        +'<td class="num">'+fmt(p.shares)+'</td>'
+        +'<td><span class="sa-pill '+cls+'">'+status+'</span></td></tr>';
+    });
+    $('sa-table').innerHTML=html;
+    $('sa-note').innerHTML='Engagement (reactions, comments, shares) is live for Facebook and Bluesky. <b>Threads metrics and Facebook views need a one-time insights reconnect</b> to populate. Bluesky does not report views. Instagram Stories expire after 24 hours, so only feed posts and reels keep numbers.';
+  };
+
   checkSession();
 })();
 </script>
