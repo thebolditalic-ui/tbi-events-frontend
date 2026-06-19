@@ -54,19 +54,20 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 #sa-updated{font-size:12px;color:#a99;}
 .sa-loading,.sa-error{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;color:#8a8178;font-size:14px;}
 .sa-error{color:var(--red);}
-.sa-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
-.sa-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 16px 14px;}
-.sa-tile .lbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#a0968a;margin-bottom:7px;}
-.sa-tile .val{font-family:var(--title-font);font-size:27px;line-height:1;color:var(--dark);}
-.sa-tile .sub{font-size:11px;color:#b3a99c;margin-top:5px;height:13px;}
+.sa-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
+.sa-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:15px 15px 13px;}
+.sa-tile .lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#a0968a;margin-bottom:7px;}
+.sa-tile .val{font-family:var(--title-font);font-size:25px;line-height:1;color:var(--dark);}
+.sa-tile .sub{font-size:10.5px;color:#b3a99c;margin-top:5px;height:12px;}
 .sa-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px;}
-.sa-chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.sa-chart-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
 .sa-metricsel{display:flex;gap:4px;flex-wrap:wrap;}
 .sa-metricsel button{border:1px solid var(--border);background:#fff;color:#6b6258;font-size:12px;font-weight:600;padding:6px 11px;border-radius:7px;cursor:pointer;}
 .sa-metricsel button.on{background:var(--dark);color:#fff;border-color:var(--dark);}
 .sa-toggles{display:flex;gap:12px;flex-wrap:wrap;}
 .sa-toggles label{display:flex;align-items:center;gap:5px;font-size:12.5px;color:#5a5249;cursor:pointer;user-select:none;}
 .sa-toggles .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.sa-chart-cap{font-size:11px;color:#b3a99c;margin:0 0 10px;}
 .sa-chart-wrap{position:relative;height:300px;}
 .sa-table{width:100%;border-collapse:collapse;font-size:13px;}
 .sa-table th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#a0968a;font-weight:700;padding:6px 10px;border-bottom:1px solid var(--border);}
@@ -81,7 +82,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .sa-pill.na{background:#f0ebe1;color:#a0968a;}
 .sa-note{font-size:12px;color:#a0968a;margin-top:12px;line-height:1.5;}
 .sa-note b{color:#8a6d1f;font-weight:700;}
-@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(2,1fr);}.sa-table{font-size:12px;}.sa-table .hide-sm{display:none;}}
+@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(3,1fr);}.sa-table{font-size:12px;}.sa-table .hide-sm{display:none;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
@@ -197,6 +198,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           <div class="sa-metricsel" id="sa-metricsel"></div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
+        <p class="sa-chart-cap">Daily trend. Views and reach are charted for Instagram and Threads; reactions, comments and shares for Facebook and Bluesky. The tiles and table above/below hold the accurate account totals for the window.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -225,29 +227,26 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   // ---------------- analytics dashboard ----------------
   var CH=[['facebook','Facebook','#1877f2'],['instagram','Instagram','#d6336c'],['threads','Threads','#111111'],['bluesky','Bluesky','#0a7aff']];
-  var METRICS=[['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts'],['impressions','Views / Impressions']];
+  var METRICS=[['views','Views'],['reach','Reach'],['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts']];
   var WINDOWS=[1,3,7,14,30,45,60,90];
-  var SA={ raw:null, win:30, custom:null, metric:'reactions', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
+  var SA={ raw:null, win:30, custom:null, metric:'views', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
   var $=function(id){return document.getElementById(id);};
-  function fmt(n){ n=n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1)+'k':String(n); }
+  function fmt(n){ n=Math.round(n||0); if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return String(n); }
 
   SA.init=function(){
-    // window pills
     var w=$('sa-windows'), html='';
     WINDOWS.forEach(function(d){ html+='<button data-w="'+d+'">'+d+'d</button>'; });
     html+='<button data-w="custom">Custom</button>';
     w.innerHTML=html;
     w.querySelectorAll('button').forEach(function(b){ b.onclick=function(){
       if(b.dataset.w==='custom'){ $('sa-custom').style.display='flex'; SA.applyCustomIfReady(); }
-      else { SA.custom=null; SA.win=parseInt(b.dataset.w,10); $('sa-custom').style.display='none'; SA.paintControls(); SA.render(); }
+      else { SA.custom=null; SA.win=parseInt(b.dataset.w,10); $('sa-custom').style.display='none'; SA.paintControls(); SA.load(false); }
     };});
     $('sa-from').onchange=$('sa-to').onchange=SA.applyCustomIfReady;
-    // metric selector
     var m=$('sa-metricsel'), mh='';
     METRICS.forEach(function(x){ mh+='<button data-m="'+x[0]+'">'+x[1]+'</button>'; });
     m.innerHTML=mh;
     m.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ SA.metric=b.dataset.m; SA.paintControls(); SA.renderChart(); };});
-    // channel toggles
     var t=$('sa-toggles'), th='';
     CH.forEach(function(c){ th+='<label><input type="checkbox" data-c="'+c[0]+'" checked><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</label>'; });
     t.innerHTML=th;
@@ -259,7 +258,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   SA.applyCustomIfReady=function(){
     var f=$('sa-from').value, t=$('sa-to').value;
-    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; SA.paintControls(); SA.render(); }
+    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; var days=Math.max(1,Math.round((new Date(t)-new Date(f))/864e5)+1); SA.win=days; SA.paintControls(); SA.load(false); }
   };
 
   SA.paintControls=function(){
@@ -274,7 +273,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     $('sa-loading').style.display='block'; $('sa-loading').textContent=refresh?'Refreshing live metrics (this can take a moment)…':'Loading metrics…';
     $('sa-error').style.display='none'; $('sa-body').style.display='none';
     try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:90,refresh:!!refresh}});
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:SA.win,refresh:!!refresh}});
       if(r.error) throw r.error;
       if(!r.data||!r.data.ok) throw new Error((r.data&&r.data.error)||'No data');
       SA.raw=r.data;
@@ -289,70 +288,68 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     }
   };
 
-  SA.days=function(){
+  SA.seriesDays=function(){
     var rows=(SA.raw&&SA.raw.series)||[];
     if(SA.custom) return rows.filter(function(d){ return d.date>=SA.custom.from && d.date<=SA.custom.to; });
-    var cutoff=new Date(Date.now()-(SA.win-1)*864e5).toISOString().slice(0,10);
-    return rows.filter(function(d){ return d.date>=cutoff; });
+    return rows;
   };
 
-  SA.totals=function(){
-    var per={}; CH.forEach(function(c){ per[c[0]]={impressions:0,reactions:0,comments:0,shares:0,posts:0}; });
-    SA.days().forEach(function(d){ CH.forEach(function(c){ var v=d[c[0]]||{}; ['impressions','reactions','comments','shares','posts'].forEach(function(k){ per[c[0]][k]+=(v[k]||0); }); }); });
-    var grand={impressions:0,reactions:0,comments:0,shares:0,posts:0};
-    CH.forEach(function(c){ if(SA.on[c[0]]){ ['impressions','reactions','comments','shares','posts'].forEach(function(k){ grand[k]+=per[c[0]][k]; }); } });
-    return {per:per,grand:grand};
+  SA.grand=function(){
+    var g={views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
+    var tot=(SA.raw&&SA.raw.totals)||{};
+    CH.forEach(function(c){ if(SA.on[c[0]]&&tot[c[0]]){ Object.keys(g).forEach(function(k){ g[k]+=(tot[c[0]][k]||0); }); } });
+    return g;
   };
 
-  SA.render=function(){ if(!SA.raw) return; var t=SA.totals(); SA.renderTiles(t.grand); SA.renderChart(); SA.renderTable(t.per); };
+  SA.render=function(){ if(!SA.raw) return; SA.renderTiles(); SA.renderChart(); SA.renderTable(); };
 
-  SA.renderTiles=function(g){
-    var defs=[['posts','Posts',''],['impressions','Views / Impressions','partial'],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
+  SA.renderTiles=function(){
+    var g=SA.grand();
+    var defs=[['posts','Posts',''],['views','Views',''],['reach','Reach',''],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
     var html='';
-    defs.forEach(function(d){
-      var sub=(d[2]==='partial')?'FB + Threads need reconnect':'&nbsp;';
-      html+='<div class="sa-tile"><div class="lbl">'+d[1]+'</div><div class="val">'+fmt(g[d[0]])+'</div><div class="sub">'+sub+'</div></div>';
-    });
+    defs.forEach(function(d){ html+='<div class="sa-tile"><div class="lbl">'+d[1]+'</div><div class="val">'+fmt(g[d[0]])+'</div><div class="sub">&nbsp;</div></div>'; });
     $('sa-tiles').innerHTML=html;
   };
 
   SA.renderChart=function(){
-    var rows=SA.days();
+    var rows=SA.seriesDays();
     var labels=rows.map(function(d){ return d.date.slice(5); });
     var ds=[];
     CH.forEach(function(c){ if(!SA.on[c[0]]) return;
-      ds.push({label:c[1],data:rows.map(function(d){ return (d[c[0]]&&d[c[0]][SA.metric])||0; }),borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:rows.length>30?0:3,borderWidth:2,fill:false});
+      var data=rows.map(function(d){ return (d[c[0]]&&d[c[0]][SA.metric])||0; });
+      if(data.reduce(function(a,b){return a+b;},0)===0) return; // skip flat-zero lines (channel has no per-day data for this metric)
+      ds.push({label:c[1],data:data,borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:rows.length>30?0:3,borderWidth:2,fill:false});
     });
     if(SA.chart) SA.chart.destroy();
     var ctx=$('sa-chart').getContext('2d');
     SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
       responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label:'';}}}},
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label:'';}}}},
       scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
     }});
   };
 
-  SA.renderTable=function(per){
-    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
+  SA.renderTable=function(){
+    var tot=(SA.raw&&SA.raw.totals)||{}, av=(SA.raw&&SA.raw.availability)||{};
+    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reach</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
     CH.forEach(function(c){
-      var p=per[c[0]], k=c[0];
-      var anyEng=(p.reactions+p.comments+p.shares)>0;
-      var status,cls;
-      if(k==='threads'){ if(p.posts>0&&!anyEng&&p.impressions===0){ status='Reconnect for insights'; cls='warn'; } else { status='Live'; cls='live'; } }
-      else if(k==='bluesky'){ status=p.posts>0?'Live':'No posts'; cls=p.posts>0?'live':'na'; }
-      else if(k==='facebook'){ status=anyEng?'Live':(p.posts>0?'No engagement':'No posts'); cls=anyEng?'live':'na'; }
-      else { status=p.posts>0?(anyEng||p.impressions?'Live':'Stories expire'):'No posts'; cls=(anyEng||p.impressions)?'live':'na'; }
-      var views=(k==='bluesky')?'&mdash;':(p.impressions||((k==='facebook'||k==='threads')?'&mdash;':0));
+      var k=c[0], p=tot[k]||{views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
+      var st=av[k]||'ok', label='Live', cls='live';
+      if(st==='needs_insights'){ label='Reconnect for insights'; cls='warn'; }
+      else if(st==='views_need_insights'){ label='Views need reconnect'; cls='warn'; }
+      else if(st==='no_token'){ label='Not connected'; cls='na'; }
+      var noViews=(k==='bluesky');
       html+='<tr><td><span class="sa-ch"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
-        +'<td class="num">'+p.posts+'</td>'
-        +'<td class="num">'+(typeof views==='number'?fmt(views):views)+'</td>'
+        +'<td class="num">'+(p.posts||0)+'</td>'
+        +'<td class="num">'+(noViews?'&mdash;':fmt(p.views))+'</td>'
+        +'<td class="num">'+(noViews?'&mdash;':fmt(p.reach))+'</td>'
         +'<td class="num">'+fmt(p.reactions)+'</td>'
         +'<td class="num">'+fmt(p.comments)+'</td>'
         +'<td class="num">'+fmt(p.shares)+'</td>'
-        +'<td><span class="sa-pill '+cls+'">'+status+'</span></td></tr>';
+        +'<td><span class="sa-pill '+cls+'">'+label+'</span></td></tr>';
     });
     $('sa-table').innerHTML=html;
-    $('sa-note').innerHTML='Engagement (reactions, comments, shares) is live for Facebook and Bluesky. <b>Threads metrics and Facebook views need a one-time insights reconnect</b> to populate. Bluesky does not report views. Instagram Stories expire after 24 hours, so only feed posts and reels keep numbers.';
+    $('sa-note').innerHTML='Instagram and Threads numbers are account-level totals (feed, reels and stories combined), matching what you see in each app. Facebook and Bluesky are summed per post. <b>Facebook views and Threads both need a one-time insights reconnect</b> to fill in. Bluesky does not report views.';
   };
 
   checkSession();
