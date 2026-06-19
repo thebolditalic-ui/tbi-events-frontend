@@ -220,7 +220,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           </div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap"><b>Line</b> shows the daily trend. Facebook &amp; Threads report real daily views; Facebook &amp; Bluesky report real daily engagement. Instagram has no daily views, so its dashed <b>(est.)</b> line traces its daily reach scaled to the true views total. Engagement that's totals-only (Instagram, Threads) shows in <b>Bar</b> and the table. Pick a metric and toggle channels on the right.</p>
+        <p class="sa-chart-cap"><b>Line</b> shows the daily trend. Facebook &amp; Threads report real daily views; Facebook &amp; Bluesky report real daily engagement. Instagram has no daily views, so its <b>(est.)</b> line traces its daily reach scaled to the true views total. Engagement that's totals-only (Instagram, Threads) shows in <b>Bar</b> and the table. Pick a metric and toggle channels on the right.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -400,7 +400,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var daily=rows.map(function(d){ return (d[k]&&d[k][SA.metric])||0; });
       if(!daily.some(function(v){return v>0;})) return;
       var est=(k==='instagram'&&SA.metric==='views');
-      lineDs.push({label:c[1]+(est?' (est.)':''),data:daily,borderColor:c[2],backgroundColor:c[2],borderDash:est?[6,4]:[],tension:0.3,pointRadius:n>30?0:3,borderWidth:2,fill:false});
+      lineDs.push({label:c[1]+(est?' (est.)':''),data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:n>30?0:3,borderWidth:2,fill:false});
     }); }
     if(lineDs.length){
       var labels=rows.map(function(d){ return d.date.slice(5); });
