@@ -85,6 +85,22 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .sa-pill.na{background:#f0ebe1;color:#a0968a;}
 .sa-note{font-size:12px;color:#a0968a;margin-top:12px;line-height:1.5;}
 .sa-note b{color:#8a6d1f;font-weight:700;}
+.sa-ch.clk{cursor:pointer;}
+.sa-ch.clk:hover{text-decoration:underline;}
+.sa-modal{position:fixed;inset:0;background:rgba(30,27,27,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.sa-modal-card{background:#fff;border-radius:12px;max-width:780px;width:100%;max-height:82vh;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);}
+.sa-modal-head{position:sticky;top:0;background:#fff;display:flex;align-items:center;justify-content:space-between;padding:15px 20px;border-bottom:1px solid var(--border);}
+.sa-modal-head h3{font-family:var(--title-font);font-size:18px;margin:0;}
+#sa-modal-close{border:none;background:transparent;font-size:24px;line-height:1;color:#a0968a;cursor:pointer;padding:0 4px;}
+.sa-ptable{width:100%;border-collapse:collapse;font-size:13px;}
+.sa-ptable th{text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#a0968a;font-weight:700;padding:10px 14px;border-bottom:1px solid var(--border);}
+.sa-ptable th.l{text-align:left;}
+.sa-ptable td{padding:10px 14px;border-bottom:1px solid #f3eee4;vertical-align:top;}
+.sa-ptable td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.sa-ptable .ptxt{max-width:380px;}
+.sa-ptable .ptxt a{color:var(--dark);text-decoration:none;}
+.sa-ptable .ptxt a:hover{text-decoration:underline;}
+.sa-ptable .pdate{font-size:11px;color:#b3a99c;margin-top:3px;}
 @media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(3,1fr);}.sa-table{font-size:12px;}.sa-table .hide-sm{display:none;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
@@ -212,6 +228,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         <p class="sa-note" id="sa-note"></p>
       </div>
     </div>
+    <div id="sa-modal" class="sa-modal" style="display:none"><div class="sa-modal-card"><div class="sa-modal-head"><h3 id="sa-modal-title">Posts</h3><button id="sa-modal-close" aria-label="Close">&times;</button></div><div id="sa-modal-body"></div></div></div>
   </div>
 </div>
 <script>
@@ -238,6 +255,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var SA={ raw:null, win:30, custom:null, metric:'views', chartType:'line', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
   var $=function(id){return document.getElementById(id);};
   function fmt(n){ n=Math.round(n||0); if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return String(n); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 
   SA.init=function(){
     var w=$('sa-windows'), html='';
@@ -259,8 +277,38 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     t.innerHTML=th;
     t.querySelectorAll('input').forEach(function(cb){ cb.onchange=function(){ SA.on[cb.dataset.c]=cb.checked; SA.render(); };});
     $('sa-refresh').onclick=function(){ SA.load(true); };
+    var mc=$('sa-modal-close'); if(mc) mc.onclick=SA.closeModal;
+    var mm=$('sa-modal'); if(mm) mm.onclick=function(e){ if(e.target===mm) SA.closeModal(); };
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') SA.closeModal(); });
     SA.paintControls();
     SA.load(false);
+  };
+  SA.closeModal=function(){ var m=$('sa-modal'); if(m) m.style.display='none'; };
+  SA.openPosts=async function(channel){
+    var m=$('sa-modal'), body=$('sa-modal-body');
+    var nm=((CH.filter(function(c){return c[0]===channel;})[0])||['','?'])[1];
+    $('sa-modal-title').textContent=nm+' — your posts ('+(SA.custom?'custom range':SA.win+' days')+')';
+    body.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">Loading posts…</div>';
+    m.style.display='flex';
+    try{
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:SA.win}});
+      if(r.error) throw r.error;
+      var posts=(r.data&&r.data.posts)||[];
+      if(!posts.length){ body.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No posts published to '+esc(nm)+' in this window.</div>'; return; }
+      var noViews=(channel==='facebook'||channel==='bluesky');
+      var h='<table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
+      posts.forEach(function(p){
+        var txt=esc(p.text||'(no text)');
+        var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
+        h+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+'</div></td>'
+          +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
+          +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+fmt(p.comments)+'</td><td class="num">'+fmt(p.shares)+'</td></tr>';
+      });
+      h+='</table>';
+      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:10px 14px;margin:0">Facebook no longer exposes per-post views via the API (page-level only), so engagement is shown. The page total in the table above is your real views number.</p>';
+      if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:10px 14px;margin:0">Instagram Stories expire after 24h and read 0 once gone; only feed posts and reels keep their numbers. The account total counts everything, including stories while live.</p>';
+      body.innerHTML=h;
+    }catch(e){ body.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
 
   SA.applyCustomIfReady=function(){
@@ -362,7 +410,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       else if(st==='views_need_insights'){ label='Views need reconnect'; cls='warn'; }
       else if(st==='no_token'){ label='Not connected'; cls='na'; }
       var noViews=(k==='bluesky');
-      html+='<tr><td><span class="sa-ch"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
+      html+='<tr><td><span class="sa-ch clk" data-ch="'+k+'" title="See your '+c[1]+' posts"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
         +'<td class="num">'+(p.posts||0)+'</td>'
         +'<td class="num">'+(noViews?'&mdash;':fmt(p.views))+'</td>'
         +'<td class="num">'+fmt(p.reactions)+'</td>'
@@ -371,7 +419,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +'<td><span class="sa-pill '+cls+'">'+label+'</span></td></tr>';
     });
     $('sa-table').innerHTML=html;
-    $('sa-note').innerHTML='Instagram and Threads are account-level totals (feed, reels and stories combined), matching each app. Facebook views are page-level; its engagement is summed per post, as is Bluesky. Bluesky reports engagement only (no views). Reach was removed. Meta is retiring it from the API.';
+    document.querySelectorAll('#sa-table .sa-ch.clk').forEach(function(el){ el.onclick=function(){ SA.openPosts(el.dataset.ch); }; });
+    $('sa-note').innerHTML='Click a channel name to see your individual posts. Instagram and Threads are account-level totals (feed, reels and stories combined), matching each app. Facebook views are page-level; its engagement is summed per post, as is Bluesky. Bluesky reports engagement only (no views). Reach was removed. Meta is retiring it from the API.';
   };
 
   checkSession();
