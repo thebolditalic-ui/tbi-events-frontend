@@ -220,7 +220,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           </div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap"><b>Line</b> shows the daily trend; a dashed line means that channel only reports a period total (Instagram views, and Instagram/Threads engagement), spread evenly across the window. <b>Bar</b> shows channel totals. Pick a metric and toggle channels on the right.</p>
+        <p class="sa-chart-cap"><b>Line</b> shows the daily trend for channels that report daily data (Facebook &amp; Threads views; Facebook &amp; Bluesky engagement). Channels that only report a period total (Instagram, and Instagram/Threads engagement) show in <b>Bar</b> and the table. Pick a metric and toggle channels on the right.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -228,7 +228,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         <p class="sa-note" id="sa-note"></p>
       </div>
     </div>
-    <div id="sa-modal" class="sa-modal" style="display:none"><div class="sa-modal-card"><div class="sa-modal-head"><h3 id="sa-modal-title">Posts</h3><button id="sa-modal-close" aria-label="Close">&times;</button></div><div id="sa-modal-body"></div></div></div>
+    <div id="sa-posts-view" style="display:none"></div>
   </div>
 </div>
 <script>
@@ -277,38 +277,48 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     t.innerHTML=th;
     t.querySelectorAll('input').forEach(function(cb){ cb.onchange=function(){ SA.on[cb.dataset.c]=cb.checked; SA.render(); };});
     $('sa-refresh').onclick=function(){ SA.load(true); };
-    var mc=$('sa-modal-close'); if(mc) mc.onclick=SA.closeModal;
-    var mm=$('sa-modal'); if(mm) mm.onclick=function(e){ if(e.target===mm) SA.closeModal(); };
-    document.addEventListener('keydown',function(e){ if(e.key==='Escape') SA.closeModal(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') SA.backToDashboard(); });
     SA.paintControls();
     SA.load(false);
   };
-  SA.closeModal=function(){ var m=$('sa-modal'); if(m) m.style.display='none'; };
+  SA.backToDashboard=function(){
+    var pv=$('sa-posts-view'); if(!pv||pv.style.display==='none') return;
+    pv.style.display='none'; pv.innerHTML='';
+    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='flex';
+    if(SA.raw){ $('sa-body').style.display='block'; SA.render(); }
+    try{ if(String(location.hash).indexOf('posts/')>=0) history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  };
   SA.openPosts=async function(channel){
-    var m=$('sa-modal'), body=$('sa-modal-body');
     var nm=((CH.filter(function(c){return c[0]===channel;})[0])||['','?'])[1];
-    $('sa-modal-title').textContent=nm+' — your posts ('+(SA.custom?'custom range':SA.win+' days')+')';
-    body.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">Loading posts…</div>';
-    m.style.display='flex';
+    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='none';
+    $('sa-body').style.display='none';
+    var pv=$('sa-posts-view'); pv.style.display='block';
+    pv.innerHTML='<button class="btn btn-sm" id="sa-back" style="background:var(--bg-alt);border:1px solid var(--border)">&larr; Back to analytics</button>'
+      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+esc(nm)+' &mdash; your posts</h3>'
+      +'<p class="section-sub" style="margin-bottom:16px">Ranked by performance, '+(SA.custom?'custom range':'last '+SA.win+' days')+'. Click a post to open it.</p>'
+      +'<div class="sa-card" style="padding:0"><div id="sa-posts-body"><div style="padding:44px;text-align:center;color:#8a8178">Loading your posts&hellip;</div></div></div>';
+    $('sa-back').onclick=SA.backToDashboard;
+    try{ history.replaceState(null,'',location.pathname+location.search+'#posts/'+channel); }catch(e){}
     try{
       var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:SA.win}});
       if(r.error) throw r.error;
       var posts=(r.data&&r.data.posts)||[];
-      if(!posts.length){ body.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No posts published to '+esc(nm)+' in this window.</div>'; return; }
+      var bodyEl=$('sa-posts-body');
+      if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts found in this window.</div>'; return; }
       var noViews=(channel==='facebook'||channel==='bluesky');
       var h='<table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
       posts.forEach(function(p){
         var txt=esc(p.text||'(no text)');
         var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
-        h+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+'</div></td>'
+        h+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+(p.kind?(' &middot; '+esc(p.kind)):'')+'</div></td>'
           +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
-          +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+fmt(p.comments)+'</td><td class="num">'+fmt(p.shares)+'</td></tr>';
+          +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
       });
       h+='</table>';
-      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:10px 14px;margin:0">Facebook no longer exposes per-post views via the API (page-level only), so engagement is shown. The page total in the table above is your real views number.</p>';
-      if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:10px 14px;margin:0">Instagram Stories expire after 24h and read 0 once gone; only feed posts and reels keep their numbers. The account total counts everything, including stories while live.</p>';
-      body.innerHTML=h;
-    }catch(e){ body.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
+      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook no longer exposes per-post views via the API (page-level only). The Views tile on the dashboard is your real page total; here, posts are ranked by engagement.</p>';
+      if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">All your recent feed posts and reels. Stories aren\'t listed (they expire after 24h), though they do count toward the account-level Views total.</p>';
+      bodyEl.innerHTML=h;
+    }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
 
   SA.applyCustomIfReady=function(){
@@ -384,19 +394,28 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       }});
       return;
     }
-    // line: real daily where available, else flat daily-average (dashed) so every channel still shows
-    var labels=rows.map(function(d){ return d.date.slice(5); });
-    var n=rows.length||1, ds=[];
-    CH.forEach(function(c){ if(!SA.on[c[0]]) return; var k=c[0];
+    // line: REAL per-day data only (no flat averages); channels without daily data for this metric are simply not plotted
+    var n=rows.length, lineDs=[];
+    if(n){ CH.forEach(function(c){ if(!SA.on[c[0]]) return; var k=c[0];
       var daily=rows.map(function(d){ return (d[k]&&d[k][SA.metric])||0; });
-      var flat=!daily.some(function(v){return v>0;}), data=daily;
-      if(flat){ var total=(tot[k]&&tot[k][SA.metric])||0; if(total<=0) return; data=rows.map(function(){return total/n;}); }
-      ds.push({label:c[1]+(flat?' (avg)':''),data:data,borderColor:c[2],backgroundColor:c[2],borderDash:flat?[5,4]:[],tension:0.3,pointRadius:(n>30||flat)?0:3,borderWidth:2,fill:false});
-    });
-    SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
-      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
-      scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
+      if(!daily.some(function(v){return v>0;})) return;
+      lineDs.push({label:c[1],data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:n>30?0:3,borderWidth:2,fill:false});
+    }); }
+    if(lineDs.length){
+      var labels=rows.map(function(d){ return d.date.slice(5); });
+      SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:lineDs},options:{
+        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
+        scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
+      }});
+      return;
+    }
+    // no daily data for this metric -> fall back to the per-channel bar so it's never empty
+    var blabels=[],bdata=[],bcolors=[];
+    CH.forEach(function(c){ if(!SA.on[c[0]]) return; blabels.push(c[1]); bdata.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); bcolors.push(c[2]); });
+    SA.chart=new Chart(ctx,{type:'bar',data:{labels:blabels,datasets:[{label:mlabel,data:bdata,backgroundColor:bcolors,borderRadius:6,maxBarThickness:96}]},options:{
+      responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
+      scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
     }});
   };
 
