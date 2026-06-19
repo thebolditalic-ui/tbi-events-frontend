@@ -305,7 +305,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var posts=(r.data&&r.data.posts)||[];
       var bodyEl=$('sa-posts-body');
       if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts found in this window.</div>'; return; }
-      var noViews=(channel==='facebook'||channel==='bluesky');
+      var noViews=(channel==='bluesky');
       var h='<table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
       posts.forEach(function(p){
         var txt=esc(p.text||'(no text)');
@@ -315,7 +315,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
       });
       h+='</table>';
-      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook no longer exposes per-post views via the API (page-level only). The Views tile on the dashboard is your real page total; here, posts are ranked by engagement.</p>';
+      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook per-post views use Meta\'s new <b>media views</b> metric, which only counts photo, video and reel posts. Link-only posts show &mdash; (Meta has no per-post number for them). The dashboard\'s Facebook Views tile counts all impressions page-wide, so it\'s larger than these per-post views add up to.</p>';
       if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">All your recent feed posts and reels. Stories aren\'t listed (they expire after 24h), though they do count toward the account-level Views total.</p>';
       bodyEl.innerHTML=h;
     }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
