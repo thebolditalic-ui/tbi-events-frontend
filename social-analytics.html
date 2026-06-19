@@ -54,7 +54,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 #sa-updated{font-size:12px;color:#a99;}
 .sa-loading,.sa-error{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;color:#8a8178;font-size:14px;}
 .sa-error{color:var(--red);}
-.sa-tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px;}
+.sa-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.sa-charttype{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:3px;}
+.sa-charttype button{border:none;background:transparent;color:#6b6258;font-size:12px;font-weight:600;padding:6px 11px;border-radius:6px;cursor:pointer;}
+.sa-charttype button.on{background:var(--dark);color:#fff;}
 .sa-tile{background:#fff;border:1px solid var(--border);border-radius:12px;padding:15px 15px 13px;}
 .sa-tile .lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#a0968a;margin-bottom:7px;}
 .sa-tile .val{font-family:var(--title-font);font-size:25px;line-height:1;color:var(--dark);}
@@ -195,10 +198,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       <div class="sa-tiles" id="sa-tiles"></div>
       <div class="sa-card">
         <div class="sa-chart-head">
-          <div class="sa-metricsel" id="sa-metricsel"></div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <div class="sa-charttype" id="sa-charttype"></div>
+            <div class="sa-metricsel" id="sa-metricsel"></div>
+          </div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap">Totals by channel for the selected window. Pick a metric above; toggle channels on the right. (Per-day trends aren't shown because Instagram and Threads only expose account-level totals, not daily engagement.)</p>
+        <p class="sa-chart-cap"><b>Line</b> shows the daily trend; a dashed line means that channel only reports a period total (Instagram views, and Instagram/Threads engagement), spread evenly across the window. <b>Bar</b> shows channel totals. Pick a metric and toggle channels on the right.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -227,9 +233,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   // ---------------- analytics dashboard ----------------
   var CH=[['facebook','Facebook','#1877f2'],['instagram','Instagram','#d6336c'],['threads','Threads','#111111'],['bluesky','Bluesky','#0a7aff']];
-  var METRICS=[['views','Views'],['reach','Reach'],['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts']];
+  var METRICS=[['views','Views'],['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts']];
   var WINDOWS=[1,3,7,14,30,45,60,90];
-  var SA={ raw:null, win:30, custom:null, metric:'views', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
+  var SA={ raw:null, win:30, custom:null, metric:'views', chartType:'line', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
   var $=function(id){return document.getElementById(id);};
   function fmt(n){ n=Math.round(n||0); if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return String(n); }
 
@@ -243,6 +249,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       else { SA.custom=null; SA.win=parseInt(b.dataset.w,10); $('sa-custom').style.display='none'; SA.paintControls(); SA.load(false); }
     };});
     $('sa-from').onchange=$('sa-to').onchange=SA.applyCustomIfReady;
+    var ct=$('sa-charttype'); if(ct){ ct.innerHTML='<button data-t="line">Line</button><button data-t="bar">Bar</button>'; ct.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ SA.chartType=b.dataset.t; SA.paintControls(); SA.renderChart(); };}); }
     var m=$('sa-metricsel'), mh='';
     METRICS.forEach(function(x){ mh+='<button data-m="'+x[0]+'">'+x[1]+'</button>'; });
     m.innerHTML=mh;
@@ -267,6 +274,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       b.classList.toggle('on',on);
     });
     document.querySelectorAll('#sa-metricsel button').forEach(function(b){ b.classList.toggle('on',b.dataset.m===SA.metric); });
+    document.querySelectorAll('#sa-charttype button').forEach(function(b){ b.classList.toggle('on',b.dataset.t===SA.chartType); });
   };
 
   SA.load=async function(refresh){
@@ -305,7 +313,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   SA.renderTiles=function(){
     var g=SA.grand();
-    var defs=[['posts','Posts',''],['views','Views',''],['reach','Reach',''],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
+    var defs=[['posts','Posts',''],['views','Views',''],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
     var html='';
     defs.forEach(function(d){ html+='<div class="sa-tile"><div class="lbl">'+d[1]+'</div><div class="val">'+fmt(g[d[0]])+'</div><div class="sub">&nbsp;</div></div>'; });
     $('sa-tiles').innerHTML=html;
@@ -313,21 +321,40 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   SA.renderChart=function(){
     var tot=(SA.raw&&SA.raw.totals)||{};
-    var labels=[],data=[],colors=[];
-    CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
     var mlabel=((METRICS.filter(function(x){return x[0]===SA.metric;})[0])||['',''])[1];
+    var yticks={precision:0,callback:function(v){return fmt(v);}};
     if(SA.chart) SA.chart.destroy();
     var ctx=$('sa-chart').getContext('2d');
-    SA.chart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:mlabel,data:data,backgroundColor:colors,borderRadius:6,maxBarThickness:96}]},options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
-      scales:{y:{beginAtZero:true,ticks:{precision:0,callback:function(v){return fmt(v);}},grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
+    var rows=SA.seriesDays();
+    if(SA.chartType==='bar' || !rows.length){
+      var labels=[],data=[],colors=[];
+      CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
+      SA.chart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:mlabel,data:data,backgroundColor:colors,borderRadius:6,maxBarThickness:96}]},options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
+        scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
+      }});
+      return;
+    }
+    // line: real daily where available, else flat daily-average (dashed) so every channel still shows
+    var labels=rows.map(function(d){ return d.date.slice(5); });
+    var n=rows.length||1, ds=[];
+    CH.forEach(function(c){ if(!SA.on[c[0]]) return; var k=c[0];
+      var daily=rows.map(function(d){ return (d[k]&&d[k][SA.metric])||0; });
+      var flat=!daily.some(function(v){return v>0;}), data=daily;
+      if(flat){ var total=(tot[k]&&tot[k][SA.metric])||0; if(total<=0) return; data=rows.map(function(){return total/n;}); }
+      ds.push({label:c[1]+(flat?' (avg)':''),data:data,borderColor:c[2],backgroundColor:c[2],borderDash:flat?[5,4]:[],tension:0.3,pointRadius:(n>30||flat)?0:3,borderWidth:2,fill:false});
+    });
+    SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:ds},options:{
+      responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
+      scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
     }});
   };
 
   SA.renderTable=function(){
     var tot=(SA.raw&&SA.raw.totals)||{}, av=(SA.raw&&SA.raw.availability)||{};
-    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reach</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
+    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
     CH.forEach(function(c){
       var k=c[0], p=tot[k]||{views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
       var st=av[k]||'ok', label='Live', cls='live';
@@ -338,14 +365,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       html+='<tr><td><span class="sa-ch"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
         +'<td class="num">'+(p.posts||0)+'</td>'
         +'<td class="num">'+(noViews?'&mdash;':fmt(p.views))+'</td>'
-        +'<td class="num">'+(noViews?'&mdash;':fmt(p.reach))+'</td>'
         +'<td class="num">'+fmt(p.reactions)+'</td>'
         +'<td class="num">'+fmt(p.comments)+'</td>'
         +'<td class="num">'+fmt(p.shares)+'</td>'
         +'<td><span class="sa-pill '+cls+'">'+label+'</span></td></tr>';
     });
     $('sa-table').innerHTML=html;
-    $('sa-note').innerHTML='Instagram and Threads numbers are account-level totals (feed, reels and stories combined), matching what you see in each app. Facebook and Bluesky are summed per post. <b>Facebook views and Threads both need a one-time insights reconnect</b> to fill in. Bluesky does not report views.';
+    $('sa-note').innerHTML='Instagram and Threads are account-level totals (feed, reels and stories combined), matching each app. Facebook views are page-level; its engagement is summed per post, as is Bluesky. Bluesky reports engagement only (no views). Reach was removed. Meta is retiring it from the API.';
   };
 
   checkSession();
