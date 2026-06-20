@@ -288,23 +288,26 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     if(SA.raw){ $('sa-body').style.display='block'; SA.render(); }
     try{ if(String(location.hash).indexOf('posts/')>=0) history.replaceState(null,'',location.pathname+location.search); }catch(e){}
   };
-  SA.openPosts=async function(channel){
+  SA.openPosts=async function(channel, dateFilter){
     var nm=((CH.filter(function(c){return c[0]===channel;})[0])||['','?'])[1];
     var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='none';
     $('sa-body').style.display='none';
     var pv=$('sa-posts-view'); pv.style.display='block';
+    var heading=esc(nm)+' &mdash; '+(dateFilter?('posts on '+esc(dateFilter)):'your posts');
+    var sub=dateFilter?('Everything you posted to '+esc(nm)+' on '+esc(dateFilter)+', with its results.'):('Ranked by performance, '+(SA.custom?'custom range':'last '+SA.win+' days')+'. Click a post to open it.');
     pv.innerHTML='<button class="btn btn-sm" id="sa-back" style="background:var(--bg-alt);border:1px solid var(--border)">&larr; Back to analytics</button>'
-      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+esc(nm)+' &mdash; your posts</h3>'
-      +'<p class="section-sub" style="margin-bottom:16px">Ranked by performance, '+(SA.custom?'custom range':'last '+SA.win+' days')+'. Click a post to open it.</p>'
+      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+heading+'</h3>'
+      +'<p class="section-sub" style="margin-bottom:16px">'+sub+'</p>'
       +'<div class="sa-card" style="padding:0"><div id="sa-posts-body"><div style="padding:44px;text-align:center;color:#8a8178">Loading your posts&hellip;</div></div></div>';
     $('sa-back').onclick=SA.backToDashboard;
-    try{ history.replaceState(null,'',location.pathname+location.search+'#posts/'+channel); }catch(e){}
+    try{ history.replaceState(null,'',location.pathname+location.search+'#posts/'+channel+(dateFilter?('/'+dateFilter):'')); }catch(e){}
     try{
       var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:SA.win}});
       if(r.error) throw r.error;
       var posts=(r.data&&r.data.posts)||[];
+      if(dateFilter) posts=posts.filter(function(p){ return p.date===dateFilter; });
       var bodyEl=$('sa-posts-body');
-      if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts found in this window.</div>'; return; }
+      if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts '+(dateFilter?('on '+esc(dateFilter)):'found in this window')+'.</div>'; return; }
       var noViews=(channel==='bluesky');
       var h='<table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
       posts.forEach(function(p){
@@ -385,11 +388,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var ctx=$('sa-chart').getContext('2d');
     var rows=SA.seriesDays();
     if(SA.chartType==='bar' || !rows.length){
-      var labels=[],data=[],colors=[];
-      CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
+      var labels=[],data=[],colors=[],bkeys=[];
+      CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); bkeys.push(c[0]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
       SA.chart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:mlabel,data:data,backgroundColor:colors,borderRadius:6,maxBarThickness:96}]},options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
+        onHover:function(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor=(els&&els.length)?'pointer':'default'; },
+        onClick:function(e,els){ if(els&&els.length){ var k=bkeys[els[0].index]; if(k) SA.openPosts(k); } },
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y)+' — click for posts';}}}},
         scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
       }});
       return;
@@ -408,13 +413,16 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         daily = ssum>0 ? shape.map(function(v){ return total*v/ssum; }) : rows.map(function(){ return total/n; });
         est=true;
       }
-      lineDs.push({label:c[1]+(est?' (est.)':''),data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),borderWidth:2,fill:false});
+      lineDs.push({label:c[1]+(est?' (est.)':''),chKey:k,data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),pointHitRadius:14,borderWidth:2,fill:false});
     }); }
     if(lineDs.length){
+      var fullDates=rows.map(function(d){ return d.date; });
       var labels=rows.map(function(d){ return d.date.slice(5); });
       SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:lineDs},options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
+        onHover:function(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor=(els&&els.length)?'pointer':'default'; },
+        onClick:function(e){ var pts=SA.chart.getElementsAtEventForMode(e,'nearest',{intersect:false},true); if(!pts.length) return; var ds=SA.chart.data.datasets[pts[0].datasetIndex]; var dt=fullDates[pts[0].index]; if(ds&&ds.chKey&&dt) SA.openPosts(ds.chKey, dt); },
+        plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label+' — click to see posts':'';},label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
         scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
       }});
       return;
