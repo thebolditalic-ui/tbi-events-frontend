@@ -220,7 +220,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           </div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap"><b>Line</b> shows the daily trend. Facebook, Threads &amp; X report real daily views; Facebook, Bluesky &amp; X report real daily engagement. Instagram has no daily views, so its <b>(est.)</b> line traces its daily reach scaled to the true views total. Engagement that's totals-only (Instagram, Threads) shows in <b>Bar</b> and the table. Pick a metric and toggle channels on the right.</p>
+        <p class="sa-chart-cap"><b>Line</b> shows the daily trend. Solid lines are real daily data (Facebook/Bluesky/X engagement; Facebook/Threads/X views). Lines marked <b>(est.)</b> &mdash; Instagram views, and Instagram/Threads engagement &mdash; only report a window total, so they're spread across the channel's daily activity to sum to the real total. <b>Bar</b> shows exact channel totals. Pick a metric and toggle channels on the right.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
@@ -398,9 +398,17 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var n=rows.length, lineDs=[];
     if(n){ CH.forEach(function(c){ if(!SA.on[c[0]]) return; var k=c[0];
       var daily=rows.map(function(d){ return (d[k]&&d[k][SA.metric])||0; });
-      if(!daily.some(function(v){return v>0;})) return;
       var est=(k==='instagram'&&SA.metric==='views');
-      lineDs.push({label:c[1]+(est?' (est.)':''),data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.3,pointRadius:n>30?0:3,borderWidth:2,fill:false});
+      if(!daily.some(function(v){return v>0;})){
+        // no real per-day data for this metric (e.g. IG/Threads engagement) -> estimate by spreading
+        // the window total across the channel's daily-views shape, so it sums to the real total
+        var total=(tot[k]&&tot[k][SA.metric])||0; if(total<=0) return;
+        var shape=rows.map(function(d){ return (d[k]&&d[k].views)||0; });
+        var ssum=shape.reduce(function(a,b){return a+b;},0);
+        daily = ssum>0 ? shape.map(function(v){ return total*v/ssum; }) : rows.map(function(){ return total/n; });
+        est=true;
+      }
+      lineDs.push({label:c[1]+(est?' (est.)':''),data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),borderWidth:2,fill:false});
     }); }
     if(lineDs.length){
       var labels=rows.map(function(d){ return d.date.slice(5); });
