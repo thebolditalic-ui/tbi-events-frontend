@@ -327,7 +327,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <h1><a href="/admin" style="color:inherit;text-decoration:none" title="Back to the dashboard">The Bold Italic <span class="adm">ADMIN</span></a></h1>
       <nav class="admin-nav">
         <a href="/admin">Dashboard</a>
-        <a href="/social" class="active">Social</a>
+        <a href="/social-analytics" class="active">Social</a>
         <a href="/events">Events</a>
         <a href="/banners">Banners</a>
         <a href="/links">Short Links</a>
@@ -346,11 +346,14 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
 .admin-subnav a:hover{color:#1a1a1a;}
 .admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
-@media(max-width:768px){.admin-subnav{padding:0 12px;}}
+.admin-subnav .subnav-settings{margin-left:auto;}
+@media(max-width:768px){.admin-subnav{padding:0 12px;}.admin-subnav .subnav-settings{margin-left:0;}}
 </style>
-<nav class="admin-subnav">
-  <a href="/social" class="active">Social</a>
+<nav class="admin-subnav" id="social-subnav">
   <a href="/social-analytics">Analytics</a>
+  <a href="/social" data-sec="post">Post</a>
+  <a href="/social?sec=schedule" data-sec="schedule">Queue &amp; Schedule</a>
+  <a href="/social?sec=settings" data-sec="settings" class="subnav-settings">Settings</a>
 </nav>
 
   <div class="wrap">
@@ -359,8 +362,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <button class="subtab" data-tab="feed">Feed / Suggestions</button>
       <button class="subtab" data-tab="instagram">Image / Video</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
-      <button class="subtab" data-tab="schedule">Schedule</button>
-      <button class="subtab" data-tab="settings">Settings</button>
+      <button class="subtab" data-tab="schedule" style="display:none">Schedule</button>
+      <button class="subtab" data-tab="settings" style="display:none">Settings</button>
     </div>
 
     <!-- FEED -->
@@ -832,6 +835,7 @@ function showApp(session){
   loginScreen.style.display='none'; app.style.display='block';
   $('#user-email').textContent=session.user.email||'';
   loadSettings(); checkConnections(); loadFeed(); loadSpend();
+  routeSection();
 }
 $('#login-btn').onclick=async()=>{
   $('#login-error').textContent='';
@@ -852,6 +856,16 @@ document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='settings'){ loadSpend(); checkChannels(); }
   if(b.dataset.tab==='jokes') loadJokesTab();
 });
+
+/* ---- section routing: Post / Queue & Schedule / Settings via sub-nav (?sec) ---- */
+function routeSection(){
+  var sec=(new URLSearchParams(location.search).get('sec')||'post');
+  var bar=document.querySelector('.subtabs');
+  document.querySelectorAll('#social-subnav a[data-sec]').forEach(function(a){ a.classList.toggle('active', a.dataset.sec===sec); });
+  if(sec==='schedule'){ if(bar) bar.style.display='none'; var sbtn=document.querySelector('.subtab[data-tab="schedule"]'); if(sbtn) sbtn.click(); }
+  else if(sec==='settings'){ if(bar) bar.style.display='none'; var stbtn=document.querySelector('.subtab[data-tab="settings"]'); if(stbtn) stbtn.click(); }
+  else { if(bar) bar.style.display=''; }
+}
 
 /* ---- settings ---- */
 let CFG=null, RT=null;

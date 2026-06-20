@@ -41,6 +41,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
 .admin-subnav a:hover{color:#1a1a1a;}
 .admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
+.admin-subnav .subnav-settings{margin-left:auto;}
+@media(max-width:768px){.admin-subnav .subnav-settings{margin-left:0;}}
 /* ---- analytics dashboard ---- */
 .sa-controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px;}
 .sa-windows{display:flex;flex-wrap:wrap;gap:4px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:3px;}
@@ -177,7 +179,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       <h1><a href="/admin" style="color:inherit;text-decoration:none" title="Back to the dashboard">The Bold Italic <span class="adm">ADMIN</span></a></h1>
       <nav class="admin-nav">
         <a href="/admin">Dashboard</a>
-        <a href="/social" class="active">Social</a>
+        <a href="/social-analytics" class="active">Social</a>
         <a href="/events">Events</a>
         <a href="/banners">Banners</a>
         <a href="/links">Short Links</a>
@@ -191,8 +193,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     </div>
   </header>
   <nav class="admin-subnav">
-    <a href="/social">Social</a>
     <a href="/social-analytics" class="active">Analytics</a>
+    <a href="/social">Post</a>
+    <a href="/social?sec=schedule">Queue &amp; Schedule</a>
+    <a href="/social?sec=settings" class="subnav-settings">Settings</a>
   </nav>
   <div class="page-wrap">
     <h2 class="section-title">Social analytics</h2>
