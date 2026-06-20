@@ -252,7 +252,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var CH=[['facebook','Facebook','#1877f2'],['instagram','Instagram','#d6336c'],['threads','Threads','#111111'],['bluesky','Bluesky','#0a7aff'],['x','X','#1a8f7a']];
   var METRICS=[['views','Views'],['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts']];
   var WINDOWS=[1,3,7,14,30,45,60,90];
-  var SA={ raw:null, win:30, custom:null, metric:'views', chartType:'line', on:{facebook:true,instagram:true,threads:true,bluesky:true}, chart:null };
+  var SA={ raw:null, win:30, custom:null, metric:'views', chartType:'line', on:{facebook:true,instagram:true,threads:true,bluesky:true,x:true}, chart:null };
   var $=function(id){return document.getElementById(id);};
   function fmt(n){ n=Math.round(n||0); if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return String(n); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
