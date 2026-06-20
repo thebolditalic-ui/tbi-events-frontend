@@ -220,12 +220,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           </div>
           <div class="sa-toggles" id="sa-toggles"></div>
         </div>
-        <p class="sa-chart-cap"><b>Line</b> shows the daily trend. Solid lines are real daily data (Facebook/Bluesky/X engagement; Facebook/Threads/X views). Lines marked <b>(est.)</b> &mdash; Instagram views, and Instagram/Threads engagement &mdash; only report a window total, so they're spread across the channel's daily activity to sum to the real total. <b>Bar</b> shows exact channel totals. Pick a metric and toggle channels on the right.</p>
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
         <table class="sa-table" id="sa-table"></table>
-        <p class="sa-note" id="sa-note"></p>
       </div>
     </div>
     <div id="sa-posts-view" style="display:none"></div>
@@ -413,7 +411,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         daily = ssum>0 ? shape.map(function(v){ return total*v/ssum; }) : rows.map(function(){ return total/n; });
         est=true;
       }
-      lineDs.push({label:c[1]+(est?' (est.)':''),chKey:k,data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),pointHitRadius:14,borderWidth:2,fill:false});
+      lineDs.push({label:c[1],chKey:k,data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),pointHitRadius:14,borderWidth:2,fill:false});
     }); }
     if(lineDs.length){
       var fullDates=rows.map(function(d){ return d.date; });
@@ -456,7 +454,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     });
     $('sa-table').innerHTML=html;
     document.querySelectorAll('#sa-table .sa-ch.clk').forEach(function(el){ el.onclick=function(){ SA.openPosts(el.dataset.ch); }; });
-    $('sa-note').innerHTML='Click a channel name to see your individual posts. Instagram and Threads are account-level totals (feed, reels and stories combined), matching each app. Facebook views are page-level; its engagement is summed per post, as is Bluesky. Bluesky reports engagement only (no views). X comes from Buffer (views, likes, comments, reposts); its newest posts read 0 for a few hours until Buffer collects the stats. Reach was removed (Meta is retiring it).';
   };
 
   checkSession();
