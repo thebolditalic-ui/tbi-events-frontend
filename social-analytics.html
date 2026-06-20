@@ -77,6 +77,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .sa-table td{padding:9px 10px;border-bottom:1px solid #f0ebe1;}
 .sa-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
 .sa-table tr:last-child td{border-bottom:none;}
+.sa-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .sa-ch{display:flex;align-items:center;gap:8px;font-weight:600;}
 .sa-ch .dot{width:9px;height:9px;border-radius:50%;}
 .sa-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
@@ -101,7 +102,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .sa-ptable .ptxt a{color:var(--dark);text-decoration:none;}
 .sa-ptable .ptxt a:hover{text-decoration:underline;}
 .sa-ptable .pdate{font-size:11px;color:#b3a99c;margin-top:3px;}
-@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(3,1fr);}.sa-table{font-size:12px;}.sa-table .hide-sm{display:none;}}
+@media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}.sa-tiles{grid-template-columns:repeat(3,1fr);}.sa-table{font-size:12px;min-width:520px;}.sa-ptable{min-width:480px;}.sa-table .hide-sm{display:none;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
@@ -225,7 +226,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
       </div>
       <div class="sa-card">
-        <table class="sa-table" id="sa-table"></table>
+        <div class="sa-scroll"><table class="sa-table" id="sa-table"></table></div>
       </div>
     </div>
     <div id="sa-posts-view" style="display:none"></div>
@@ -309,7 +310,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var bodyEl=$('sa-posts-body');
       if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts '+(dateFilter?('on '+esc(dateFilter)):'found in this window')+'.</div>'; return; }
       var noViews=(channel==='bluesky');
-      var h='<table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
+      var h='<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
       posts.forEach(function(p){
         var txt=esc(p.text||'(no text)');
         var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
@@ -317,7 +318,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
           +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
       });
-      h+='</table>';
+      h+='</table></div>';
       if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook per-post views use Meta\'s new <b>media views</b> metric, which only counts photo, video and reel posts. Link-only posts show &mdash; (Meta has no per-post number for them). The dashboard\'s Facebook Views tile counts all impressions page-wide, so it\'s larger than these per-post views add up to.</p>';
       if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">All your recent feed posts and reels. Stories aren\'t listed (they expire after 24h), though they do count toward the account-level Views total.</p>';
       bodyEl.innerHTML=h;
