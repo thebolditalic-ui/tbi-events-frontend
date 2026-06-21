@@ -228,13 +228,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       <div class="sa-card">
         <div class="sa-scroll"><table class="sa-table" id="sa-table"></table></div>
       </div>
-      <div class="sa-card" id="sa-stories-card">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-          <h3 style="font-family:var(--title-font);font-size:18px;margin:0">Stories</h3>
-          <span style="font-size:11px;color:#b3a99c;max-width:520px;text-align:right">Instagram &amp; Facebook Stories expire after 24 hours, so they're captured automatically every few hours and kept here. History builds going forward.</span>
-        </div>
-        <div id="sa-stories-body"><div style="padding:18px;text-align:center;color:#8a8178">Loading stories&hellip;</div></div>
-      </div>
     </div>
     <div id="sa-posts-view" style="display:none"></div>
   </div>
@@ -375,32 +368,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     }catch(e){ var be=$('sa-posts-multi'); if(be) be.innerHTML='<div class="sa-card" style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
 
-  SA.loadStories=async function(){
-    var el=$('sa-stories-body'); if(!el) return;
-    try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'stories',window_days:SA.win}});
-      if(r.error) throw r.error;
-      var d=r.data||{}, rows=d.rows||[], tot=d.totals||{}, ig=tot.instagram||{}, fb=tot.facebook||{};
-      var sum=[];
-      if(ig.stories) sum.push('<b style="color:#d6336c">Instagram</b> &middot; '+ig.stories+' stor'+(ig.stories>1?'ies':'y')+' &middot; '+fmt(ig.views)+' views &middot; '+fmt(ig.reach)+' reach &middot; '+fmt(ig.replies)+' replies &middot; '+fmt(ig.taps)+' taps');
-      if(fb.stories) sum.push('<b style="color:#1877f2">Facebook</b> &middot; '+fb.stories+' stor'+(fb.stories>1?'ies':'y')+' &middot; '+fmt(fb.views)+' views &middot; '+fmt(fb.reach)+' reach &middot; '+fmt(fb.replies)+' replies &middot; '+fmt(fb.shares)+' shares');
-      if(!rows.length){ el.innerHTML='<div style="padding:18px;text-align:center;color:#8a8178">No Stories captured in this window yet. New Instagram and Facebook Stories show up here within a few hours of posting.</div>'; return; }
-      var h='<div style="display:flex;flex-direction:column;gap:4px;font-size:13px;margin-bottom:12px">'+sum.map(function(s){return '<div>'+s+'</div>';}).join('')+'</div>';
-      h+='<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Story</th><th>Channel</th><th>Views</th><th>Reach</th><th>Replies</th><th>Taps / Shares</th></tr>';
-      rows.forEach(function(p){
-        var isIg=(p.channel==='instagram'), nm=isIg?'Instagram':'Facebook', color=isIg?'#d6336c':'#1877f2';
-        var lab=(p.media_type||'Story'); lab=lab.charAt(0).toUpperCase()+lab.slice(1).toLowerCase();
-        var title=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+esc(lab)+' story</a>'):(esc(lab)+' story');
-        var ts=isIg?fmt(p.taps):fmt(p.shares);
-        h+='<tr><td class="ptxt">'+title+'<div class="pdate">'+esc(p.posted_on)+'</div></td>'
-          +'<td><span style="color:'+color+';font-weight:600">'+nm+'</span></td>'
-          +'<td class="num">'+fmt(p.views)+'</td><td class="num">'+fmt(p.reach)+'</td><td class="num">'+fmt(p.replies)+'</td><td class="num">'+ts+'</td></tr>';
-      });
-      h+='</table></div>';
-      el.innerHTML=h;
-    }catch(e){ el.innerHTML='<div style="padding:18px;text-align:center;color:var(--red)">Could not load stories: '+esc((e&&e.message)||e)+'</div>'; }
-  };
-
   SA.applyCustomIfReady=function(){
     var f=$('sa-from').value, t=$('sa-to').value;
     if(f&&t&&f<=t){ SA.custom={from:f,to:t}; var days=Math.max(1,Math.round((new Date(t)-new Date(f))/864e5)+1); SA.win=days; SA.paintControls(); SA.load(false); }
@@ -427,7 +394,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
       $('sa-updated').textContent='Updated '+when+'.';
       SA.render();
-      SA.loadStories();
     }catch(e){
       $('sa-loading').style.display='none';
       $('sa-error').style.display='block';
