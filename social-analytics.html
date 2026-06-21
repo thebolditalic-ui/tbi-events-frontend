@@ -312,7 +312,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var noViews=(channel==='bluesky');
       var h='<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
       posts.forEach(function(p){
-        var txt=esc(p.text||'(no text)');
+        var txt=esc(p.text||'Image (no caption)');
         var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
         h+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+(p.kind?(' &middot; '+esc(p.kind)):'')+'</div></td>'
           +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
@@ -323,6 +323,49 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">All your recent feed posts and reels. Stories aren\'t listed (they expire after 24h), though they do count toward the account-level Views total.</p>';
       bodyEl.innerHTML=h;
     }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
+  };
+
+  SA.openPostsAllForDate=async function(dateFilter){
+    var chans=CH.filter(function(c){ return SA.on[c[0]]; });
+    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='none';
+    $('sa-body').style.display='none';
+    var pv=$('sa-posts-view'); pv.style.display='block';
+    var heading='All channels &mdash; posts on '+esc(dateFilter);
+    var sub='Everything you posted on '+esc(dateFilter)+' across your selected channels, with each post’s results.';
+    pv.innerHTML='<button class="btn btn-sm" id="sa-back" style="background:var(--bg-alt);border:1px solid var(--border)">&larr; Back to analytics</button>'
+      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+heading+'</h3>'
+      +'<p class="section-sub" style="margin-bottom:16px">'+sub+'</p>'
+      +'<div id="sa-posts-multi"><div style="padding:44px;text-align:center;color:#8a8178">Loading your posts&hellip;</div></div>';
+    $('sa-back').onclick=SA.backToDashboard;
+    try{ history.replaceState(null,'',location.pathname+location.search+'#postsday/'+dateFilter); }catch(e){}
+    try{
+      var results=await Promise.all(chans.map(function(c){
+        return sb.functions.invoke('social-analytics',{body:{action:'posts',channel:c[0],window_days:SA.win}})
+          .then(function(r){ return {c:c, posts:(!r.error&&r.data&&r.data.posts)||[]}; })
+          .catch(function(){ return {c:c, posts:[]}; });
+      }));
+      var html=''; var any=false;
+      results.forEach(function(res){
+        var dayPosts=res.posts.filter(function(p){ return p.date===dateFilter; });
+        if(!dayPosts.length) return;
+        any=true;
+        var channel=res.c[0], nm=res.c[1], color=res.c[2], noViews=(channel==='bluesky');
+        html+='<div class="sa-card" style="padding:0;margin-bottom:16px">'
+          +'<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border)"><span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block"></span><b style="font-family:var(--title-font);font-size:15px">'+esc(nm)+'</b><span style="color:#8a8178;font-size:12px">'+dayPosts.length+' post'+(dayPosts.length>1?'s':'')+'</span></div>'
+          +'<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
+        dayPosts.forEach(function(p){
+          var txt=esc(p.text||'Image (no caption)');
+          var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
+          html+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+(p.kind?(' &middot; '+esc(p.kind)):'')+'</div></td>'
+            +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
+            +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
+        });
+        html+='</table></div></div>';
+      });
+      var body=$('sa-posts-multi');
+      if(!any){ body.innerHTML='<div class="sa-card" style="padding:44px;text-align:center;color:#8a8178">No posts on '+esc(dateFilter)+' for the channels you have selected.</div>'; return; }
+      body.innerHTML=html;
+    }catch(e){ var be=$('sa-posts-multi'); if(be) be.innerHTML='<div class="sa-card" style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
 
   SA.applyCustomIfReady=function(){
@@ -422,7 +465,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:lineDs},options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
         onHover:function(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor=(els&&els.length)?'pointer':'default'; },
-        onClick:function(e){ var pts=SA.chart.getElementsAtEventForMode(e,'nearest',{intersect:false},true); if(!pts.length) return; var ds=SA.chart.data.datasets[pts[0].datasetIndex]; var dt=fullDates[pts[0].index]; if(ds&&ds.chKey&&dt) SA.openPosts(ds.chKey, dt); },
+        onClick:function(e){ var pts=SA.chart.getElementsAtEventForMode(e,'nearest',{intersect:false},true); if(!pts.length) return; var dt=fullDates[pts[0].index]; if(dt) SA.openPostsAllForDate(dt); },
         plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{callbacks:{title:function(it){return it[0]?it[0].label+' — click to see posts':'';},label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);}}}},
         scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
       }});
