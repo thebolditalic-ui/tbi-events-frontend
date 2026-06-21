@@ -306,7 +306,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:SA.win}});
       if(r.error) throw r.error;
       var posts=(r.data&&r.data.posts)||[];
-      var agg=(r.data&&r.data.storyAgg)||null;
       if(dateFilter) posts=posts.filter(function(p){ return p.date===dateFilter; });
       var bodyEl=$('sa-posts-body');
       if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts '+(dateFilter?('on '+esc(dateFilter)):'found in this window')+'.</div>'; return; }
@@ -321,7 +320,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       });
       h+='</table></div>';
       if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook per-post views use Meta\'s new <b>media views</b> metric, which only counts photo, video and reel posts. Link-only posts show &mdash; (Meta has no per-post number for them). The dashboard\'s Facebook Views tile counts all impressions page-wide, so it\'s larger than these per-post views add up to.</p>';
-      if(channel==='instagram'){ var sa=''; if(agg&&(agg.views||agg.reach||agg.interactions)) sa='<b>Stories this window:</b> '+fmt(agg.views)+' views &middot; '+fmt(agg.reach)+' reach &middot; '+fmt(agg.interactions)+' interactions (already counted in your account Views above). '; h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">'+sa+'Feed posts and reels are listed individually. Instagram only lets us itemize stories from when tracking began (they appear as their own rows, newest captured first); older expired stories cannot be pulled one by one, but their totals are in the Stories line and your account Views.</p>'; }
       bodyEl.innerHTML=h;
     }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
