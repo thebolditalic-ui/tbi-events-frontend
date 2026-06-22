@@ -55,6 +55,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
 .card.wide { grid-column: 1 / -1; }
+.qmore { font-size: 12px; color: #8a8178; padding: 8px 2px 2px; }
 .dcol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .card h3 { font-family: var(--title-font); font-size: 16px; font-weight: 400; margin-bottom: 2px; }
 .card .sub { color: #8a8178; font-size: 12px; margin-bottom: 10px; line-height: 1.45; }
@@ -364,31 +365,76 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
 
   // ---- upcoming social posts ----
+  // ---- upcoming social posts: an ELASTIC preview that fills the left column to match the
+  // right column's height, so no gap is left and it self-heals if the right column changes. ----
+  var QUEUE = { rows: [], total: 0, lastAt: null, wired: false };
+  function qMD(iso){ return iso ? new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' }) : ''; }
+  function renderQueueRows(count){
+    var host = $('queue-body'); if (!host) return;
+    var rows = QUEUE.rows.slice(0, count);
+    if (!rows.length) { host.innerHTML = '<span class="emptymsg">Queue is empty.</span>'; return; }
+    var body = '<table><tbody>' + rows.map(function (p) {
+      var kind = p.video_url ? '<span class="chip">REEL</span>' : ((p.image_urls && p.image_urls.length) ? '<span class="chip">PHOTO</span>' : '');
+      var ch = (p.channels || []).map(chIcon).join('');
+      return '<tr><td style="white-space:nowrap;color:#8a8178;font-size:12px">' + esc(fmtWhen(p.scheduled_at)) + '</td><td>' + kind + ch + ' ' + esc((p.text || p.link || '').slice(0, 64)) + '</td></tr>';
+    }).join('') + '</tbody></table>';
+    var more = QUEUE.total - rows.length;
+    if (more > 0) body += '<div class="qmore">+' + more + ' more scheduled' + (QUEUE.lastAt ? (' through ' + qMD(QUEUE.lastAt)) : '') + '</div>';
+    host.innerHTML = body;
+  }
+  function balanceQueue(){
+    var maxN = QUEUE.rows.length; if (!maxN) return;
+    if (window.innerWidth <= 860) { renderQueueRows(Math.min(6, maxN)); return; } // mobile: fixed preview, never measure
+    var dcols = document.querySelectorAll('.dcol');
+    var host = $('queue-body'); var qcard = host ? host.closest('.card') : null;
+    var rightCol = dcols[1];
+    if (!rightCol || !qcard) { renderQueueRows(Math.min(6, maxN)); return; }
+    var rcards = rightCol.querySelectorAll('.card');
+    if (!rcards.length) { renderQueueRows(Math.min(6, maxN)); return; }
+    var rightBottom = rcards[rcards.length - 1].getBoundingClientRect().bottom; // stable; left growth doesn't move right cards
+    var MIN = 3, best = Math.min(MIN, maxN);
+    for (var k = MIN; k <= maxN; k++){
+      renderQueueRows(k);
+      if (qcard.getBoundingClientRect().bottom <= rightBottom + 8) best = k; else break;
+    }
+    renderQueueRows(best);
+  }
+  var _qBalT = null;
+  function scheduleBalance(){ if (_qBalT) clearTimeout(_qBalT); _qBalT = setTimeout(balanceQueue, 120); }
   async function loadQueue() {
-    var r = await sb.from('post_queue').select('text,link,channels,scheduled_at,video_url,image_urls').eq('status', 'queued').order('scheduled_at', { ascending: true }).limit(6);
+    var r = await sb.from('post_queue').select('text,link,channels,scheduled_at,video_url,image_urls').eq('status', 'queued').order('scheduled_at', { ascending: true }).limit(18);
     var host = $('queue-body');
     if (r.error) { host.textContent = r.error.message; return; }
     var rows = r.data || [];
     var c = await sb.from('post_queue').select('id', { count: 'exact', head: true }).eq('status', 'queued');
     var n = (c.count != null ? c.count : rows.length);
     $('st-queue').innerHTML = n + ' <small>post' + (n === 1 ? '' : 's') + ' scheduled</small>';
+    var lastAt = null;
     var rangeEl = $('st-queue-range');
     if (rangeEl) {
       if (!n) { rangeEl.textContent = ''; }
       else {
         var last = await sb.from('post_queue').select('scheduled_at').eq('status', 'queued').order('scheduled_at', { ascending: false }).limit(1);
         var firstAt = rows[0] && rows[0].scheduled_at;
-        var lastAt = last.data && last.data[0] && last.data[0].scheduled_at;
+        lastAt = last.data && last.data[0] && last.data[0].scheduled_at;
         function md(iso) { return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' }); }
         rangeEl.textContent = firstAt ? (md(firstAt) + (lastAt && md(lastAt) !== md(firstAt) ? (' to ' + md(lastAt)) : '')) : '';
       }
     }
-    if (!rows.length) { host.innerHTML = '<span class="emptymsg">Queue is empty.</span>'; return; }
-    host.innerHTML = '<table><tbody>' + rows.map(function (p) {
-      var kind = p.video_url ? '<span class="chip">REEL</span>' : ((p.image_urls && p.image_urls.length) ? '<span class="chip">PHOTO</span>' : '');
-      var ch = (p.channels || []).map(chIcon).join('');
-      return '<tr><td style="white-space:nowrap;color:#8a8178;font-size:12px">' + esc(fmtWhen(p.scheduled_at)) + '</td><td>' + kind + ch + ' ' + esc((p.text || p.link || '').slice(0, 64)) + '</td></tr>';
-    }).join('') + '</tbody></table>';
+    QUEUE.rows = rows; QUEUE.total = n; QUEUE.lastAt = lastAt;
+    balanceQueue();
+    if (!QUEUE.wired) {
+      QUEUE.wired = true;
+      window.addEventListener('resize', scheduleBalance);
+      try {
+        if (window.ResizeObserver) {
+          var ro = new ResizeObserver(scheduleBalance);
+          var dc = document.querySelectorAll('.dcol');
+          if (dc[1]) dc[1].querySelectorAll('.card').forEach(function (cd) { ro.observe(cd); });
+          var sc = $('soc-snap'); if (sc && sc.closest('.card')) ro.observe(sc.closest('.card'));
+        }
+      } catch (e) {}
+    }
   }
 
   // ---- featured slots (events page top three) + editor's picks / upcoming snapshot ----
