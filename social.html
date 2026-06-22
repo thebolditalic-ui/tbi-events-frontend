@@ -63,6 +63,20 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .series-row .se-key{width:110px}.series-row .se-name{width:150px}.series-row .se-brief{flex:1;min-width:200px}
 .panel{display:none}
 .panel.active{display:block}
+.nl-tbtn{border:1px solid var(--border);background:#fff;border-radius:5px;padding:4px 9px;font-size:13px;cursor:pointer;color:#333;line-height:1.2}
+.nl-tbtn:hover{background:var(--bg-alt)}
+#nl-editor h2{font-size:21px;font-family:var(--title-font,Georgia,serif);margin:12px 0 4px;font-weight:600}
+#nl-editor h3{font-size:17px;font-family:var(--title-font,Georgia,serif);margin:10px 0 4px;font-weight:600}
+#nl-editor blockquote{border-left:3px solid var(--border);margin:8px 0;padding:2px 0 2px 12px;color:#555}
+#nl-editor p{margin:0 0 10px}
+#nl-editor img{max-width:100%;border-radius:6px}
+#nl-editor:empty:before{content:attr(data-ph);color:#aaa}
+.nl-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.nl-pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;text-transform:capitalize}
+.nl-pill.draft{background:#f0ebe1;color:#8a7d63}
+.nl-pill.scheduled{background:rgba(255,184,0,.18);color:#8a6d1f}
+.nl-pill.published{background:rgba(39,174,96,.14);color:#1e8c4f}
+
 
 h2.section{font-family:var(--title-font);font-weight:400;font-size:22px;margin:0 0 4px}
 p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70ch}
@@ -361,6 +375,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <button class="subtab" data-tab="feed">Feed / Suggestions</button>
       <button class="subtab" data-tab="instagram">Image / Video</button>
       <button class="subtab" data-tab="jokes">Jokes &amp; Questions</button>
+      <button class="subtab" data-tab="newsletter">Substack Newsletter</button>
       <button class="subtab" data-tab="schedule" style="display:none">Schedule</button>
       <button class="subtab" data-tab="settings" style="display:none">Settings</button>
     </div>
@@ -683,6 +698,72 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div>
     </section>
 
+    <!-- SUBSTACK NEWSLETTER -->
+    <section class="panel" id="panel-newsletter">
+      <h2 class="section">Substack Newsletter</h2>
+      <p class="sub">Compose a full Substack post and hand it to Substack to publish or schedule. Email is <b>off by default</b> (web/app only) and only sends when you turn it on per send. For a test email or audience segments, use <b>Open in Substack</b>.</p>
+      <div id="nl-disconnected" class="sub" style="display:none;color:var(--red)">Substack isn't connected. Add your cookie in <a href="/social?sec=settings">Settings</a> first.</div>
+
+      <div class="card" style="border:1px solid var(--border);border-radius:10px;padding:16px;background:#fff;max-width:760px">
+        <input id="nl-title" placeholder="Post title" style="width:100%;font-size:22px;font-family:var(--title-font,Georgia,serif);border:none;border-bottom:1px solid var(--border);padding:8px 2px;margin-bottom:8px;background:transparent">
+        <input id="nl-subtitle" placeholder="Subtitle (optional)" style="width:100%;font-size:15px;color:#555;border:none;border-bottom:1px solid var(--border);padding:7px 2px;margin-bottom:12px;background:transparent">
+
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+          <label class="nl-tbtn" style="cursor:pointer">Cover image<input id="nl-cover-file" type="file" accept="image/*" style="display:none"></label>
+          <img id="nl-cover-prev" style="display:none;height:42px;border-radius:4px;border:1px solid var(--border)">
+          <button id="nl-cover-clear" type="button" class="nl-tbtn" style="display:none;color:#b00">Remove cover</button>
+        </div>
+
+        <div class="nl-tb" style="display:flex;gap:3px;flex-wrap:wrap;border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;padding:6px;background:var(--bg-alt)">
+          <button type="button" class="nl-tbtn" data-cmd="bold" title="Bold" style="font-weight:700;min-width:30px">B</button>
+          <button type="button" class="nl-tbtn" data-cmd="italic" title="Italic" style="font-style:italic;min-width:30px">i</button>
+          <button type="button" class="nl-tbtn" data-cmd="h2" title="Heading">Heading</button>
+          <button type="button" class="nl-tbtn" data-cmd="h3" title="Subheading">Subhead</button>
+          <button type="button" class="nl-tbtn" data-cmd="ul" title="Bulleted list">&bull; List</button>
+          <button type="button" class="nl-tbtn" data-cmd="ol" title="Numbered list">1. List</button>
+          <button type="button" class="nl-tbtn" data-cmd="quote" title="Block quote">Quote</button>
+          <button type="button" class="nl-tbtn" data-cmd="link" title="Add link">Link</button>
+          <button type="button" class="nl-tbtn" data-cmd="unlink" title="Remove link">Unlink</button>
+          <label class="nl-tbtn" title="Insert image" style="cursor:pointer">Image<input id="nl-img-file" type="file" accept="image/*" style="display:none"></label>
+          <button type="button" class="nl-tbtn" data-cmd="clear" title="Clear to normal text">Normal</button>
+        </div>
+        <div id="nl-editor" contenteditable="true" style="border:1px solid var(--border);border-radius:0 0 8px 8px;min-height:240px;padding:14px;font-size:15px;line-height:1.6;background:#fff;outline:none"></div>
+
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:14px">
+          <label style="font-size:13px;color:#555">Audience
+            <select id="nl-audience" style="margin-left:6px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px">
+              <option value="everyone">Everyone</option>
+              <option value="only_paid">Paid subscribers only</option>
+              <option value="founding">Founding members only</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;font-weight:600">
+            <input id="nl-send-email" type="checkbox"> Send as email
+          </label>
+          <span id="nl-email-warn" style="display:none;font-size:12px;color:var(--red)">A real email will go to the selected audience.</span>
+        </div>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+          <label style="font-size:13px;color:#555">When
+            <select id="nl-when" style="margin-left:6px;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px">
+              <option value="draft">Save as draft</option>
+              <option value="schedule">Schedule</option>
+              <option value="now">Publish now</option>
+            </select>
+          </label>
+          <input id="nl-when-at" type="datetime-local" style="display:none;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:13px">
+          <span style="flex:1"></span>
+          <a id="nl-open" href="#" target="_blank" rel="noopener" style="display:none;font-size:13px;color:var(--blue);align-self:center">Open in Substack &#8599;</a>
+          <button id="nl-new" type="button" class="nl-tbtn" style="align-self:center">New</button>
+          <button id="nl-go" type="button" style="border:none;border-radius:6px;padding:9px 18px;font-weight:600;cursor:pointer;background:var(--gold);color:var(--dark)">Save as draft</button>
+        </div>
+        <div id="nl-status" class="run-status" style="margin-top:10px;font-size:13px;color:#666"></div>
+      </div>
+
+      <h3 style="font-family:var(--title-font,Georgia,serif);font-size:16px;margin:22px 0 8px">Recent newsletters</h3>
+      <div id="nl-list" class="sub">Loading&hellip;</div>
+    </section>
+
     <!-- SCHEDULE -->
     <section class="panel" id="panel-schedule">
       <h2 class="section">Schedule</h2>
@@ -866,6 +947,7 @@ document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{
   if(b.dataset.tab==='schedule') loadSchedule();
   if(b.dataset.tab==='settings'){ loadSpend(); checkChannels(); }
   if(b.dataset.tab==='jokes') loadJokesTab();
+  if(b.dataset.tab==='newsletter') loadNewsletterTab();
 });
 
 /* ---- section routing: Post / Queue & Schedule / Settings via sub-nav (?sec) ---- */
@@ -1156,6 +1238,176 @@ if($('#jokes-gen')) $('#jokes-gen').onclick=async()=>{
   btn.disabled=false;
 };
 if($('#jokes-reload')) $('#jokes-reload').onclick=loadJokes;
+
+/* ===== Substack Newsletter composer ===== */
+var NL = { draftId:null, cover:null };
+function nlExec(cmd){
+  var ed=document.getElementById('nl-editor'); if(!ed) return; ed.focus();
+  if(cmd==='bold') document.execCommand('bold');
+  else if(cmd==='italic') document.execCommand('italic');
+  else if(cmd==='h2') document.execCommand('formatBlock', false, 'H2');
+  else if(cmd==='h3') document.execCommand('formatBlock', false, 'H3');
+  else if(cmd==='ul') document.execCommand('insertUnorderedList');
+  else if(cmd==='ol') document.execCommand('insertOrderedList');
+  else if(cmd==='quote') document.execCommand('formatBlock', false, 'BLOCKQUOTE');
+  else if(cmd==='clear'){ document.execCommand('removeFormat'); document.execCommand('formatBlock', false, 'P'); }
+  else if(cmd==='unlink') document.execCommand('unlink');
+  else if(cmd==='link'){ var u=prompt('Link URL:','https://'); if(u) document.execCommand('createLink', false, u); }
+}
+function nlInline(node, marks){
+  marks=marks||[]; var out=[];
+  node.childNodes.forEach(function(n){
+    if(n.nodeType===3){ if(n.nodeValue) out.push({type:'text', text:n.nodeValue, marks:marks.slice()}); return; }
+    if(n.nodeType!==1) return;
+    var t=n.tagName.toLowerCase();
+    if(t==='br'){ out.push({type:'text', text:' ', marks:marks.slice()}); return; }
+    if(t==='img'){ return; }
+    var m=marks.slice();
+    if(t==='b'||t==='strong') m.push({type:'strong'});
+    else if(t==='i'||t==='em') m.push({type:'em'});
+    else if(t==='a') m.push({type:'link', attrs:{href:n.getAttribute('href')||''}});
+    out.push.apply(out, nlInline(n, m));
+  });
+  return out;
+}
+function nlClean(content){
+  return (content||[]).filter(function(c){ return !(c.type==='text' && !c.text); }).map(function(c){ if(c.marks && !c.marks.length) delete c.marks; return c; });
+}
+function nlPara(node){ var c=nlClean(nlInline(node)); return {type:'paragraph', content:c}; }
+function nlListItems(listNode){
+  var items=[]; var lis=listNode.querySelectorAll(':scope > li');
+  lis.forEach(function(li){ items.push({type:'list_item', content:[ nlPara(li) ]}); });
+  return items;
+}
+function nlImgNode(src){ return {type:'captionedImage', content:[{type:'image2', attrs:{src:src, fullscreen:null, imageSize:null, height:null, width:null, resizeWidth:null, bytes:null, alt:null, title:null, type:null, href:null, belowTheFold:false, topImage:false, internalRedirect:null}}]}; }
+function nlCollectDoc(){
+  var ed=document.getElementById('nl-editor'); var content=[];
+  ed.childNodes.forEach(function(n){
+    if(n.nodeType===3){ if(n.nodeValue && n.nodeValue.trim()) content.push({type:'paragraph', content:[{type:'text', text:n.nodeValue}]}); return; }
+    if(n.nodeType!==1) return;
+    var t=n.tagName.toLowerCase();
+    if(t==='h1'||t==='h2') content.push({type:'heading', attrs:{level:2}, content:nlClean(nlInline(n))});
+    else if(t==='h3'||t==='h4') content.push({type:'heading', attrs:{level:3}, content:nlClean(nlInline(n))});
+    else if(t==='ul') content.push({type:'bullet_list', content:nlListItems(n)});
+    else if(t==='ol') content.push({type:'ordered_list', content:nlListItems(n)});
+    else if(t==='blockquote') content.push({type:'blockquote', content:[ nlPara(n) ]});
+    else if(t==='img') content.push(nlImgNode(n.getAttribute('src')));
+    else {
+      var img=n.querySelector && n.querySelector('img');
+      var inl=nlClean(nlInline(n));
+      if(img && !inl.length) content.push(nlImgNode(img.getAttribute('src')));
+      else if(inl.length) content.push({type:'paragraph', content:inl});
+    }
+  });
+  if(!content.length) content.push({type:'paragraph'});
+  return {type:'doc', content:content};
+}
+function nlEscape(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function nlInlineHtml(content){
+  return (content||[]).map(function(c){
+    if(c.type!=='text') return '';
+    var t=nlEscape(c.text); var marks=c.marks||[];
+    marks.forEach(function(m){ if(m.type==='strong') t='<strong>'+t+'</strong>'; else if(m.type==='em') t='<em>'+t+'</em>'; else if(m.type==='link') t='<a href="'+nlEscape((m.attrs&&m.attrs.href)||'#')+'">'+t+'</a>'; });
+    return t;
+  }).join('');
+}
+function nlDocToHtml(doc){
+  if(!doc||!doc.content) return '';
+  return doc.content.map(function(n){
+    if(n.type==='paragraph') return '<p>'+nlInlineHtml(n.content)+'</p>';
+    if(n.type==='heading'){ var lv=(n.attrs&&n.attrs.level)===2?'2':'3'; return '<h'+lv+'>'+nlInlineHtml(n.content)+'</h'+lv+'>'; }
+    if(n.type==='bullet_list'||n.type==='ordered_list'){ var tag=n.type==='ordered_list'?'ol':'ul'; return '<'+tag+'>'+(n.content||[]).map(function(li){ var p=(li.content&&li.content[0]&&li.content[0].content)||[]; return '<li>'+nlInlineHtml(p)+'</li>'; }).join('')+'</'+tag+'>'; }
+    if(n.type==='blockquote'){ var p=(n.content&&n.content[0]&&n.content[0].content)||[]; return '<blockquote>'+nlInlineHtml(p)+'</blockquote>'; }
+    if(n.type==='captionedImage'){ var im=(n.content||[])[0]; var src=(im&&im.attrs&&im.attrs.src)||''; return '<p><img src="'+nlEscape(src)+'"></p>'; }
+    return '';
+  }).join('');
+}
+async function nlCall(payload){ var r=await sb.functions.invoke('substack',{body:payload}); if(r.error) throw r.error; if(r.data&&r.data.ok===false) throw new Error(r.data.error||'failed'); return r.data; }
+function nlStatus(t,err){ var s=document.getElementById('nl-status'); if(s){ s.textContent=t; s.style.color=err?'var(--red)':'#666'; } }
+async function nlSaveDraft(){
+  var doc=nlCollectDoc();
+  var payload={action:'nl_save', title:document.getElementById('nl-title').value, subtitle:document.getElementById('nl-subtitle').value, body_doc:doc, audience:document.getElementById('nl-audience').value};
+  if(NL.draftId) payload.draft_id=NL.draftId;
+  if(NL.cover) payload.cover_image=NL.cover;
+  var d=await nlCall(payload); NL.draftId=d.draft_id;
+  var op=document.getElementById('nl-open'); if(op&&d.editor_url){ op.href=d.editor_url; op.style.display=''; }
+  return d;
+}
+async function nlGo(){
+  var when=document.getElementById('nl-when').value;
+  var sendEmail=document.getElementById('nl-send-email').checked;
+  var aud=document.getElementById('nl-audience').value;
+  var audLabel=document.querySelector('#nl-audience option:checked').textContent;
+  var btn=document.getElementById('nl-go'); btn.disabled=true;
+  try{
+    if(!document.getElementById('nl-title').value.trim()){ nlStatus('Add a title first.',true); btn.disabled=false; return; }
+    nlStatus('Saving to Substack…'); await nlSaveDraft();
+    if(when==='draft'){ nlStatus('Saved as a draft on Substack. Use Open in Substack to preview or send a test email.'); }
+    else if(when==='schedule'){
+      var at=document.getElementById('nl-when-at').value; if(!at){ nlStatus('Pick a date & time to schedule.',true); btn.disabled=false; return; }
+      var iso=new Date(at).toISOString();
+      if(sendEmail && !confirm('Schedule this to EMAIL '+audLabel+' on '+new Date(at).toLocaleString()+'?\n\nA real email will be sent at that time.')){ btn.disabled=false; nlStatus('Cancelled.'); return; }
+      await nlCall({action:'nl_schedule', draft_id:NL.draftId, post_date:iso, send_email:sendEmail, audience:aud});
+      nlStatus('Scheduled on Substack for '+new Date(at).toLocaleString()+(sendEmail?(' — will email '+audLabel):' — web/app only, no email')+'.');
+    } else if(when==='now'){
+      var msg = sendEmail ? ('Publish now AND EMAIL '+audLabel+'?\n\nThis sends a real email immediately.') : 'Publish now to web/app only (no email)?';
+      if(!confirm(msg)){ btn.disabled=false; nlStatus('Cancelled.'); return; }
+      var d=await nlCall({action:'nl_publish_now', draft_id:NL.draftId, send_email:sendEmail, audience:aud});
+      nlStatus('Published'+(sendEmail?(' and emailed '+audLabel):' (web/app only)')+'.');
+      if(d.url){ var op=document.getElementById('nl-open'); op.href=d.url; op.style.display=''; }
+    }
+    nlLoadList();
+  }catch(e){ nlStatus('Error: '+(e.message||e), true); }
+  btn.disabled=false;
+}
+function nlReset(){ NL.draftId=null; NL.cover=null; var t=document.getElementById('nl-title'); if(t)t.value=''; var s=document.getElementById('nl-subtitle'); if(s)s.value=''; var e=document.getElementById('nl-editor'); if(e)e.innerHTML=''; document.getElementById('nl-cover-prev').style.display='none'; document.getElementById('nl-cover-clear').style.display='none'; document.getElementById('nl-open').style.display='none'; document.getElementById('nl-send-email').checked=false; document.getElementById('nl-email-warn').style.display='none'; nlStatus(''); }
+async function nlEdit(id){
+  nlStatus('Loading…');
+  try{ var d=await nlCall({action:'nl_get', draft_id:id}); var dr=d.draft; nlReset(); NL.draftId=dr.id;
+    document.getElementById('nl-title').value=dr.title||''; document.getElementById('nl-subtitle').value=dr.subtitle||'';
+    document.getElementById('nl-editor').innerHTML=nlDocToHtml(dr.body_doc)||'';
+    document.getElementById('nl-audience').value=['everyone','only_paid','founding'].indexOf(dr.audience)>=0?dr.audience:'everyone';
+    if(dr.cover_image){ NL.cover=dr.cover_image; var pv=document.getElementById('nl-cover-prev'); pv.src=dr.cover_image; pv.style.display=''; document.getElementById('nl-cover-clear').style.display=''; }
+    nlStatus('Loaded "'+(dr.title||'untitled')+'" for editing.');
+    document.getElementById('panel-newsletter').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){ nlStatus('Error: '+(e.message||e),true); }
+}
+async function nlDelete(id){ if(!confirm('Delete this Substack draft? This cannot be undone.')) return; try{ await nlCall({action:'nl_delete', draft_id:id}); if(NL.draftId===id) nlReset(); nlLoadList(); }catch(e){ alert('Error: '+(e.message||e)); } }
+function nlFmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateString([], {month:'short',day:'numeric'}); }catch(e){ return ''; } }
+async function nlLoadList(){
+  var host=document.getElementById('nl-list'); if(!host) return;
+  try{ var d=await nlCall({action:'nl_list'}); var items=d.items||[];
+    if(!items.length){ host.innerHTML='<div style="color:#999;padding:8px 0">No newsletters yet.</div>'; return; }
+    host.innerHTML=items.map(function(i){
+      var pill='<span class="nl-pill '+i.status+'">'+i.status+'</span>';
+      var when=i.post_date?(' &middot; '+nlFmtDate(i.post_date)):'';
+      var emailTag=i.should_send_email?' &middot; email':'';
+      var open=i.url?('<a href="'+i.url+'" target="_blank" rel="noopener" style="color:var(--blue);font-size:12px">Open &#8599;</a>'):'';
+      var actions=i.is_published?open:('<button class="nl-tbtn nl-edit" data-id="'+i.id+'" style="font-size:12px">Edit</button> <button class="nl-tbtn nl-del" data-id="'+i.id+'" style="font-size:12px;color:#b00">Delete</button>');
+      return '<div class="nl-row">'+pill+'<span style="flex:1;font-size:14px">'+nlEscape(i.title||'(untitled)')+'<span style="color:#aaa;font-size:12px">'+when+emailTag+'</span></span>'+actions+'</div>';
+    }).join('');
+    host.querySelectorAll('.nl-edit').forEach(function(b){ b.onclick=function(){ nlEdit(b.dataset.id); }; });
+    host.querySelectorAll('.nl-del').forEach(function(b){ b.onclick=function(){ nlDelete(b.dataset.id); }; });
+  }catch(e){ host.innerHTML='<div style="color:var(--red);padding:8px 0">Could not load: '+(e.message||e)+'</div>'; }
+}
+function nlReadFile(file, cb){ var r=new FileReader(); r.onload=function(){ cb(r.result); }; r.readAsDataURL(file); }
+var _nlWired=false;
+async function loadNewsletterTab(){
+  try{ var c=await sb.functions.invoke('substack',{body:{action:'check'}}); var conn=c.data&&c.data.connected; var dc=document.getElementById('nl-disconnected'); if(dc) dc.style.display=conn?'none':'block'; }catch(e){}
+  if(!_nlWired){ _nlWired=true;
+    document.querySelectorAll('#panel-newsletter .nl-tbtn[data-cmd]').forEach(function(b){ b.onmousedown=function(e){ e.preventDefault(); }; b.onclick=function(){ nlExec(b.dataset.cmd); }; });
+    var ed=document.getElementById('nl-editor'); if(ed) ed.setAttribute('data-ph','Write your newsletter…');
+    document.getElementById('nl-when').onchange=function(){ document.getElementById('nl-when-at').style.display=this.value==='schedule'?'':'none'; document.getElementById('nl-go').textContent=this.value==='now'?'Publish now':(this.value==='schedule'?'Schedule':'Save as draft'); };
+    document.getElementById('nl-send-email').onchange=function(){ document.getElementById('nl-email-warn').style.display=this.checked?'':'none'; };
+    document.getElementById('nl-go').onclick=nlGo;
+    document.getElementById('nl-new').onclick=function(){ nlReset(); nlStatus('New newsletter.'); };
+    document.getElementById('nl-cover-file').onchange=function(){ var f=this.files&&this.files[0]; if(!f) return; nlStatus('Uploading cover…'); nlReadFile(f, async function(durl){ try{ var d=await nlCall({action:'nl_image', data_url:durl}); NL.cover=d.url; var pv=document.getElementById('nl-cover-prev'); pv.src=d.url; pv.style.display=''; document.getElementById('nl-cover-clear').style.display=''; nlStatus('Cover uploaded.'); }catch(e){ nlStatus('Cover upload failed: '+(e.message||e),true); } }); this.value=''; };
+    document.getElementById('nl-cover-clear').onclick=function(){ NL.cover=null; document.getElementById('nl-cover-prev').style.display='none'; this.style.display='none'; };
+    var imgf=document.getElementById('nl-img-file'); if(imgf) imgf.onchange=function(){ var f=this.files&&this.files[0]; if(!f) return; nlStatus('Uploading image…'); nlReadFile(f, async function(durl){ try{ var d=await nlCall({action:'nl_image', data_url:durl}); document.getElementById('nl-editor').focus(); document.execCommand('insertHTML', false, '<p><img src="'+d.url+'"></p><p></p>'); nlStatus('Image inserted.'); }catch(e){ nlStatus('Image upload failed: '+(e.message||e),true); } }); this.value=''; };
+  }
+  nlLoadList();
+}
+
 function renderSeriesEditor(){
   const host=$('#series-list'); if(!host) return; const arr=Array.isArray(CFG&&CFG.series)?CFG.series:[];
   host.innerHTML=arr.map(s=>'<div class="series-row">'+
