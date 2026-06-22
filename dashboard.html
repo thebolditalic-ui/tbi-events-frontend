@@ -55,6 +55,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
 .card.wide { grid-column: 1 / -1; }
+.dcol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .card h3 { font-family: var(--title-font); font-size: 16px; font-weight: 400; margin-bottom: 2px; }
 .card .sub { color: #8a8178; font-size: 12px; margin-bottom: 10px; line-height: 1.45; }
 .card table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -203,6 +204,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <table><thead><tr><th>Story</th><th class="r">Readers</th></tr></thead><tbody id="live-body"><tr><td colspan="2" class="emptymsg">Loading…</td></tr></tbody></table>
       </div>
 
+      <div class="dcol">
       <div class="card">
         <h3>Upcoming social posts</h3>
         <div class="sub">Next out of the unified queue. Manage on the <a href="/social?sec=schedule">Social</a> tab.</div>
@@ -215,6 +217,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <div id="soc-snap"><div class="emptymsg">Loading…</div></div>
       </div>
 
+      </div>
+
+      <div class="dcol">
       <div class="card">
         <h3>Featured on the events page</h3>
         <div class="sub">The three featured slots, then editor's picks (or a snapshot of what's coming up). Manage on <a href="/events">Events</a>.</div>
@@ -226,6 +231,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <div class="sub">Sessions on events.thebolditalic.com, last 7 days.</div>
         <div class="bars" id="vis-bars"></div>
         <div class="bars-labels" id="vis-labels"></div>
+      </div>
+
       </div>
 
       <div class="card">
@@ -303,7 +310,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       var g = d.grand || {};
       var views = g.views || 0, posts = g.posts || 0, eng = (g.reactions || 0) + (g.comments || 0) + (g.shares || 0);
       var series = d.series || [];
-      var vals = series.map(function (x) { var s = 0; ['facebook', 'instagram', 'threads', 'bluesky', 'x'].forEach(function (c) { s += (x[c] && x[c].views) || 0; }); return s; });
+      var vals = series.map(function (x) { var s = 0; ['facebook', 'instagram', 'threads', 'bluesky', 'x', 'substack'].forEach(function (c) { s += (x[c] && x[c].views) || 0; }); return s; });
       var W = 300, H = 56, n = vals.length, max = Math.max.apply(null, vals.concat([1])), spark;
       if (n >= 2) {
         var pts = vals.map(function (v, i) { return ((i / (n - 1)) * W).toFixed(1) + ',' + (52 - (v / max) * 44).toFixed(1); });
