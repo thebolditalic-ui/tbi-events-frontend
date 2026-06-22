@@ -927,11 +927,11 @@ function setPill(sel,ok,noText){
 }
 async function checkChannels(){
   var host=$('#chan-conns'); if(!host) return;
-  var defs=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X']];
+  var defs=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack']];
   host.innerHTML=defs.map(function(d){return '<div class="toggle-row"><span>'+d[1]+'</span><span class="statuspill no" id="cc-'+d[0]+'">checking...</span></div>';}).join('');
   function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
   async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
-  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky');
+  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
   try{ var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}}); setc('x', !!(rx.data&&rx.data.connected)); }catch(e){ setc('x',false); }
 }
 if($('#chan-recheck')) $('#chan-recheck').onclick=checkChannels;
@@ -1249,7 +1249,7 @@ function schedShow(v){
 }
 var TBI_MARK_URL='https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/tbi-mark.png';
 try{ document.fonts.load("400 40px 'EdsMarket'"); }catch(_e){}
-var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'}];
+var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'},{k:'substack',l:'Substack'}];
 var IMG_CH=[{k:'instagram',l:'Instagram'},{k:'facebook',l:'Facebook'}];
 var CH_SVG={
   facebook:'<svg viewBox="0 0 24 24" fill="#1877F2" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
@@ -2673,8 +2673,8 @@ gate();
 <script>
 (function(){
   var P=document.getElementById('panel-compose'); if(!P) return;
-  var CH=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X']];
-  var sel={facebook:true,instagram:false,threads:true,bluesky:true,x:true};
+  var CH=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack']];
+  var sel={facebook:true,instagram:false,threads:true,bluesky:true,x:true,substack:false};
   var imgs=[]; var when='now'; var lmManual=false;
   var chans=document.getElementById('cmp-chans');
   function renderChans(){ chans.innerHTML=''; CH.forEach(function(c){ var on=sel[c[0]]; var b=document.createElement('button'); b.textContent=c[1]; b.style.cssText='font-size:13px;font-weight:600;padding:7px 13px;border-radius:18px;border:1px solid '+(on?'var(--dark)':'var(--border)')+';background:'+(on?'var(--dark)':'var(--bg-alt)')+';color:'+(on?'#fff':'var(--dark)')+';cursor:pointer'; b.onclick=function(){ sel[c[0]]=!sel[c[0]]; renderChans(); }; chans.appendChild(b); }); }
