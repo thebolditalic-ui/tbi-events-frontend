@@ -425,6 +425,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     }
     QUEUE.rows = rows; QUEUE.total = n; QUEUE.lastAt = lastAt;
     balanceQueue();
+    // late re-runs catch async settle (chart sparkline, banner thumbnails, event rows) regardless of observer timing
+    setTimeout(balanceQueue, 400); setTimeout(balanceQueue, 1000); setTimeout(balanceQueue, 1900);
     if (!QUEUE.wired) {
       QUEUE.wired = true;
       window.addEventListener('resize', scheduleBalance);
