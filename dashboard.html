@@ -392,10 +392,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var rcards = rightCol.querySelectorAll('.card');
     if (!rcards.length) { renderQueueRows(Math.min(6, maxN)); return; }
     var rightBottom = rcards[rcards.length - 1].getBoundingClientRect().bottom; // stable; left growth doesn't move right cards
-    var MIN = 3, best = Math.min(MIN, maxN);
+    var MIN = 3, best = Math.min(MIN, maxN), bestDiff = Infinity;
     for (var k = MIN; k <= maxN; k++){
       renderQueueRows(k);
-      if (qcard.getBoundingClientRect().bottom <= rightBottom + 8) best = k; else break;
+      var lb = qcard.getBoundingClientRect().bottom, diff = Math.abs(lb - rightBottom);
+      if (diff < bestDiff) { bestDiff = diff; best = k; }   // pick the row count whose bottom is CLOSEST to the right column
+      if (lb > rightBottom + 4) break;                       // past it -> more rows only get further
     }
     renderQueueRows(best);
   }
