@@ -730,6 +730,18 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
       </div>
       <div class="set-group">
+        <h3>Substack (Notes)</h3>
+        <div class="set-body">
+          <div class="hint">Connect Substack to schedule <b>Notes</b> (short updates) alongside your other channels. Substack has no official API, so this uses your logged-in session cookie. In a browser signed in to Substack, open DevTools &rarr; Application &rarr; Cookies &rarr; substack.com, copy the <b>substack.sid</b> value, and paste it below. It lasts months as long as you stay signed in.</div>
+          <input type="text" id="sub-sid" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Paste your substack.sid cookie value" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <input type="text" id="sub-handle" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Publication handle (optional, e.g. thebolditalic)" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box">
+            <select id="sub-cookiename" title="Cookie name (default substack.sid; try connect.sid if that fails)" style="border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"><option value="substack.sid">substack.sid</option><option value="connect.sid">connect.sid</option></select>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gold btn-sm" id="sub-conn-btn">Connect Substack</button><span class="run-status" id="sub-conn-status">checking&hellip;</span></div>
+        </div>
+      </div>
+      <div class="set-group">
         <h3>Connections</h3>
         <div class="set-body" id="conn-status">
           <div class="toggle-row"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
@@ -2720,6 +2732,36 @@ gate();
         if(st){ st.style.color=ok?'var(--green)':'var(--red)'; st.textContent=bits.join(' \u00b7 '); }
       } else { if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((d&&d.error)||'failed'); } }
     }catch(e){ if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((e&&e.message)||e); } }
+    btn.disabled=false;
+  };
+})();
+</script>
+<script>
+(function(){
+  var btn=document.getElementById('sub-conn-btn'); if(!btn) return;
+  var st=document.getElementById('sub-conn-status');
+  function show(connected,handle,err){
+    if(!st) return;
+    if(err){ st.style.color='var(--red)'; st.textContent=err; return; }
+    if(connected){ st.style.color='var(--green)'; st.textContent='Connected'+(handle?(' as @'+handle):''); }
+    else { st.style.color='#8a8178'; st.textContent='Not connected'; }
+  }
+  (async function(){
+    try{ var r=await sb.functions.invoke('substack',{body:{action:'check'}}); if(r&&r.error) throw r.error; var d=(r&&r.data)||{}; show(!!d.connected, d.handle); }
+    catch(e){ show(false,'',''); }
+  })();
+  btn.onclick=async function(){
+    var inp=document.getElementById('sub-sid'), h=document.getElementById('sub-handle'), cn=document.getElementById('sub-cookiename');
+    var sid=((inp&&inp.value)||'').trim();
+    if(!sid){ show(false,'','Paste your substack.sid cookie value first.'); return; }
+    btn.disabled=true; if(st){ st.style.color='#8a8178'; st.textContent='Connecting…'; }
+    try{
+      var r=await sb.functions.invoke('substack',{body:{action:'connect',sid:sid,handle:((h&&h.value)||'').trim(),cookie_name:((cn&&cn.value)||'substack.sid')}});
+      if(r.error) throw r.error;
+      var d=r.data||{};
+      if(d&&d.ok&&d.connected){ if(inp) inp.value=''; show(true,d.handle); }
+      else { show(false,'','Error: '+((d&&d.error)||'failed')); }
+    }catch(e){ show(false,'','Error: '+((e&&e.message)||e)); }
     btn.disabled=false;
   };
 })();
