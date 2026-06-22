@@ -206,15 +206,15 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
       <div class="dcol">
       <div class="card">
-        <h3>Upcoming social posts</h3>
-        <div class="sub">Next out of the unified queue. Manage on the <a href="/social?sec=schedule">Social</a> tab.</div>
-        <div id="queue-body" class="emptymsg">Loading…</div>
-      </div>
-
-      <div class="card">
         <h3>Social this week</h3>
         <div class="sub">All channels, last 7 days. <a href="/social-analytics">Full analytics →</a></div>
         <div id="soc-snap"><div class="emptymsg">Loading…</div></div>
+      </div>
+
+      <div class="card">
+        <h3>Upcoming social posts</h3>
+        <div class="sub">Next out of the unified queue. Manage on the <a href="/social?sec=schedule">Social</a> tab.</div>
+        <div id="queue-body" class="emptymsg">Loading…</div>
       </div>
 
       </div>
@@ -365,7 +365,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   // ---- upcoming social posts ----
   async function loadQueue() {
-    var r = await sb.from('post_queue').select('text,link,channels,scheduled_at,video_url,image_urls').eq('status', 'queued').order('scheduled_at', { ascending: true }).limit(8);
+    var r = await sb.from('post_queue').select('text,link,channels,scheduled_at,video_url,image_urls').eq('status', 'queued').order('scheduled_at', { ascending: true }).limit(6);
     var host = $('queue-body');
     if (r.error) { host.textContent = r.error.message; return; }
     var rows = r.data || [];
