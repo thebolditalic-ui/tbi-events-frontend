@@ -40,6 +40,16 @@ function isPrefetchRequest(req) {
   return false;
 }
 
+// A real banner click navigates FROM one of our pages, so it carries a thebolditalic.com referer.
+// Bots/link-followers/scanners hit the redirect URL directly with no (or foreign) referer -- skip those.
+function clickRefererHost(req) {
+  try { var r = req.headers['referer'] || req.headers['referrer'] || ''; return r ? new URL(r).hostname.toLowerCase() : ''; } catch (e) { return ''; }
+}
+function isTrustedReferer(req) {
+  var h = clickRefererHost(req);
+  return h === 'thebolditalic.com' || h.endsWith('.thebolditalic.com');
+}
+
 function parseBody(req) {
   if (!req.body) return {};
   if (typeof req.body === 'object') return req.body;
@@ -103,7 +113,7 @@ async function handleClick(req, res) {
     if (!banner || !banner.destination_url) return res.status(404).send('Banner not found');
 
     var ua = req.headers['user-agent'] || '';
-    var skipLog = isBotUA(ua) || isPrefetchRequest(req);
+    var skipLog = isBotUA(ua) || isPrefetchRequest(req) || !isTrustedReferer(req); // must come from a TBI page
     if (SUPABASE_SERVICE_KEY && !skipLog) {
       var refererUrl = req.headers['referer'] || req.headers['referrer'] || '';
       var sessionId = (req.query && req.query.s) || null;
