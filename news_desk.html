@@ -224,7 +224,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
 
   <div class="page-wrap">
     <h2 class="section-title">News Desk</h2>
-    <p class="section-sub">SF restaurant, bar, and consumer-business openings and closings, gathered from city permit and license records. The code gathers, the model writes a sourced brief, you vet, the system ships. Right now everything lands in Ghost as a <b>draft</b> (shadow mode); closings always need your explicit hand.</p>
+    <p class="section-sub">SF food and drink openings and closings, sourced from what the local outlets are actually reporting (Eater SF, the Chronicle, SFGate, Mission Local, tablehopper, the Standard). The code finds the stories, the model confirms each one with a web search and writes a sourced brief in TBI's voice, or kills it if it cannot stand it up. You vet, the system ships. Everything lands in Ghost as a <b>draft</b> (shadow mode); closings always need your explicit hand.</p>
 
     <div class="pills" id="pills">
       <span class="pill" id="pill-sources">sources: checking...</span>
@@ -252,7 +252,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
     <div id="lead-list"><div class="empty">Loading...</div></div>
 
     <h3 class="zone">On the radar</h3>
-    <p class="zone-sub">Single-signal leads, possible license transfers, and anything the writer judged too thin. No brief is written until a second signal lands (or you force one).</p>
+    <p class="zone-sub">Leads the writer judged too thin to confirm, or ones we may have already covered. Nothing here gets a brief unless you write one anyway.</p>
     <div id="radar-list"><div class="empty">Loading...</div></div>
 
     <h3 class="zone">Pipeline runs</h3>
@@ -265,7 +265,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
       <div class="set-card"><div class="switchrow"><span><b>Shadow mode</b><br><span style="color:#8a8178;font-size:11.5px">all pushes land as Ghost drafts</span></span><label class="switch"><input type="checkbox" id="cfg-shadow" checked><span class="slider-sw"></span></label></div></div>
       <div class="set-card"><label for="cfg-cap">Daily auto-post cap</label><input type="number" id="cfg-cap" min="1" max="10" value="3"></div>
       <div class="set-card"><label for="cfg-anom">Anomaly halt threshold</label><input type="number" id="cfg-anom" min="5" max="200" value="25"></div>
-      <div class="set-card"><label for="cfg-window">Gather window (days)</label><input type="number" id="cfg-window" min="1" max="30" value="7"></div>
+      <div class="set-card" style="display:none"><label for="cfg-window">Gather window (days)</label><input type="number" id="cfg-window" min="1" max="30" value="7"></div>
       <div class="set-card"><label for="cfg-model">Brief model</label><select id="cfg-model"><option value="claude-sonnet-4-6">Sonnet (default)</option><option value="claude-opus-4-8">Opus</option></select></div>
     </div>
     <div class="toolbar" style="margin-top:12px">
@@ -356,14 +356,14 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
 
   // ---- connection pills ----
   async function loadPills() {
-    try { var g = await invoke('news-gather', { action: 'check' }); var ok = g.datasf && g.abc; var p = $('pill-sources'); p.textContent = 'sources: ' + (ok ? 'DataSF + ABC reachable' : 'problem (see runs)'); p.className = 'pill ' + (ok ? 'on' : 'off'); } catch (e) { $('pill-sources').textContent = 'sources: ' + e.message; $('pill-sources').className = 'pill off'; }
+    try { var g = await invoke('news-gather', { action: 'check' }); var reached = g.feeds_reached || 0, total = g.feeds_total || 0; var ok = total > 0 && reached >= total - 1; var p = $('pill-sources'); p.textContent = 'feeds: ' + reached + '/' + total + ' outlets live'; p.className = 'pill ' + (ok ? 'on' : (reached > 0 ? 'warn' : 'off')); } catch (e) { $('pill-sources').textContent = 'feeds: ' + e.message; $('pill-sources').className = 'pill off'; }
     try { var n = await invoke('news-generate', { action: 'check' }); var p2 = $('pill-engine'); p2.textContent = 'AI engine: ' + (n.has_anthropic_key ? ('ready (' + (n.brief_model || '') + ')') : 'no API key'); p2.className = 'pill ' + (n.has_anthropic_key ? 'on' : 'off'); } catch (e2) { $('pill-engine').textContent = 'AI engine: ' + e2.message; $('pill-engine').className = 'pill off'; }
     try { var h = await invoke('news-publish', { action: 'check' }); var p3 = $('pill-ghost'); p3.textContent = 'Ghost: ' + (h.connected ? ('connected (' + (h.site || '') + ')') : (h.has_admin_key ? ('key set, error: ' + (h.error || '?')) : 'not connected')); p3.className = 'pill ' + (h.connected ? 'on' : 'off'); $('ghost-help').hidden = !!h.connected; } catch (e3) { $('pill-ghost').textContent = 'Ghost: ' + e3.message; $('pill-ghost').className = 'pill off'; }
   }
 
   // ---- top actions ----
   $('run-gather').onclick = async function () {
-    var b = this; b.disabled = true; setStatus($('top-status'), 'Gathering from city records (30 to 90 seconds)...');
+    var b = this; b.disabled = true; setStatus($('top-status'), 'Reading the food and drink feeds and writing briefs (30 to 90 seconds)...');
     try { var d = await invoke('news-gather', { action: 'gather' }); setStatus($('top-status'), d.halted ? ('HALTED: ' + d.halt_reason) : ('Done ' + CK + ' ' + d.inserted + ' new, ' + d.updated + ' updated' + (d.generation && d.generation.generated ? (', ' + d.generation.generated + ' briefs written') : '')), !d.halted); loadAll(); }
     catch (e) { setStatus($('top-status'), 'Error: ' + e.message, false); }
     b.disabled = false;
