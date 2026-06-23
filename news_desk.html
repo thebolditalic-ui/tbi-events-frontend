@@ -95,6 +95,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .result.ok { color: var(--green); }
 .result.err { color: var(--red); }
 .empty { background: #fff; border: 1px dashed var(--border); border-radius: 10px; padding: 26px; text-align: center; color: #8a8178; font-size: 13px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; margin-top: 6px; }
+@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+.health-warn { background: #fff4e5; border: 1px solid #f0c987; color: #8a5a00; border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.5; margin: 4px 0 16px; }
 .radar-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .radar-item .grow { flex: 1; min-width: 220px; }
 .runrow { font-size: 12px; color: #6f6759; padding: 7px 0; border-bottom: 1px dashed var(--border); }
@@ -224,19 +227,11 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
 
   <div class="page-wrap">
     <h2 class="section-title">News Desk</h2>
-    <p class="section-sub">SF food and drink openings and closings, sourced from what the local outlets are actually reporting (Eater SF, the Chronicle, SFGate, Mission Local, tablehopper, the Standard). The code finds the stories, the model confirms each one with a web search and writes a sourced brief in TBI's voice, or kills it if it cannot stand it up. You vet, the system ships. Everything lands in Ghost as a <b>draft</b> (shadow mode); closings always need your explicit hand.</p>
-
-    <div class="pills" id="pills">
-      <span class="pill" id="pill-sources">sources: checking...</span>
-      <span class="pill" id="pill-engine">AI engine: checking...</span>
-      <span class="pill" id="pill-ghost">Ghost: checking...</span>
-      <span class="pill" id="pill-shadow">shadow mode</span>
-      <span class="pill" id="pill-kill">kill switch</span>
-    </div>
+    <div id="health-warn" class="health-warn" hidden></div>
     <div class="toolbar">
-      <button class="btn btn-gold btn-sm" id="run-gather">Run gather now</button>
-      <button class="btn btn-outline btn-sm" id="run-generate">Generate briefs</button>
-      <button class="btn btn-outline btn-sm" id="reload-all">Reload</button>
+      <button class="btn btn-gold btn-sm" id="run-gather" title="Pull the latest food and drink stories from the outlets and write briefs for the new ones">Check for new stories</button>
+      <button class="btn btn-outline btn-sm" id="run-generate" title="Write briefs for any leads still waiting, without pulling new ones">Write pending briefs</button>
+      <button class="btn btn-outline btn-sm" id="reload-all" title="Reload the lists below from the database">Refresh</button>
       <span class="run-status" id="top-status"></span>
     </div>
 
@@ -249,24 +244,27 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
       </select>
       <span class="run-status" id="list-count"></span>
     </div>
-    <div id="lead-list"><div class="empty">Loading...</div></div>
+    <div id="lead-list"><div class="empty">One moment...</div></div>
 
-    <h3 class="zone">On the radar</h3>
-    <p class="zone-sub">Leads the writer judged too thin to confirm, or ones we may have already covered. Nothing here gets a brief unless you write one anyway.</p>
-    <div id="radar-list"><div class="empty">Loading...</div></div>
-
-    <h3 class="zone">Pipeline runs</h3>
-    <div id="runs-list" class="set-card" style="margin-top:6px"></div>
+    <div class="two-col">
+      <div>
+        <h3 class="zone">Set aside</h3>
+        <div id="radar-list"><div class="empty">One moment...</div></div>
+      </div>
+      <div>
+        <h3 class="zone">Recent activity</h3>
+        <div id="runs-list" class="set-card"></div>
+      </div>
+    </div>
 
     <h3 class="zone">Settings</h3>
-    <p class="zone-sub">Shadow mode keeps every push a Ghost draft. The kill switch stops gathering, writing, and publishing entirely. Flip shadow off only after grading a few weeks of briefs.</p>
     <div class="set-grid">
-      <div class="set-card"><div class="switchrow"><span><b>Kill switch</b><br><span style="color:#8a8178;font-size:11.5px">stops the whole pipeline</span></span><label class="switch"><input type="checkbox" id="cfg-kill"><span class="slider-sw"></span></label></div></div>
-      <div class="set-card"><div class="switchrow"><span><b>Shadow mode</b><br><span style="color:#8a8178;font-size:11.5px">all pushes land as Ghost drafts</span></span><label class="switch"><input type="checkbox" id="cfg-shadow" checked><span class="slider-sw"></span></label></div></div>
-      <div class="set-card"><label for="cfg-cap">Daily auto-post cap</label><input type="number" id="cfg-cap" min="1" max="10" value="3"></div>
-      <div class="set-card"><label for="cfg-anom">Anomaly halt threshold</label><input type="number" id="cfg-anom" min="5" max="200" value="25"></div>
+      <div class="set-card"><div class="switchrow"><span><b>Auto-publish</b><br><span style="color:#8a8178;font-size:11.5px">Off: every story waits as a draft for you. On: confident openings can post on a schedule, and you still get a veto window. Closings always wait for you.</span></span><label class="switch"><input type="checkbox" id="cfg-autopub"><span class="slider-sw"></span></label></div></div>
+      <div class="set-card"><div class="switchrow"><span><b>Pause everything</b><br><span style="color:#8a8178;font-size:11.5px">Stops finding stories, writing, and publishing</span></span><label class="switch"><input type="checkbox" id="cfg-kill"><span class="slider-sw"></span></label></div></div>
+      <div class="set-card"><label for="cfg-cap">Most auto-posts per day</label><input type="number" id="cfg-cap" min="1" max="10" value="3"></div>
+      <div class="set-card"><label for="cfg-model">Writing model</label><select id="cfg-model"><option value="claude-sonnet-4-6">Sonnet (default)</option><option value="claude-opus-4-8">Opus</option></select></div>
+      <div class="set-card" style="display:none"><label for="cfg-anom">Anomaly halt threshold</label><input type="number" id="cfg-anom" min="5" max="200" value="25"></div>
       <div class="set-card" style="display:none"><label for="cfg-window">Gather window (days)</label><input type="number" id="cfg-window" min="1" max="30" value="7"></div>
-      <div class="set-card"><label for="cfg-model">Brief model</label><select id="cfg-model"><option value="claude-sonnet-4-6">Sonnet (default)</option><option value="claude-opus-4-8">Opus</option></select></div>
     </div>
     <div class="toolbar" style="margin-top:12px">
       <button class="btn btn-gold btn-sm" id="cfg-save">Save settings</button>
@@ -320,31 +318,23 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
     var r = await sb.from('pipeline_config').select('*');
     CFG = {}; (r.data || []).forEach(function (x) { CFG[x.key] = x.value; });
     $('cfg-kill').checked = CFG.kill_switch === true;
-    $('cfg-shadow').checked = CFG.shadow_mode !== false;
+    $('cfg-autopub').checked = CFG.shadow_mode === false; // auto-publish is on only when shadow mode is off
     $('cfg-cap').value = CFG.daily_cap || 3;
     $('cfg-anom').value = CFG.anomaly_threshold || 25;
     $('cfg-window').value = CFG.window_days || 7;
     $('cfg-model').value = CFG.brief_model || 'claude-sonnet-4-6';
-    paintModePills();
-  }
-  function paintModePills() {
-    var sh = $('pill-shadow'), ki = $('pill-kill');
-    sh.textContent = 'shadow mode: ' + ($('cfg-shadow').checked ? 'ON (drafts only)' : 'OFF (can schedule)');
-    sh.className = 'pill ' + ($('cfg-shadow').checked ? 'warn' : 'on');
-    ki.textContent = 'kill switch: ' + ($('cfg-kill').checked ? 'ON (pipeline stopped)' : 'off');
-    ki.className = 'pill ' + ($('cfg-kill').checked ? 'off' : 'on');
   }
   $('cfg-save').onclick = async function () {
     var rows = [
       { key: 'kill_switch', value: $('cfg-kill').checked },
-      { key: 'shadow_mode', value: $('cfg-shadow').checked },
+      { key: 'shadow_mode', value: !$('cfg-autopub').checked },
       { key: 'daily_cap', value: parseInt($('cfg-cap').value, 10) || 3 },
       { key: 'anomaly_threshold', value: parseInt($('cfg-anom').value, 10) || 25 },
       { key: 'window_days', value: parseInt($('cfg-window').value, 10) || 7 },
       { key: 'brief_model', value: $('cfg-model').value },
     ];
-    if (!$('cfg-shadow').checked && CFG.shadow_mode !== false) {
-      if (!window.confirm('Turn shadow mode OFF? Future pushes of tier-3 OPENINGS can be scheduled to publish on their own (with the morning veto window). Closings still require you.')) { $('cfg-shadow').checked = true; return; }
+    if ($('cfg-autopub').checked && CFG.shadow_mode !== false) {
+      if (!window.confirm('Turn auto-publish ON? Confident openings (tier 3) can then be scheduled to post on their own, with a morning veto window. Closings always wait for you.')) { $('cfg-autopub').checked = false; return; }
     }
     var b = $('cfg-save'); b.disabled = true;
     var r = await sb.from('pipeline_config').upsert(rows);
@@ -352,13 +342,15 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
     if (r.error) { setStatus($('cfg-status'), 'Error: ' + r.error.message, false); return; }
     setStatus($('cfg-status'), 'Saved ' + CK, true); loadConfig();
   };
-  ['cfg-kill', 'cfg-shadow'].forEach(function (id) { $(id).addEventListener('change', paintModePills); });
 
-  // ---- connection pills ----
-  async function loadPills() {
-    try { var g = await invoke('news-gather', { action: 'check' }); var reached = g.feeds_reached || 0, total = g.feeds_total || 0; var ok = total > 0 && reached >= total - 1; var p = $('pill-sources'); p.textContent = 'feeds: ' + reached + '/' + total + ' outlets live'; p.className = 'pill ' + (ok ? 'on' : (reached > 0 ? 'warn' : 'off')); } catch (e) { $('pill-sources').textContent = 'feeds: ' + e.message; $('pill-sources').className = 'pill off'; }
-    try { var n = await invoke('news-generate', { action: 'check' }); var p2 = $('pill-engine'); p2.textContent = 'AI engine: ' + (n.has_anthropic_key ? ('ready (' + (n.brief_model || '') + ')') : 'no API key'); p2.className = 'pill ' + (n.has_anthropic_key ? 'on' : 'off'); } catch (e2) { $('pill-engine').textContent = 'AI engine: ' + e2.message; $('pill-engine').className = 'pill off'; }
-    try { var h = await invoke('news-publish', { action: 'check' }); var p3 = $('pill-ghost'); p3.textContent = 'Ghost: ' + (h.connected ? ('connected (' + (h.site || '') + ')') : (h.has_admin_key ? ('key set, error: ' + (h.error || '?')) : 'not connected')); p3.className = 'pill ' + (h.connected ? 'on' : 'off'); $('ghost-help').hidden = !!h.connected; } catch (e3) { $('pill-ghost').textContent = 'Ghost: ' + e3.message; $('pill-ghost').className = 'pill off'; }
+  // ---- quiet health check: stays silent unless something is actually broken ----
+  async function loadHealth() {
+    var warns = [];
+    try { var g = await invoke('news-gather', { action: 'check' }); var reached = g.feeds_reached || 0, total = g.feeds_total || 0; if (total > 0 && reached < total - 1) warns.push('Only ' + reached + ' of ' + total + ' story sources responded just now.'); if (g.kill_switch) warns.push('The pipeline is paused (turn it back on in Settings).'); } catch (e) { warns.push('Could not reach the story sources: ' + e.message); }
+    try { var n = await invoke('news-generate', { action: 'check' }); if (!n.has_anthropic_key) warns.push('The writing model has no API key set.'); } catch (e2) { warns.push('Writer check failed: ' + e2.message); }
+    try { var h = await invoke('news-publish', { action: 'check' }); if (!h.connected) { warns.push('Ghost is not connected, so nothing can be pushed yet.'); $('ghost-help').hidden = false; } else { $('ghost-help').hidden = true; } } catch (e3) { warns.push('Ghost check failed: ' + e3.message); }
+    var box = $('health-warn');
+    if (warns.length) { box.innerHTML = warns.map(function (w) { return esc(w); }).join('<br>'); box.hidden = false; } else { box.hidden = true; }
   }
 
   // ---- top actions ----
@@ -382,15 +374,16 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
   function tierBadge(t) { return '<span class="badge t' + t + '">T' + t + '</span>'; }
   function statusBadge(s) { return '<span class="badge st">' + esc(s.replace(/_/g, ' ')) + '</span>'; }
   function signalsHtml(sigs) {
-    var li = (sigs || []).map(function (s) { return '<li>[' + esc(s.source) + '] ' + esc(s.date || '') + ' ' + esc(s.detail || '') + (s.url ? (' <a href="' + esc(s.url) + '" target="_blank" rel="noopener">source</a>') : '') + '</li>'; }).join('');
-    return '<details class="signals"><summary>' + (sigs || []).length + ' signal' + ((sigs || []).length === 1 ? '' : 's') + '</summary><ul>' + li + '</ul></details>';
+    var arr = Array.isArray(sigs) ? sigs : [];
+    var li = arr.map(function (s) { return '<li>[' + esc(s.source) + '] ' + esc(s.date || '') + ' ' + esc(s.detail || '') + (s.url ? (' <a href="' + esc(s.url) + '" target="_blank" rel="noopener">source</a>') : '') + '</li>'; }).join('');
+    return '<details class="signals"><summary>' + arr.length + ' signal' + (arr.length === 1 ? '' : 's') + '</summary><ul>' + li + '</ul></details>';
   }
   function linksEditor(links) {
-    var rows = (links || []).map(function (l, i) { return '<div class="linkrow" data-i="' + i + '"><input class="lbl" value="' + esc(l.label || '') + '" placeholder="label"><input class="url" value="' + esc(l.url || '') + '" placeholder="https://..."><button class="openlink" type="button" title="open to verify">&#8599;</button><button class="rmlink" title="remove">&times;</button></div>'; }).join('');
+    var rows = (Array.isArray(links) ? links : []).map(function (l, i) { return '<div class="linkrow" data-i="' + i + '"><input class="lbl" value="' + esc(l.label || '') + '" placeholder="label"><input class="url" value="' + esc(l.url || '') + '" placeholder="https://..."><button class="openlink" type="button" title="open to verify">&#8599;</button><button class="rmlink" title="remove">&times;</button></div>'; }).join('');
     return '<div class="linksbox">' + rows + '<div style="margin-top:6px"><button class="btn btn-outline btn-sm addlink">+ link</button></div></div>';
   }
   async function loadLeads() {
-    var host = $('lead-list'); host.innerHTML = '<div class="empty">Loading...</div>';
+    var host = $('lead-list'); host.innerHTML = '<div class="empty">One moment...</div>';
     var f = $('lead-filter').value;
     var q = sb.from('business_leads').select('*').order('confidence_tier', { ascending: false }).order('updated_at', { ascending: false }).limit(80);
     if (f === 'review') q = q.in('status', ['brief_generated', 'in_review', 'draft_written']);
@@ -406,7 +399,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
       LEADS[L.id] = L;
       var badges = tierBadge(L.confidence_tier) + '<span class="badge ' + L.lead_type + '">' + L.lead_type + '</span>' + (L.is_transfer ? '<span class="badge transfer">transfer?</span>' : '') + (L.tbi_covered ? '<span class="badge covered">TBI covered?</span>' : '') + statusBadge(L.status);
       var ghostLink = L.ghost_post_id ? (' &middot; <a href="https://the-bold-italic.ghost.io/ghost/#/editor/post/' + esc(L.ghost_post_id) + '" target="_blank" rel="noopener">open in Ghost</a>') : '';
-      var pushLabel = ($('cfg-shadow').checked || L.lead_type === 'closing') ? 'Push to Ghost (draft)' : 'Push to Ghost';
+      var pushLabel = (!$('cfg-autopub').checked || L.lead_type === 'closing') ? 'Push to Ghost (draft)' : 'Push to Ghost';
       return '<div class="lead" data-id="' + L.id + '">' +
         '<div class="lead-head">' + badges + '<span class="lead-name">' + esc(L.business_name) + '</span></div>' +
         '<div class="lead-meta">' + esc(L.address || '') + (L.neighborhood ? (' &middot; ' + esc(L.neighborhood)) : '') + (L.abc_license_type ? (' &middot; ABC type ' + esc(L.abc_license_type)) : '') + (L.generation_note ? (' &middot; <i>' + esc(L.generation_note) + '</i>') : '') + ghostLink + '</div>' +
@@ -462,9 +455,9 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
     }; });
     host.querySelectorAll('.push').forEach(function (b) { b.onclick = async function () {
       var card = b.closest('.lead'); var id = card.dataset.id; var res = card.querySelector('[data-res]'); var L = LEADS[id];
-      var shadow = $('cfg-shadow').checked;
+      var auto = $('cfg-autopub').checked;
       var mode = 'draft';
-      if (!shadow && L.lead_type === 'opening' && L.confidence_tier >= 3) {
+      if (auto && L.lead_type === 'opening' && L.confidence_tier >= 3) {
         mode = window.confirm('Schedule this for the next 9am slot (OK), or push as a plain draft (Cancel)?') ? 'scheduled' : 'draft';
       }
       if (!window.confirm((mode === 'scheduled' ? 'Schedule' : 'Push as Ghost draft') + ': "' + (card.querySelector('.headline').value || L.business_name) + '"?')) return;
@@ -541,7 +534,7 @@ h3.zone { font-family: var(--title-font); font-size: 18px; margin: 30px 0 6px; }
   }
 
   function loadAll() { loadLeads(); loadRadar(); loadRuns(); }
-  function boot() { loadConfig().then(function () { loadAll(); loadPills(); }); }
+  function boot() { loadConfig().then(function () { loadAll(); loadHealth(); }); }
   checkSession();
 })();
 </script>
