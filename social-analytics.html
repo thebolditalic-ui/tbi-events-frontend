@@ -54,6 +54,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 #sa-updated{font-size:12px;color:#a99;}
 .sa-loading,.sa-error{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center;color:#8a8178;font-size:14px;}
 .sa-spin{display:inline-block;width:17px;height:17px;border:2.5px solid var(--border);border-top-color:var(--dark);border-radius:50%;animation:sa-rot .7s linear infinite;vertical-align:middle;margin-right:9px;}
+.sa-spin-sm{width:12px;height:12px;border-width:2px;margin-right:7px;border-top-color:var(--dark);}
+#sa-refresh[disabled]{opacity:.7;cursor:default;}
 @keyframes sa-rot{to{transform:rotate(360deg);}}
 .sa-error{color:var(--red);}
 .sa-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
@@ -281,7 +283,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     CH.forEach(function(c){ th+='<label><input type="checkbox" data-c="'+c[0]+'" checked><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</label>'; });
     t.innerHTML=th;
     t.querySelectorAll('input').forEach(function(cb){ cb.onchange=function(){ SA.on[cb.dataset.c]=cb.checked; SA.render(); };});
-    $('sa-refresh').onclick=function(){ SA.load(true); };
+    $('sa-refresh').onclick=function(){ SA.refresh(); };
     document.addEventListener('keydown',function(e){ if(e.key==='Escape') SA.backToDashboard(); });
     SA.paintControls();
     SA.load(false);
@@ -402,6 +404,35 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       $('sa-error').style.display='block';
       $('sa-error').textContent='Could not load analytics: '+((e&&e.message)||e);
     }
+  };
+
+  // Refresh: kick the live pull off in the BACKGROUND (server-side), keep the panes visible, show a small
+  // spinner on the button, and poll the cache until the new numbers land. Safe to navigate away mid-refresh.
+  SA.refresh=async function(){
+    var btn=$('sa-refresh');
+    if(btn.dataset.busy==='1') return;
+    btn.dataset.busy='1'; btn.disabled=true;
+    var orig=btn.innerHTML; btn.innerHTML='<span class="sa-spin sa-spin-sm"></span>Refreshing…';
+    var before=(SA.raw&&SA.raw.captured_at)||'';
+    function finish(msg){ btn.disabled=false; btn.dataset.busy=''; btn.innerHTML=orig; if(msg)$('sa-updated').textContent=msg; }
+    try{ var k=await sb.functions.invoke('social-analytics',{body:{action:'refresh_async'}}); if(k&&k.error) throw k.error; }
+    catch(_e){ /* the trigger returns instantly; even if it hiccups the work runs server-side, so just poll */ }
+    var tries=0, MAX=45; // ~3 minutes, then stop politely
+    (function poll(){
+      tries++;
+      sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:SA.win,refresh:false}}).then(function(r){
+        var d=r&&r.data;
+        if(d&&d.ok&&d.captured_at&&d.captured_at!==before){
+          SA.raw=d;
+          var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+          SA.render();
+          finish('Updated '+when+'.');
+          return;
+        }
+        if(tries>=MAX){ finish('Still finishing in the background; the numbers will be ready on your next visit.'); return; }
+        setTimeout(poll,4000);
+      }).catch(function(){ if(tries>=MAX) finish(); else setTimeout(poll,4000); });
+    })();
   };
 
   SA.seriesDays=function(){
