@@ -198,6 +198,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   .bn-table tr.stats-row td::before { display: none; }
 }
 
+.admin-subnav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;padding:0 24px;background:#fff;border-bottom:1px solid #e7e2d8;}
+.admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
+.admin-subnav a:hover{color:#1a1a1a;}
+.admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
+@media(max-width:768px){.admin-subnav{padding:0 12px;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
@@ -279,17 +284,19 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <a href="/admin">Dashboard</a>
         <a href="/social-analytics">Social</a>
         <a href="/events">Events</a>
-        <a href="/banners" class="active">Banners</a>
-        <a href="/links">Short Links</a>
         <a href="/news_desk">Content Farm</a>
-        <a href="/games">Games</a>
+        <a href="/banners" class="active">Site</a>
       </nav>
     </div>
-    <div class="user-info">
+    <div class="user-info"><a href="/social?sec=settings" title="Settings" aria-label="Settings" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#d8d2c4;text-decoration:none;font-size:16px;line-height:1;border:1px solid rgba(255,255,255,0.18);margin-right:10px;">⚙</a>
       <span id="user-email"></span>
       <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,0.12);color:#ccc;border:1px solid rgba(255,255,255,0.25);">Sign Out</button>
     </div>
   </header>
+<nav class="admin-subnav">
+  <a href="/banners" class="active">Banners</a>
+  <a href="/links">Short Links</a>
+</nav>
 
   <div class="page-wrap">
     <h2 class="section-title">Currently live</h2>
