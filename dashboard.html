@@ -57,6 +57,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .card.wide { grid-column: 1 / -1; }
 .qmore { font-size: 12px; color: #8a8178; padding: 8px 2px 2px; }
 .dcol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.dcol > .card:last-child { flex: 1 1 auto; }  /* last card fills its column so the two columns' bottoms align (no trailing gap) */
 .card h3 { font-family: var(--title-font); font-size: 16px; font-weight: 400; margin-bottom: 2px; }
 .card .sub { color: #8a8178; font-size: 12px; margin-bottom: 10px; line-height: 1.45; }
 .card table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -403,12 +404,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var rcards = rightCol.querySelectorAll('.card');
     if (!rcards.length) { renderQueueRows(Math.min(6, maxN)); return; }
     var rightBottom = rcards[rcards.length - 1].getBoundingClientRect().bottom; // stable; left growth doesn't move right cards
-    var MIN = 3, best = Math.min(MIN, maxN), bestDiff = Infinity;
+    var MIN = 3, best = Math.min(MIN, maxN);
     for (var k = MIN; k <= maxN; k++){
       renderQueueRows(k);
-      var lb = qcard.getBoundingClientRect().bottom, diff = Math.abs(lb - rightBottom);
-      if (diff < bestDiff) { bestDiff = diff; best = k; }   // pick the row count whose bottom is CLOSEST to the right column
-      if (lb > rightBottom + 4) break;                       // past it -> more rows only get further
+      var cb = host.getBoundingClientRect().bottom;   // measure the POSTS content (the card itself flex-fills the column)
+      if (cb <= rightBottom + 8) best = k;            // keep the largest count that still fits inside the right column's height
+      else break;                                      // overshoot -> stop; the flex-filled card absorbs the sub-row remainder
     }
     renderQueueRows(best);
   }
