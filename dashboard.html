@@ -93,6 +93,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .earn-min { background: #fbe0e3; border-radius: 3px; padding: 1px 5px; font-size: 11px; }
 .earn-prow.earn-ptot { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; font-weight: 700; }
 .earn-prow.earn-ptot span:first-child, .earn-prow.earn-ptot span:last-child { color: var(--dark); }
+.earn-tbl em { font-style: normal; color: #b9b0a3; font-size: 10px; margin-left: 4px; }
+.earn-note { font-size: 10.5px; color: #a0968a; margin-top: 6px; line-height: 1.3; }
 .soc-num { font-family: var(--title-font); font-size: 22px; font-weight: 400; color: var(--dark); line-height: 1; }
 .soc-lbl { font-size: 11px; color: #8a8178; margin-top: 3px; }
 .soc-spark { width: 100%; height: 56px; display: block; margin-top: 2px; }
@@ -349,11 +351,16 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       if (ec) {
         var money = function (x) { return '$' + (Math.round((x || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
         var erow = function (label, t, m, l, cls) { return '<tr class="' + (cls || '') + '"><td>' + label + '</td><td class="r">' + money(t) + '</td><td class="r">' + money(m) + '</td><td class="r">' + money(l) + '</td></tr>'; };
+        // Mediavine settles a day behind, so "today" is usually empty; show the freshest day that has earnings, dated.
+        var mvDaily = (mv.latest != null ? mv.latest : (mv.today || 0));
+        var mvNote = (mv.latest != null && !mv.latest_is_today && mv.latest_date)
+          ? ' <em>' + new Date(mv.latest_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</em>' : '';
         var ehtml = '<table class="earn-tbl"><thead><tr><th></th><th class="r">Today</th><th class="r">Month</th><th class="r">Last mo.</th></tr></thead><tbody>'
-          + erow('Total', (meta.today || 0) + (mv.today || 0), (meta.mtd || 0) + (mv.mtd || 0), (meta.last_month || 0) + (mv.last_month || 0), 'earn-tot')
-          + erow('Mediavine', mv.today || 0, mv.mtd || 0, mv.last_month || 0)
+          + erow('Total', (meta.today || 0) + mvDaily, (meta.mtd || 0) + (mv.mtd || 0), (meta.last_month || 0) + (mv.last_month || 0), 'earn-tot')
+          + '<tr><td>Mediavine</td><td class="r">' + money(mvDaily) + mvNote + '</td><td class="r">' + money(mv.mtd || 0) + '</td><td class="r">' + money(mv.last_month || 0) + '</td></tr>'
           + erow('Meta', meta.today || 0, meta.mtd || 0, meta.last_month || 0)
-          + '</tbody></table>';
+          + '</tbody></table>'
+          + (mvNote ? '<div class="earn-note">Mediavine settles ~a day behind; its daily figure is the last complete day.</div>' : '');
         // Subscriptions (Ghost MRR) — recurring run-rate, kept separate from ad cash so the two aren't conflated
         var subs = d.subscriptions || {};
         if (subs.mrr != null) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Subscriptions</div>'
