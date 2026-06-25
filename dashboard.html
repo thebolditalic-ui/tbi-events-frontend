@@ -91,6 +91,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .earn-prow span:last-child { color: #4a443b; font-variant-numeric: tabular-nums; }
 .earn-prow em { font-style: normal; color: #b9b0a3; font-size: 10px; margin-left: 3px; }
 .earn-min { background: #fbe0e3; border-radius: 3px; padding: 1px 5px; font-size: 11px; }
+.earn-prow.earn-ptot { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 5px; font-weight: 700; }
+.earn-prow.earn-ptot span:first-child, .earn-prow.earn-ptot span:last-child { color: var(--dark); }
 .soc-num { font-family: var(--title-font); font-size: 22px; font-weight: 400; color: var(--dark); line-height: 1; }
 .soc-lbl { font-size: 11px; color: #8a8178; margin-top: 3px; }
 .soc-spark { width: 100%; height: 56px; display: block; margin-top: 2px; }
@@ -369,7 +371,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         var rn = (subs.renewals || []).filter(function (x) { return x.amount > 0; });
         if (rn.length) { var g0 = rn[0]; pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
         pays = pays.filter(function (p) { return !isNaN(p.date); }).sort(function (a, b) { return a.date - b.date; });
-        if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var ds = p.monthly ? p.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ((p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var cnt = p.count ? ' <em>' + p.count + ' renewal' + (p.count === 1 ? '' : 's') + '</em>' : ''; var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + ' · ' + ds + cnt + '</span></div>'; }).join('') + '</div>';
+        if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var tail = p.monthly ? '' : (' · ' + (p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + tail + '</span></div>'; }).join('') + '<div class="earn-prow earn-ptot"><span>Total</span><span>' + money(pays.reduce(function (a, p) { return a + (p.amount || 0); }, 0)) + '</span></div></div>';
         ec.innerHTML = ehtml;
       }
     } catch (e) {
