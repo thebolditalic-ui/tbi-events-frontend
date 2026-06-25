@@ -356,7 +356,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         var subs = d.subscriptions || {};
         if (subs.mrr != null) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Subscriptions</div>'
           + '<div class="earn-prow"><span>Recurring (MRR)</span><span>' + money(subs.mrr) + '/mo</span></div>'
-          + '<div class="earn-prow"><span>Paid members</span><span>' + (subs.paid || 0) + (subs.canceling ? ' <em>' + subs.canceling + ' canceling</em>' : '') + '</span></div></div>';
+          + '<div class="earn-prow"><span>Paid members</span><span>' + (subs.paid || 0) + '</span></div></div>';
         // upcoming payouts: Mediavine (from API) + Meta (computed; Meta pays ~the 21st monthly for the prior month, $100 min)
         function nextMeta(m) { if (!m) return null; var n = new Date(), y = n.getFullYear(), mo = n.getMonth(), day = n.getDate();
           if (day <= 21 && (m.last_month || 0) > 0) return { date: new Date(y, mo, 21), amount: m.last_month, label: new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long' }), partial: false };
@@ -367,12 +367,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         // Ghost subscriptions, by month: next month's payout + a heads-up for the biggest annual-renewal months ahead
         var mk2d = function (k) { var p = String(k).split('-'); return new Date(+p[0], +p[1] - 1, 1); };
         var rn = (subs.renewals || []).filter(function (x) { return x.amount > 0; });
-        if (rn.length) {
-          var g0 = rn[0];
-          pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 });
-          rn.slice(1).filter(function (x) { return x.annual_count > 0; }).sort(function (a, b) { return b.amount - a.amount; }).slice(0, 3)
-            .forEach(function (s) { pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(s.month), amount: s.amount, count: s.count, min: 0 }); });
-        }
+        if (rn.length) { var g0 = rn[0]; pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
         pays = pays.filter(function (p) { return !isNaN(p.date); }).sort(function (a, b) { return a.date - b.date; });
         if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var ds = p.monthly ? p.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : ((p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var cnt = p.count ? ' <em>' + p.count + ' renewal' + (p.count === 1 ? '' : 's') + '</em>' : ''; var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + ' · ' + ds + cnt + '</span></div>'; }).join('') + '</div>';
         ec.innerHTML = ehtml;
