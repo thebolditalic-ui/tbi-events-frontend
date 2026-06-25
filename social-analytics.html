@@ -59,6 +59,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 @keyframes sa-rot{to{transform:rotate(360deg);}}
 .sa-error{color:var(--red);}
 .sa-tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px;}
+.sa-earn{background:#fff;border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:12px;padding:13px 18px;margin-bottom:14px;display:flex;align-items:center;gap:26px;flex-wrap:wrap;}
+.sa-earn .hd{font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:#8a8178;line-height:1.25;}
+.sa-earn .ei .v{font-size:19px;font-weight:700;color:var(--dark);font-variant-numeric:tabular-nums;}
+.sa-earn .ei .l{font-size:11px;color:#a0968a;}
+.sa-earn .note{font-size:11px;color:#a0968a;margin-left:auto;max-width:240px;text-align:right;}
+@media(max-width:768px){.sa-earn{gap:16px}.sa-earn .note{margin-left:0;text-align:left;max-width:100%}}
 .sa-charttype{display:flex;gap:4px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:3px;}
 .sa-charttype button{border:none;background:transparent;color:#6b6258;font-size:12px;font-weight:600;padding:6px 11px;border-radius:6px;cursor:pointer;}
 .sa-charttype button.on{background:var(--dark);color:#fff;}
@@ -220,6 +226,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <div id="sa-error" class="sa-error" style="display:none"></div>
 
     <div id="sa-body" style="display:none">
+      <div id="sa-earn" class="sa-earn" style="display:none"></div>
       <div class="sa-tiles" id="sa-tiles"></div>
       <div class="sa-card">
         <div class="sa-chart-head">
@@ -448,7 +455,21 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     return g;
   };
 
-  SA.render=function(){ if(!SA.raw) return; SA.renderTiles(); SA.renderChart(); SA.renderTable(); };
+  SA.render=function(){ if(!SA.raw) return; SA.renderEarn(); SA.renderTiles(); SA.renderChart(); SA.renderTable(); };
+
+  SA.renderEarn=function(){
+    var e=(SA.raw&&SA.raw.earnings)||null, el=$('sa-earn');
+    if(!el) return;
+    if(!e || !((e.d90||0)>0 || (e.today||0)>0)){ el.style.display='none'; return; }
+    function d(n){ return '$'+(Math.round((n||0)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    el.style.display='flex';
+    el.innerHTML='<div class="hd">Est. earnings</div>'
+      +'<div class="ei"><div class="v">'+d(e.today)+'</div><div class="l">Today</div></div>'
+      +'<div class="ei"><div class="v">'+d(e.d7)+'</div><div class="l">7 days</div></div>'
+      +'<div class="ei"><div class="v">'+d(e.d30)+'</div><div class="l">30 days</div></div>'
+      +'<div class="ei"><div class="v">'+d(e.d90)+'</div><div class="l">90 days</div></div>'
+      +'<div class="note">Meta Content Monetization, approximate (excludes bonuses, before final adjustments).</div>';
+  };
 
   SA.renderTiles=function(){
     var g=SA.grand();
