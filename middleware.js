@@ -111,6 +111,27 @@ function getClientIp(request) {
   return request.headers.get('x-real-ip') || '';
 }
 
+// Registrable domain (last two labels, www-stripped). Good enough for the .com
+// destinations we use; treats donate.mazloweb.com and www.mazloweb.com as one site.
+function regDomain(host) {
+  if (!host) return '';
+  const parts = host.replace(/^www\./, '').toLowerCase().split('.');
+  return parts.slice(-2).join('.');
+}
+// True when the click's referer is the SAME site as the destination — i.e. the
+// short link was hit from the very page it points to (donation widgets, Partiful
+// link scanners, etc. re-pinging it). Those aren't real clicks, so we skip
+// logging them. The redirect still happens regardless.
+function isSelfReferer(referer, destination) {
+  try {
+    const r = regDomain(new URL(referer).hostname);
+    const d = regDomain(new URL(destination).hostname);
+    return !!r && r === d;
+  } catch (_) {
+    return false;
+  }
+}
+
 
 // ============================================================
 // Short-link surface (tbi.fyi)
@@ -177,7 +198,8 @@ async function handleShortLink(request, url) {
   // we still redirect because of the catch — the user always wins over
   // analytics.
   const ua = request.headers.get('user-agent') || '';
-  if (!isBotUA(ua) && !isPrefetchRequest(request)) {
+  const referer = request.headers.get('referer') || '';
+  if (!isBotUA(ua) && !isPrefetchRequest(request) && !isSelfReferer(referer, destination)) {
     try {
       await fetch(SUPABASE_URL + '/rest/v1/short_link_clicks', {
         method: 'POST',
@@ -191,7 +213,7 @@ async function handleShortLink(request, url) {
           slug: slug,
           destination: destination,
           user_agent: ua,
-          referer: request.headers.get('referer') || '',
+          referer: referer,
           ip_hash: hashString(getClientIp(request)),
         }),
       });
