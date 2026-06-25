@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/settings",
+      "destination": "/settings.html"
+    },
+    {
       "source": "/",
       "has": [
         {

@@ -265,7 +265,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:optional;}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
-@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
+@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:optional;}
 .admin-header, .page-header .header-top{ border-bottom:1px solid rgba(255,255,255,.9); }
 .admin-header h1, .page-header h1, .header-top h1{ font-family:'EdsMarket', var(--title-font), Georgia, serif; font-weight:400; }
 .admin-header h1 .adm, .page-header h1 .adm, .header-top h1 .adm{
@@ -348,7 +348,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         <a href="/banners">Site</a>
       </nav>
     </div>
-    <div class="user-info"><a href="/social?sec=settings" title="Settings" aria-label="Settings" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#d8d2c4;text-decoration:none;font-size:16px;line-height:1;border:1px solid rgba(255,255,255,0.18);margin-right:10px;">⚙</a>
+    <div class="user-info"><a href="/settings" title="Settings" aria-label="Settings" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#d8d2c4;text-decoration:none;font-size:16px;line-height:1;border:1px solid rgba(255,255,255,0.18);margin-right:10px;">⚙</a>
       <span id="user-email"></span>
       <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,.12);color:#ccc;border:1px solid rgba(255,255,255,.25)">Sign Out</button>
     </div>
@@ -365,7 +365,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
   <a href="/social-analytics">Analytics</a>
   <a href="/social" data-sec="post">Post</a>
   <a href="/social?sec=schedule" data-sec="schedule">Queue &amp; Schedule</a>
-  <a href="/social?sec=settings" data-sec="settings" class="subnav-settings">Settings</a>
+  <a href="/settings" data-sec="settings" class="subnav-settings">Go to settings</a>
 </nav>
 
   <div class="wrap">
@@ -701,7 +701,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
     <section class="panel" id="panel-newsletter">
       <h2 class="section">Substack Newsletter</h2>
       <p class="sub">Compose a full Substack post and hand it to Substack to publish or schedule. Email is <b>off by default</b> (web/app only) and only sends when you turn it on per send. For a test email or audience segments, use <b>Open in Substack</b>.</p>
-      <div id="nl-disconnected" class="sub" style="display:none;color:var(--red)">Substack isn't connected. Add your cookie in <a href="/social?sec=settings">Settings</a> first.</div>
+      <div id="nl-disconnected" class="sub" style="display:none;color:var(--red)">Substack isn't connected. Add your cookie in <a href="/settings">Settings</a> first.</div>
 
       <div class="card" style="border:1px solid var(--border);border-radius:10px;padding:16px;background:#fff;max-width:760px">
         <input id="nl-title" placeholder="Post title" style="width:100%;font-size:22px;font-family:var(--title-font,Georgia,serif);border:none;border-bottom:1px solid var(--border);padding:8px 2px;margin-bottom:8px;background:transparent">

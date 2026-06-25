@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="preload" href="https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2" as="font" type="font/woff2" crossorigin>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>TBI Admin — Settings</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{ --cream:#fff6e6; --dark:#1E1B1B; --gold:#FFD682; --blue:#5b7bd5; --red:#e74c3c; --green:#27ae60; --border:#e0d8cc; --bg-alt:#faf5eb; --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; --title-font:'Georgia',serif; }
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--font);background:var(--cream);color:var(--dark);min-height:100vh}
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:40px;width:100%;max-width:380px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.login-box h1{font-family:var(--title-font);font-size:26px;margin:0 0 6px}
+.login-box p{font-size:14px;margin:0 0 20px;color:#8a8178}
+.login-box label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;margin:12px 0 4px}
+.login-box input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;background:var(--bg-alt)}
+.login-box input:focus{outline:none;border-color:var(--blue)}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;min-height:16px}
+.btn{display:inline-block;border:none;border-radius:6px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:#fff;background:var(--dark)}
+.btn:hover{opacity:.85}
+.btn-primary{background:var(--dark);color:#fff}
+.btn-gold{background:var(--gold);color:var(--dark)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--dark)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.admin-header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:relative}
+.admin-header-left{display:flex;align-items:center;gap:20px}
+.admin-header h1{font-family:var(--title-font);font-size:20px;margin:0;font-weight:400}
+.admin-nav{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.admin-nav a{color:rgba(255,255,255,.62);text-decoration:none;font-size:13px;font-weight:500;padding:7px 14px;border-radius:8px;border:1px solid transparent;transition:all .15s}
+.admin-nav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.admin-nav a.active{color:var(--gold);background:rgba(255,214,130,.14);border-color:rgba(255,214,130,.34)}
+.user-info{display:flex;align-items:center;gap:12px;font-size:13px;color:#ccc}
+.admin-subnav{display:flex;gap:2px;flex-wrap:wrap;align-items:center;padding:0 24px;background:#fff;border-bottom:1px solid #e7e2d8;}
+.admin-subnav a{padding:11px 15px;font-size:13px;font-weight:500;color:#777;text-decoration:none;border-bottom:2px solid transparent;transition:all .15s;}
+.admin-subnav a:hover{color:#1a1a1a;}
+.admin-subnav a.active{color:#1a1a1a;font-weight:600;border-bottom-color:#1a1a1a;}
+#settings-app{display:none}
+.wrap{max-width:880px;margin:0 auto;padding:22px 24px 60px}
+h2.section{font-family:var(--title-font);font-weight:400;font-size:24px;margin:0 0 4px}
+p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70ch}
+.run-status{font-size:13px;color:#8a8178}
+.set-section-h{font-family:var(--title-font);font-size:18px;font-weight:400;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.set-group{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.set-group h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8a8178;margin:0;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg-alt)}
+.set-body{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fld{display:flex;flex-direction:column;gap:5px}
+.fld.full{grid-column:1 / -1}
+.fld label{font-size:12px;font-weight:600;color:#444}
+.fld .hint,.hint{font-size:11px;color:#8a8178;line-height:1.45}
+.fld input[type=text],.fld input[type=number],.fld textarea,.fld select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg-alt);font-family:inherit}
+.fld textarea{min-height:120px;resize:vertical;line-height:1.4}
+.fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--blue)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.statuspill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px}
+.statuspill.ok{background:rgba(39,174,96,.12);color:var(--green)}
+.statuspill.no{background:rgba(231,76,60,.12);color:var(--red)}
+.savebar{position:sticky;bottom:0;background:var(--cream);padding:14px 0;border-top:1px solid var(--border);display:flex;gap:12px;align-items:center}
+/* channel connections with lifetime estimates */
+.chan-row{display:flex;align-items:center;gap:12px;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f0ebe1}
+.chan-row:last-child{border-bottom:none}
+.chan-name{font-weight:600;min-width:88px}
+.chan-life{flex:1;font-size:11.5px;color:#8a8178}
+/* collapsible sections */
+details.set-coll{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+details.set-coll>summary{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8a8178;padding:13px 16px;cursor:pointer;list-style:none;background:var(--bg-alt)}
+details.set-coll>summary::-webkit-details-marker{display:none}
+details.set-coll>summary:after{content:'▸';float:right;color:#b9b0a3;font-size:12px}
+details.set-coll[open]>summary{border-bottom:1px solid var(--border)}
+details.set-coll[open]>summary:after{content:'▾'}
+.set-coll-body{padding:14px 16px 2px}
+.set-coll-body .set-group:last-child{margin-bottom:14px}
+@font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:optional;}
+.admin-header h1{font-family:'EdsMarket',var(--title-font),Georgia,serif;font-weight:400}
+.admin-header h1 .adm{font-family:'Helvetica Neue',Arial,sans-serif;font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.55);margin-left:8px;vertical-align:middle}
+#user-email{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:rgba(255,255,255,.6);white-space:nowrap}
+@media(min-width:769px){.admin-header{min-height:60px;padding:8px 24px}.admin-header h1{font-size:22px}.admin-nav{left:50%;top:50%;transform:translate(-50%,-50%)}.admin-subnav{justify-content:center}}
+@media(max-width:768px){
+  .admin-header{position:static !important;flex-direction:column !important;align-items:stretch !important;gap:10px !important;padding:12px 14px !important}
+  .admin-header-left{flex-direction:column !important;align-items:stretch !important;gap:10px !important}
+  .admin-header h1{font-size:20px !important;text-align:center}
+  .admin-nav{position:static !important;transform:none !important;flex-wrap:wrap !important;justify-content:center !important;gap:6px !important;width:100% !important}
+  .user-info{width:100% !important;justify-content:space-between !important}
+  .admin-subnav{justify-content:center !important;flex-wrap:wrap}
+  .set-body{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-screen">
+  <div class="login-box">
+    <h1>TBI Settings</h1>
+    <p>Sign in to manage settings.</p>
+    <label for="login-email">Email</label>
+    <input type="email" id="login-email" autocomplete="email">
+    <label for="login-pass">Password</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn btn-primary" id="login-btn" style="width:100%;margin-top:16px">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="settings-app">
+  <header class="admin-header">
+    <div class="admin-header-left">
+      <h1><a href="/admin" style="color:inherit;text-decoration:none" title="Back to the dashboard">The Bold Italic <span class="adm">ADMIN</span></a></h1>
+      <nav class="admin-nav">
+        <a href="/admin">Dashboard</a>
+        <a href="/social-analytics">Social</a>
+        <a href="/events">Events</a>
+        <a href="/news_desk">Content Farm</a>
+        <a href="/banners" class="active">Site</a>
+      </nav>
+    </div>
+    <div class="user-info">
+      <a href="/settings" title="Settings" aria-label="Settings" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;color:#d8d2c4;text-decoration:none;font-size:16px;line-height:1;border:1px solid rgba(255,255,255,0.18);margin-right:10px;">⚙</a>
+      <span id="user-email"></span>
+      <button class="btn btn-sm" id="logout-btn" style="background:rgba(255,255,255,.12);color:#ccc;border:1px solid rgba(255,255,255,.25)">Sign Out</button>
+    </div>
+  </header>
+  <nav class="admin-subnav">
+    <a href="/banners">Banners</a>
+    <a href="/links">Short Links</a>
+    <a href="/settings" class="active">Settings</a>
+  </nav>
+
+  <div class="wrap">
+    <h2 class="section">Settings</h2>
+    <p class="sub">Connections, spend, and the controls behind each area. More sections will land here over time; for now it's Social.</p>
+
+    <div class="set-section-h">Social</div>
+
+    <!-- Channel connections + renewal estimates (always visible) -->
+    <div class="set-group">
+      <h3>Channel connections</h3>
+      <div class="set-body" style="display:block" id="chan-conns"><div class="hint">Checking…</div></div>
+      <div class="set-body" style="display:block;padding-top:0"><div class="hint">Green means that channel's secret is set and the account is reachable. The "renews" column is when you'd need to paste a fresh token; most never expire.</div><div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="chan-recheck">Re-check</button></div></div>
+    </div>
+
+    <!-- Connections (Anthropic / Ghost) -->
+    <div class="set-group">
+      <h3>Connections</h3>
+      <div class="set-body" style="display:block" id="conn-status">
+        <div class="toggle-row" style="padding:5px 0"><span>Anthropic API key</span><span class="statuspill no" id="st-anthropic">checking…</span></div>
+        <div class="toggle-row" style="padding:5px 0"><span>Ghost content API</span><span class="statuspill no" id="st-ghost">checking…</span></div>
+        <div class="hint" style="margin-top:8px">Secrets live in Supabase (Edge Function secrets), never in this page. This only reports whether they're present. The engine only runs for a signed-in admin.</div>
+      </div>
+    </div>
+
+    <!-- Spend -->
+    <div class="set-group">
+      <h3>Spend (estimated)</h3>
+      <div class="set-body" style="display:block">
+        <div class="toggle-row" style="padding:5px 0"><span>This month</span><span class="statuspill ok" id="spend-month">—</span></div>
+        <div class="toggle-row" style="padding:5px 0"><span>All time</span><span class="statuspill ok" id="spend-all">—</span></div>
+        <div class="hint" style="margin-top:8px">Estimated from tokens logged per run — Sonnet 4.6 is $3/$15 per million in/out, Opus 4.8 $5/$25. The cached voice prompt makes repeat runs cheaper. Your real bill is in the Anthropic console.</div>
+      </div>
+    </div>
+
+    <!-- Reconnect services (collapsed) -->
+    <details class="set-coll">
+      <summary>Reconnect services</summary>
+      <div class="set-coll-body">
+        <div class="set-group">
+          <h3>Reconnect Facebook</h3>
+          <div class="set-body" style="display:block">
+            <div class="hint">If Facebook posting or commenting stops working (token expired), paste a fresh Facebook <b>user</b> token from the Graph API Explorer here. The system extends it to a permanent Page token automatically — no expiry, nothing to paste into Supabase.</div>
+            <input type="text" id="fb-recon-token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Paste a Facebook user access token" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gold btn-sm" id="fb-recon-btn">Reconnect Facebook</button><span class="run-status" id="fb-recon-status"></span></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Reconnect Threads</h3>
+          <div class="set-body" style="display:block">
+            <div class="hint">To pull Threads views, likes and replies (account insights), paste a fresh Threads <b>user</b> token minted with the <b>threads_manage_insights</b> permission. Not the app id|secret — a long single-string user token. The system extends it to a long-lived token automatically.</div>
+            <input type="text" id="th-recon-token" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Paste a Threads user access token" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gold btn-sm" id="th-recon-btn">Reconnect Threads</button><span class="run-status" id="th-recon-status"></span></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Substack (Notes)</h3>
+          <div class="set-body" style="display:block">
+            <div class="hint">Connect Substack to schedule <b>Notes</b> (short updates) alongside your other channels. Substack has no official API, so this uses your logged-in session cookie. In a browser signed in to Substack, open DevTools → Application → Cookies → substack.com, copy the <b>substack.sid</b> value, and paste it below. It lasts months as long as you stay signed in.</div>
+            <input type="text" id="sub-sid" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Paste your substack.sid cookie value" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box;margin-top:10px">
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <input type="text" id="sub-handle" autocomplete="off" spellcheck="false" data-1p-ignore data-lpignore="true" placeholder="Publication handle (optional, e.g. thebolditalic)" style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);box-sizing:border-box">
+              <select id="sub-cookiename" title="Cookie name (default substack.sid; try connect.sid if that fails)" style="border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"><option value="substack.sid">substack.sid</option><option value="connect.sid">connect.sid</option></select>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn btn-gold btn-sm" id="sub-conn-btn">Connect Substack</button><span class="run-status" id="sub-conn-status">checking…</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Engine & automation (collapsed) -->
+    <details class="set-coll">
+      <summary>Engine &amp; automation</summary>
+      <div class="set-coll-body">
+        <div class="set-group">
+          <h3>Engine</h3>
+          <div class="set-body">
+            <div class="fld"><label>Model</label><select data-cfg="model"><option value="claude-sonnet-4-6">Claude Sonnet 4.6 (default)</option><option value="claude-opus-4-8">Claude Opus 4.8</option></select></div>
+            <div class="fld"></div>
+            <div class="fld full"><label>Voice prompt (system)</label><textarea data-cfg="voice_prompt"></textarea><div class="hint">Stable across calls so it stays prompt-cached. Tune the voice here, not in code.</div></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Automation switches</h3>
+          <div class="set-body">
+            <div class="fld"><div class="toggle-row"><label>Story crawl enabled</label><input type="checkbox" data-rt="crawl_enabled"></div><div class="hint">Master switch / cold-start.</div></div>
+            <div class="fld"><div class="toggle-row"><label>Instagram track enabled</label><input type="checkbox" data-rt="ig_enabled"></div></div>
+            <div class="fld"><div class="toggle-row"><label>Jokes &amp; questions enabled</label><input type="checkbox" data-rt="jokes_enabled"></div></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Story crawl</h3>
+          <div class="set-body">
+            <div class="fld"><label>Window (days)</label><input type="number" data-cfg="crawl_window_days" min="1" max="60"></div>
+            <div class="fld"><label>Stories per day</label><input type="number" data-cfg="crawl_stories_per_day" min="1" max="50"></div>
+            <div class="fld"><label>Suggestions per story</label><input type="number" data-cfg="suggestions_per_story" min="1" max="30"></div>
+            <div class="fld"><label>Suggestion TTL (days)</label><input type="number" data-cfg="suggestion_ttl_days" min="1" max="120"></div>
+            <div class="fld"><label>Evergreen cooldown (days)</label><input type="number" data-cfg="evergreen_cooldown_days" min="1" max="365"></div>
+            <div class="fld"><label>Evergreen Ghost tag</label><input type="text" data-cfg="evergreen_tag"></div>
+            <div class="fld"><div class="toggle-row"><label>Scheduling resets window</label><input type="checkbox" data-cfg="schedule_resets_window"></div></div>
+            <div class="fld"><div class="toggle-row"><label>Editing also resets window</label><input type="checkbox" data-cfg="edit_also_resets_window"></div></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Instagram</h3>
+          <div class="set-body">
+            <div class="fld"><label>Window (days)</label><input type="number" data-cfg="ig_window_days" min="1" max="60"></div>
+            <div class="fld"><label>Cards per day</label><input type="number" data-cfg="ig_cards_per_day" min="1" max="20"></div>
+            <div class="fld"><label>Alt headlines</label><input type="number" data-cfg="ig_alt_headlines" min="0" max="30"></div>
+            <div class="fld"><label>Caption options</label><input type="number" data-cfg="ig_caption_options" min="1" max="30"></div>
+            <div class="fld"><label>Image purge day of month</label><input type="number" data-cfg="ig_purge_day_of_month" min="1" max="28"></div>
+          </div>
+        </div>
+        <div class="set-group">
+          <h3>Jokes &amp; questions</h3>
+          <div class="set-body">
+            <div class="fld"><label>Cadence (days)</label><input type="number" data-cfg="jokes_cadence_days" min="1" max="60"></div>
+            <div class="fld"><label>Per batch</label><input type="number" data-cfg="jokes_per_batch" min="1" max="40"></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <div class="savebar">
+      <button class="btn btn-gold" id="save-settings">Save settings</button>
+      <span class="run-status" id="save-status"></span>
+      <span class="hint" style="margin-left:auto">Saves the Engine &amp; automation fields.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL='https://scawgrjcjgcmvsimvash.supabase.co';
+const SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+const $=s=>document.querySelector(s);
+const money=n=>'~$'+(Number(n)||0).toFixed(2);
+
+/* ---- auth gate ---- */
+const loginScreen=$('#login-screen'), app=$('#settings-app');
+async function gate(){ const {data}=await sb.auth.getSession(); if(data.session){ showApp(data.session); } else { loginScreen.style.display='flex'; app.style.display='none'; } }
+function showApp(session){
+  loginScreen.style.display='none'; app.style.display='block';
+  $('#user-email').textContent=session.user.email||'';
+  loadSettings(); checkConnections(); checkChannels(); loadSpend();
+}
+$('#login-btn').onclick=async()=>{
+  $('#login-error').textContent='';
+  const email=$('#login-email').value.trim(), pass=$('#login-pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){ $('#login-error').textContent=error.message; return; }
+  showApp(data.session);
+};
+$('#login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')$('#login-btn').click();});
+$('#logout-btn').onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
+
+/* ---- engine/automation config ---- */
+let CFG=null, RT=null;
+async function loadSettings(){
+  const [{data:cfg},{data:rt}]=await Promise.all([
+    sb.from('social_config').select('*').eq('id',1).single(),
+    sb.from('social_runtime').select('*').eq('id',1).single()
+  ]);
+  CFG=cfg||{}; RT=rt||{};
+  document.querySelectorAll('[data-cfg]').forEach(el=>{ const k=el.dataset.cfg, v=CFG[k]; if(el.type==='checkbox') el.checked=!!v; else if(v!=null) el.value=v; });
+  document.querySelectorAll('[data-rt]').forEach(el=>{ const k=el.dataset.rt; if(el.type==='checkbox') el.checked=!!RT[k]; });
+}
+$('#save-settings').onclick=async()=>{
+  $('#save-status').textContent='Saving…';
+  const cfg={id:1,updated_at:new Date().toISOString()};
+  document.querySelectorAll('[data-cfg]').forEach(el=>{ const k=el.dataset.cfg; if(el.type==='checkbox') cfg[k]=el.checked; else if(el.type==='number') cfg[k]=el.value===''?null:Number(el.value); else cfg[k]=el.value; });
+  const rt={id:1};
+  document.querySelectorAll('[data-rt]').forEach(el=>{ rt[el.dataset.rt]=el.checked; });
+  if(rt.crawl_enabled && !RT.crawl_enabled) rt.crawl_window_expires_at=new Date(Date.now()+(cfg.crawl_window_days||4)*864e5).toISOString();
+  if(rt.ig_enabled && !RT.ig_enabled) rt.ig_window_expires_at=new Date(Date.now()+(cfg.ig_window_days||4)*864e5).toISOString();
+  const e1=(await sb.from('social_config').update(cfg).eq('id',1)).error;
+  const e2=(await sb.from('social_runtime').update(rt).eq('id',1)).error;
+  if(e1||e2){ $('#save-status').textContent='Error: '+((e1||e2).message); return; }
+  RT={...RT,...rt}; CFG={...CFG,...cfg};
+  $('#save-status').textContent='Saved ✓'; setTimeout(()=>$('#save-status').textContent='',2000);
+};
+
+/* ---- connection status (Anthropic / Ghost) ---- */
+async function checkConnections(){
+  try{ const {data,error}=await sb.functions.invoke('generate',{body:{check:true}}); if(error) throw error; setPill('#st-anthropic',data.anthropic); setPill('#st-ghost',data.ghost); }
+  catch(e){ setPill('#st-anthropic',false,'unavailable'); setPill('#st-ghost',false,'unavailable'); }
+}
+function setPill(sel,ok,noText){ const el=$(sel); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':(noText||'not set'); }
+
+/* ---- channel connections + renewal estimates ---- */
+async function checkChannels(){
+  var host=$('#chan-conns'); if(!host) return;
+  var defs=[
+    ['facebook','Facebook','Permanent — never expires'],
+    ['instagram','Instagram','Tied to Facebook — never expires'],
+    ['threads','Threads','Auto-renews weekly (60-day token)'],
+    ['bluesky','Bluesky','Permanent (app password)'],
+    ['x','X','Long-lived (via Buffer)'],
+    ['substack','Substack','~Months — re-paste if you fully sign out']
+  ];
+  host.innerHTML=defs.map(function(d){return '<div class="chan-row"><span class="chan-name">'+d[1]+'</span><span class="chan-life">'+d[2]+'</span><span class="statuspill no" id="cc-'+d[0]+'">checking…</span></div>';}).join('');
+  function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
+  async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
+  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
+  try{ var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}}); setc('x', !!(rx.data&&rx.data.connected)); }catch(e){ setc('x',false); }
+}
+$('#chan-recheck').onclick=checkChannels;
+
+/* ---- spend ---- */
+async function loadSpend(){
+  const {data,error}=await sb.from('social_usage').select('est_cost_usd,created_at');
+  if(error||!data){ return; }
+  const m0=new Date(); m0.setDate(1); m0.setHours(0,0,0,0);
+  let month=0, all=0;
+  data.forEach(r=>{ const c=Number(r.est_cost_usd||0); all+=c; if(new Date(r.created_at)>=m0) month+=c; });
+  if($('#spend-month')) $('#spend-month').textContent=money(month);
+  if($('#spend-all')) $('#spend-all').textContent=money(all);
+}
+
+/* ---- Reconnect Facebook ---- */
+(function(){
+  var btn=$('#fb-recon-btn'); if(!btn) return;
+  btn.onclick=async function(){
+    var st=$('#fb-recon-status'), inp=$('#fb-recon-token'); var tok=((inp&&inp.value)||'').trim();
+    if(!tok){ if(st){ st.style.color='var(--red)'; st.textContent='Paste a user token first.'; } return; }
+    btn.disabled=true; if(st){ st.style.color='#8a8178'; st.textContent='Connecting…'; }
+    try{
+      var r=await sb.functions.invoke('facebook',{body:{action:'connect',user_token:tok}}); if(r.error) throw r.error; var d=r.data||{};
+      if(d&&d.ok){ if(inp) inp.value=''; var ok=(d.never_expires&&d.can_comment); var bits=['Connected as '+(d.page||'the Page'), d.never_expires?'permanent token ✓':'token still expires (re-check)', d.can_comment?'comments on ✓':'missing pages_manage_engagement']; if(st){ st.style.color=ok?'var(--green)':'var(--red)'; st.textContent=bits.join(' · '); } }
+      else { if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((d&&d.error)||'failed'); } }
+    }catch(e){ if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((e&&e.message)||e); } }
+    btn.disabled=false;
+  };
+})();
+/* ---- Reconnect Threads ---- */
+(function(){
+  var btn=$('#th-recon-btn'); if(!btn) return;
+  btn.onclick=async function(){
+    var st=$('#th-recon-status'), inp=$('#th-recon-token'); var tok=((inp&&inp.value)||'').trim();
+    if(!tok){ if(st){ st.style.color='var(--red)'; st.textContent='Paste a Threads user token first.'; } return; }
+    btn.disabled=true; if(st){ st.style.color='#8a8178'; st.textContent='Connecting…'; }
+    try{
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'threads_connect',user_token:tok}}); if(r.error) throw r.error; var d=r.data||{};
+      if(d&&d.ok){ if(inp) inp.value=''; var ok=!!d.can_insights; var bits=['Connected as @'+(d.username||'threads'), d.can_insights?'insights on ✓':('insights still blocked'+(d.insights_error?(': '+d.insights_error):''))]; if(st){ st.style.color=ok?'var(--green)':'var(--red)'; st.textContent=bits.join(' · '); } }
+      else { if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((d&&d.error)||'failed'); } }
+    }catch(e){ if(st){ st.style.color='var(--red)'; st.textContent='Error: '+((e&&e.message)||e); } }
+    btn.disabled=false;
+  };
+})();
+/* ---- Substack connect ---- */
+(function(){
+  var btn=$('#sub-conn-btn'); if(!btn) return; var st=$('#sub-conn-status');
+  function show(connected,handle,err){ if(!st) return; if(err){ st.style.color='var(--red)'; st.textContent=err; return; } if(connected){ st.style.color='var(--green)'; st.textContent='Connected'+(handle?(' as @'+handle):''); } else { st.style.color='#8a8178'; st.textContent='Not connected'; } }
+  (async function(){ try{ var r=await sb.functions.invoke('substack',{body:{action:'check'}}); if(r&&r.error) throw r.error; var d=(r&&r.data)||{}; show(!!d.connected, d.handle); } catch(e){ show(false,'',''); } })();
+  btn.onclick=async function(){
+    var inp=$('#sub-sid'), h=$('#sub-handle'), cn=$('#sub-cookiename'); var sid=((inp&&inp.value)||'').trim();
+    if(!sid){ show(false,'','Paste your substack.sid cookie value first.'); return; }
+    btn.disabled=true; if(st){ st.style.color='#8a8178'; st.textContent='Connecting…'; }
+    try{ var r=await sb.functions.invoke('substack',{body:{action:'connect',sid:sid,handle:((h&&h.value)||'').trim(),cookie_name:((cn&&cn.value)||'substack.sid')}}); if(r.error) throw r.error; var d=r.data||{}; if(d&&d.ok&&d.connected){ if(inp) inp.value=''; show(true,d.handle); } else { show(false,'','Error: '+((d&&d.error)||'failed')); } }
+    catch(e){ show(false,'','Error: '+((e&&e.message)||e)); }
+    btn.disabled=false;
+  };
+})();
+
+gate();
+</script>
+</body>
+</html>
