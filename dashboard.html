@@ -78,6 +78,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .bars-labels { display: flex; gap: 3px; font-size: 9px; color: #8a8178; }
 .bars-labels span { flex: 1; text-align: center; }
 .soc-stats { display: flex; gap: 20px; margin: 4px 0 8px; }
+.earn-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+.earn-tbl th { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #a0968a; font-weight: 700; padding: 2px 0; border-bottom: 1px solid var(--border); }
+.earn-tbl td { padding: 6px 0; border-bottom: 1px solid #f0ebe1; }
+.earn-tbl td.r, .earn-tbl th.r { text-align: right; font-variant-numeric: tabular-nums; }
+.earn-tbl tr:last-child td { border-bottom: none; }
+.earn-tbl tr.earn-tot td { font-weight: 700; color: var(--dark); border-bottom: 2px solid var(--border); }
+.earn-payout { margin-top: 8px; font-size: 12px; color: #8a8178; }
+.earn-payout span { color: #a0968a; }
 .soc-num { font-family: var(--title-font); font-size: 22px; font-weight: 400; color: var(--dark); line-height: 1; }
 .soc-lbl { font-size: 11px; color: #8a8178; margin-top: 3px; }
 .soc-spark { width: 100%; height: 56px; display: block; margin-top: 2px; }
@@ -208,10 +216,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
       <div class="dcol">
       <div class="card">
+        <h3>Earnings</h3>
+        <div class="sub">Site ads (Mediavine) and social (Meta). <a href="/social-analytics">Details →</a></div>
+        <div id="earn-card"><div class="emptymsg">Loading…</div></div>
+      </div>
+      <div class="card">
         <h3>Social this week</h3>
         <div class="sub">All channels, last 7 days. <a href="/social-analytics">Full analytics →</a></div>
         <div id="soc-snap"><div class="emptymsg">Loading…</div></div>
-        <div id="earn-snap"></div>
       </div>
 
       <div class="card">
@@ -326,15 +338,18 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         + '<div><div class="soc-num">' + snapNum(eng) + '</div><div class="soc-lbl">engagements</div></div>'
         + '</div>' + spark
         + '<div class="soc-spark-labels"><span>' + lbl(series[0] && series[0].date) + '</span><span>' + lbl(series[n - 1] && series[n - 1].date) + '</span></div>';
-      var earn = d.earnings || {}, eh = $('earn-snap');
-      if (eh) {
-        var em = function (x) { return '$' + (Math.round((x || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
-        eh.innerHTML = ((earn.d90 || 0) > 0 || (earn.today || 0) > 0)
-          ? '<div style="border-top:1px solid #efe9df;padding-top:10px;margin-top:12px;margin-bottom:6px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8a8178">Est. earnings <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#a99">(Meta, approx)</span></div>'
-            + '<div class="soc-stats"><div><div class="soc-num">' + em(earn.today) + '</div><div class="soc-lbl">today</div></div>'
-            + '<div><div class="soc-num">' + em(earn.d7) + '</div><div class="soc-lbl">7 days</div></div>'
-            + '<div><div class="soc-num">' + em(earn.d30) + '</div><div class="soc-lbl">30 days</div></div></div>'
-          : '';
+      var meta = d.earnings || {}, mv = d.mediavine || {}, ec = $('earn-card');
+      if (ec) {
+        var money = function (x) { return '$' + (Math.round((x || 0) * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+        var erow = function (label, t, m, l, cls) { return '<tr class="' + (cls || '') + '"><td>' + label + '</td><td class="r">' + money(t) + '</td><td class="r">' + money(m) + '</td><td class="r">' + money(l) + '</td></tr>'; };
+        var ehtml = '<table class="earn-tbl"><thead><tr><th></th><th class="r">Today</th><th class="r">Month</th><th class="r">Last mo.</th></tr></thead><tbody>'
+          + erow('Total', (meta.today || 0) + (mv.today || 0), (meta.mtd || 0) + (mv.mtd || 0), (meta.last_month || 0) + (mv.last_month || 0), 'earn-tot')
+          + erow('Mediavine', mv.today || 0, mv.mtd || 0, mv.last_month || 0)
+          + erow('Meta', meta.today || 0, meta.mtd || 0, meta.last_month || 0)
+          + '</tbody></table>';
+        var np = mv.next_payout;
+        if (np && np.value != null) { var pd = new Date(np.date); var pds = isNaN(pd) ? np.date : pd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); ehtml += '<div class="earn-payout">Next payout ' + money(np.value) + ' on ' + pds + ' <span>(Mediavine)</span></div>'; }
+        ec.innerHTML = ehtml;
       }
     } catch (e) {
       host.innerHTML = '<div class="emptymsg">Could not load: ' + esc((e && e.message) || e) + '</div>';
