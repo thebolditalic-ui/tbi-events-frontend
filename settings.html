@@ -321,7 +321,7 @@ async function checkConnections(){
 function setPill(sel,ok,noText){ const el=$(sel); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':(noText||'not set'); }
 
 /* ---- channel connections + renewal estimates ---- */
-async function checkChannels(){
+async function checkChannels(force){
   var host=$('#chan-conns'); if(!host) return;
   var defs=[
     ['facebook','Facebook','Permanent — never expires'],
@@ -335,9 +335,22 @@ async function checkChannels(){
   function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
   async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
   ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
-  try{ var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}}); setc('x', !!(rx.data&&rx.data.connected)); }catch(e){ setc('x',false); }
+  // X goes through Buffer, which is rate-limited and shares the posting quota. So check at most once
+  // every 6h per browser, and treat a throttle ("too many requests") as still-connected — a throttle
+  // means the token works, Buffer is just busy — instead of a misleading "not set". Re-check forces it.
+  var XKAT='x_chk_at', XKOK='x_chk_ok';
+  if(!force && (Date.now()-(+(localStorage.getItem(XKAT)||0)) < 6*3600e3)){
+    setc('x', localStorage.getItem(XKOK)==='1');
+  } else {
+    try{
+      var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}});
+      var xd=(rx&&rx.data)||{};
+      var xok = !!xd.connected || (!!xd.error && /too many|rate|429/i.test(xd.error));
+      setc('x', xok); localStorage.setItem(XKOK, xok?'1':'0'); localStorage.setItem(XKAT, String(Date.now()));
+    }catch(e){ setc('x', false); }
+  }
 }
-$('#chan-recheck').onclick=checkChannels;
+$('#chan-recheck').onclick=function(){ checkChannels(true); };
 
 /* ---- spend ---- */
 async function loadSpend(){
