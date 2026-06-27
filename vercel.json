@@ -99,6 +99,10 @@
       "destination": "/social-analytics.html"
     },
     {
+      "source": "/downloader",
+      "destination": "/downloader.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
