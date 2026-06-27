@@ -309,10 +309,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     $('sa-back').onclick=SA.backToDashboard;
     try{ history.replaceState(null,'',location.pathname+location.search+'#posts/'+channel+(dateFilter?('/'+dateFilter):'')); }catch(e){}
     try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:SA.win}});
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:(SA.custom?90:SA.win)}});
       if(r.error) throw r.error;
       var posts=(r.data&&r.data.posts)||[];
-      if(dateFilter) posts=posts.filter(function(p){ return p.date===dateFilter; });
+      if(dateFilter) posts=posts.filter(function(p){ return p.date===dateFilter; }); else if(SA.custom) posts=posts.filter(function(p){ return p.date>=SA.custom.from && p.date<=SA.custom.to; });
       var bodyEl=$('sa-posts-body');
       if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts '+(dateFilter?('on '+esc(dateFilter)):'found in this window')+'.</div>'; return; }
       var noViews=(channel==='bluesky');
@@ -345,7 +345,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     try{ history.replaceState(null,'',location.pathname+location.search+'#postsday/'+dateFilter); }catch(e){}
     try{
       var results=await Promise.all(chans.map(function(c){
-        return sb.functions.invoke('social-analytics',{body:{action:'posts',channel:c[0],window_days:SA.win}})
+        return sb.functions.invoke('social-analytics',{body:{action:'posts',channel:c[0],window_days:(SA.custom?90:SA.win)}})
           .then(function(r){ return {c:c, posts:(!r.error&&r.data&&r.data.posts)||[]}; })
           .catch(function(){ return {c:c, posts:[]}; });
       }));
@@ -375,7 +375,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   SA.applyCustomIfReady=function(){
     var f=$('sa-from').value, t=$('sa-to').value;
-    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; var days=Math.max(1,Math.round((new Date(t)-new Date(f))/864e5)+1); SA.win=days; SA.paintControls(); SA.load(false); }
+    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; SA.paintControls(); SA.load(false); }
   };
 
   SA.paintControls=function(){
@@ -391,7 +391,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     $('sa-loading').style.display='block'; $('sa-loading').innerHTML='<span class="sa-spin"></span>'+(refresh?'Refreshing live metrics (this can take a moment)…':'Loading metrics…');
     $('sa-error').style.display='none'; $('sa-body').style.display='none';
     try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:SA.win,refresh:!!refresh}});
+      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:(SA.custom?90:SA.win),refresh:!!refresh}});
       if(r.error) throw r.error;
       if(!r.data||!r.data.ok) throw new Error((r.data&&r.data.error)||'No data');
       SA.raw=r.data;
@@ -399,6 +399,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
       $('sa-updated').textContent='Updated '+when+'.';
       SA.render();
+      if(SA.custom){ var _s=(SA.raw.series||[]); if(_s.length && _s[0].date>SA.custom.from){ $('sa-updated').textContent+='  ·  data available from '+_s[0].date; } }
     }catch(e){
       $('sa-loading').style.display='none';
       $('sa-error').style.display='block';
@@ -420,7 +421,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var tries=0, MAX=45; // ~3 minutes, then stop politely
     (function poll(){
       tries++;
-      sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:SA.win,refresh:false}}).then(function(r){
+      sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:(SA.custom?90:SA.win),refresh:false}}).then(function(r){
         var d=r&&r.data;
         if(d&&d.ok&&d.captured_at&&d.captured_at!==before){
           SA.raw=d;
@@ -441,9 +442,24 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     return rows;
   };
 
+  SA.effTotals=function(){
+    if(!SA.custom) return (SA.raw&&SA.raw.totals)||{};
+    var rows=SA.seriesDays(), full=(SA.raw&&SA.raw.series)||[], wtot=(SA.raw&&SA.raw.totals)||{}, out={};
+    var METS=['views','reach','reactions','comments','shares','posts'];
+    CH.forEach(function(c){ var k=c[0], o={};
+      METS.forEach(function(m){
+        var sum=0, has=false;
+        rows.forEach(function(d){ var v=d[k]&&d[k][m]; if(typeof v==='number'){ sum+=v; if(v>0)has=true; } });
+        if(has){ o[m]=sum; }
+        else { var wt=(wtot[k]&&wtot[k][m])||0; if(wt>0){ var rv=0,fv=0; rows.forEach(function(d){ rv+=((d[k]&&d[k].views)||0); }); full.forEach(function(d){ fv+=((d[k]&&d[k].views)||0); }); o[m]=fv>0?Math.round(wt*rv/fv):0; } else o[m]=sum; }
+      });
+      out[k]=o;
+    });
+    return out;
+  };
   SA.grand=function(){
     var g={views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
-    var tot=(SA.raw&&SA.raw.totals)||{};
+    var tot=SA.effTotals();
     CH.forEach(function(c){ if(SA.on[c[0]]&&tot[c[0]]){ Object.keys(g).forEach(function(k){ g[k]+=(tot[c[0]][k]||0); }); } });
     return g;
   };
@@ -459,7 +475,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   };
 
   SA.renderChart=function(){
-    var tot=(SA.raw&&SA.raw.totals)||{};
+    var tot=SA.effTotals();
     var mlabel=((METRICS.filter(function(x){return x[0]===SA.metric;})[0])||['',''])[1];
     var yticks={precision:0,callback:function(v){return fmt(v);}};
     if(SA.chart) SA.chart.destroy();
@@ -525,7 +541,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   };
 
   SA.renderTable=function(){
-    var tot=(SA.raw&&SA.raw.totals)||{}, av=(SA.raw&&SA.raw.availability)||{};
+    var tot=SA.effTotals(), av=(SA.raw&&SA.raw.availability)||{};
     var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
     CH.forEach(function(c){
       var k=c[0], p=tot[k]||{views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
