@@ -177,8 +177,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .dl-meta{padding:8px 10px 2px;font-size:11.5px;color:#8a8178}
 .dl-actions{display:flex;gap:6px;padding:6px 10px 10px;flex-wrap:wrap;margin-top:auto}
 .dl-btn{font-size:11.5px;font-weight:600;padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:#1E1B1B;color:#fff;text-decoration:none;cursor:pointer}
-.dl-btn.ghost{background:#fff;color:#1E1B1B}
-.dl-btn.del{background:#fff;color:#b3261e;border-color:#e8c9c5}
+.dl-btn.ghost{background:#fff;color:#1E1B1B}.dl-btn.del{background:#fff;color:#b3261e;border-color:#e8c9c5}
 .dl-empty{color:#8a8178;padding:44px;text-align:center;grid-column:1/-1}
 </style>
 </head>
@@ -221,12 +220,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   </nav>
   <div class="page-wrap">
     <h2 class="section-title">Instagram Downloader</h2>
-    <p class="section-sub">Full-res photos, whole carousels, and reels saved straight into your library. It runs in your own browser as you &mdash; no third-party site, no extra account.</p>
-    <div class="dl-install"><b>Install once:</b> drag this button to your bookmarks bar &rarr; <a class="dl-bm" id="dl-bm" href="#" onclick="return false">&#128229; IG &rarr; Admin</a><span id="dl-bm-wait" style="color:#8a8178;font-size:12.5px"> (loading&hellip;)</span>
-      <div class="dl-hint">Then open any Instagram post or reel (logged in) and click <b>IG &rarr; Admin</b> in your bookmarks bar &mdash; the media uploads here automatically. First click, Chrome may ask to allow it; say yes.</div></div>
+    <p class="section-sub">Full-res photos, whole carousels, and reels saved straight into your library. The grabbing runs in your own browser as you &mdash; no third-party site, no extra account.</p>
+    <div class="dl-install"><b>Install once:</b> drag this button to your bookmarks bar &rarr; <a class="dl-bm" id="dl-bm" href="#" onclick="return false">&#128229; IG &rarr; Admin</a><span id="dl-bm-wait" style="color:#8a8178;font-size:12.5px"></span>
+      <div class="dl-hint">Then open any Instagram post or reel (logged in) and click <b>IG &rarr; Admin</b>. It opens this page in a new tab and the media saves into your library below automatically.</div></div>
     <div class="dl-bar"><b>Your library</b><button class="btn btn-sm" id="dl-refresh">&#8635; Refresh</button></div>
     <div class="dl-grid" id="dl-grid"></div>
-    <textarea id="bm-src" style="display:none">(async()=&gt;{try{ var m=location.pathname.match(/\/(p|reel|reels|tv)\/([^/]+)/);if(!m){alert('Open an Instagram post or reel first.');return;} var s=m[2],A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',d=0n; for(var i=0;i&lt;s.length;i++){var v=A.indexOf(s[i]);if(v&lt;0){alert('Unrecognized Instagram URL.');return;}d=d*64n+BigInt(v);} var cs=(document.cookie.match(/csrftoken=([^;]+)/)||[])[1]||''; var r=await fetch('/api/v1/media/'+d+'/info/',{headers:{'x-ig-app-id':'936619743392459','x-csrftoken':cs},credentials:'include'}); if(!r.ok){alert('Instagram returned '+r.status+' - make sure you are logged into Instagram here.');return;} var j=await r.json(),it=(j.items||[])[0];if(!it){alert('No media found.');return;} var u=(it.user&amp;&amp;it.user.username)||'ig',cap=((it.caption&amp;&amp;it.caption.text)||''),ns=it.carousel_media||[it]; var md=ns.map(function(n){var vv=n.video_versions;if(vv&amp;&amp;vv.length)return{u:vv[0].url,e:'mp4'};var c=n.image_versions2&amp;&amp;n.image_versions2.candidates;return c&amp;&amp;c.length?{u:c[0].url,e:'jpg'}:null;}).filter(Boolean); if(!md.length){alert('No downloadable media found.');return;} var FN='https://scawgrjcjgcmvsimvash.supabase.co/functions/v1/ig-grab?action=upload',AN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0',SE='__SECRET__',SRC='https://www.instagram.com/p/'+s+'/'; var b=document.createElement('div');b.style.cssText='position:fixed;z-index:2147483647;right:16px;bottom:16px;background:#111;color:#fff;font:13px/1.4 -apple-system,Segoe UI,sans-serif;padding:13px 30px 13px 15px;border-radius:11px;box-shadow:0 8px 30px rgba(0,0,0,.5)'; b.textContent='Saving '+md.length+' to admin...'; var X=document.createElement('span');X.textContent='x';X.style.cssText='position:absolute;top:4px;right:9px;cursor:pointer;font-size:15px;opacity:.7';X.onclick=function(){b.remove();};b.appendChild(X); document.body.appendChild(b); var ok=0,bad=0; for(var k=0;k&lt;md.length;k++){ try{var bl=await(await fetch(md[k].u)).blob();var f=new FormData();f.append('file',bl,u+'_'+s+'_'+(k+1)+'.'+md[k].e);f.append('shortcode',s);f.append('idx',String(k+1));f.append('ext',md[k].e);f.append('username',u);f.append('caption',cap);f.append('source_url',SRC);var up=await fetch(FN,{method:'POST',headers:{apikey:AN,'x-grab-secret':SE},body:f});if(up.ok)ok++;else bad++;} catch(e){bad++;} b.firstChild.textContent='Saving to admin: '+ok+'/'+md.length+(bad?(' ('+bad+' failed)'):''); await new Promise(function(z){setTimeout(z,200);}); } b.firstChild.textContent=(bad?('Saved '+ok+'/'+md.length+' - '+bad+' failed'):('Saved '+ok+' to admin')); var a=document.createElement('a');a.href='https://admin.thebolditalic.com/downloader';a.target='_blank';a.textContent='Open library';a.style.cssText='display:block;color:#FFD682;margin-top:8px;font-size:12px';b.appendChild(a); }catch(e){alert('Grab failed: '+(e&amp;&amp;e.message||e));}})()</textarea>
+    <textarea id="bm-src" style="display:none">(async()=&gt;{try{ var m=location.pathname.match(/\/(p|reel|reels|tv)\/([^/]+)/);if(!m){alert('Open an Instagram post or reel first.');return;} var s=m[2],A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',d=0n; for(var i=0;i&lt;s.length;i++){var v=A.indexOf(s[i]);if(v&lt;0){alert('Unrecognized Instagram URL.');return;}d=d*64n+BigInt(v);} var cs=(document.cookie.match(/csrftoken=([^;]+)/)||[])[1]||''; var r=await fetch('/api/v1/media/'+d+'/info/',{headers:{'x-ig-app-id':'936619743392459','x-csrftoken':cs},credentials:'include'}); if(!r.ok){alert('Instagram returned '+r.status+' - make sure you are logged into Instagram here.');return;} var j=await r.json(),it=(j.items||[])[0];if(!it){alert('No media found.');return;} var u=(it.user&amp;&amp;it.user.username)||'ig',cap=((it.caption&amp;&amp;it.caption.text)||''),ns=it.carousel_media||[it]; var md=ns.map(function(n){var vv=n.video_versions;if(vv&amp;&amp;vv.length)return{u:vv[0].url,e:'mp4'};var c=n.image_versions2&amp;&amp;n.image_versions2.candidates;return c&amp;&amp;c.length?{u:c[0].url,e:'jpg'}:null;}).filter(Boolean); if(!md.length){alert('No downloadable media found.');return;} var p={s:s,u:u,c:cap.slice(0,400),m:md}; var enc=encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(p))))); window.open('https://admin.thebolditalic.com/downloader#grab='+enc,'_blank'); }catch(e){alert('Grab failed: '+(e&amp;&amp;e.message||e));}})()</textarea>
   </div>
 </div>
 <script>
@@ -250,17 +249,33 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $=function(id){return document.getElementById(id);};
   function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function dlFile(url,name){ fetch(url).then(function(r){return r.blob();}).then(function(bl){var u=URL.createObjectURL(bl);var a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},6000);}).catch(function(){window.open(url,'_blank');}); }
-  var DL={};
-  DL.init=function(){ DL.setupBookmarklet(); DL.load(); var rf=$('dl-refresh'); if(rf) rf.onclick=DL.load; };
-  DL.setupBookmarklet=async function(){
-    try{
-      var r=await sb.functions.invoke('ig-grab',{body:{action:'secret'}});
-      if(r.error||!r.data||!r.data.ok) throw new Error('no secret');
-      var tpl=$('bm-src').value;
-      $('dl-bm').setAttribute('href','javascript:'+encodeURIComponent(tpl.replace('__SECRET__', r.data.secret)));
-      $('dl-bm').onclick=function(){return false;};
-      var w=$('dl-bm-wait'); if(w) w.style.display='none';
-    }catch(e){ var w=$('dl-bm-wait'); if(w) w.textContent=' (installer unavailable)'; }
+  var FN=SUPABASE_URL+'/functions/v1/ig-grab', ANON=SUPABASE_ANON, DL={};
+  DL.init=function(){
+    try{ $('dl-bm').setAttribute('href','javascript:'+encodeURIComponent($('bm-src').value)); $('dl-bm').onclick=function(){return false;}; }catch(e){}
+    var rf=$('dl-refresh'); if(rf) rf.onclick=DL.load;
+    if(/grab=/.test(location.hash)) DL.processGrab(); else DL.load();
+  };
+  DL.processGrab=async function(){
+    var mm=location.hash.match(/grab=([^&]+)/);
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+    var p; try{ p=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(mm[1]))))); }catch(e){ DL.load(); return; }
+    if(!p||!p.m||!p.m.length){ DL.load(); return; }
+    var sess=await sb.auth.getSession(); var tok=sess&&sess.data&&sess.data.session&&sess.data.session.access_token;
+    var box=$('dl-grid'); box.innerHTML='<div class="dl-empty">Saving '+p.m.length+' item(s) from @'+esc(p.u)+'…</div>';
+    var src='https://www.instagram.com/p/'+p.s+'/',ok=0,bad=0;
+    for(var k=0;k<p.m.length;k++){
+      try{
+        var bl=await (await fetch(p.m[k].u)).blob();
+        var f=new FormData();
+        f.append('file',bl,(p.u||'ig')+'_'+p.s+'_'+(k+1)+'.'+p.m[k].e);
+        f.append('shortcode',p.s);f.append('idx',String(k+1));f.append('ext',p.m[k].e);
+        f.append('username',p.u||'');f.append('caption',p.c||'');f.append('source_url',src);
+        var up=await fetch(FN+'?action=upload',{method:'POST',headers:{authorization:'Bearer '+tok,apikey:ANON},body:f});
+        if(up.ok)ok++;else bad++;
+      }catch(e){ bad++; }
+    }
+    await DL.load();
+    if(bad){ try{ var n=document.createElement('div'); n.className='dl-empty'; n.style.gridColumn='1/-1'; n.textContent='Note: '+bad+' item(s) could not be saved.'; $('dl-grid').insertBefore(n, $('dl-grid').firstChild); }catch(e){} }
   };
   DL.load=async function(){
     var box=$('dl-grid'); box.innerHTML='<div class="dl-empty">Loading…</div>';
@@ -276,7 +291,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       h+='<div class="dl-card">'+media+'<div class="dl-meta">@'+esc(it.username||'')+(dt?(' · '+dt):'')+'</div><div class="dl-actions"><button class="dl-btn dld" data-u="'+esc(it.url)+'" data-n="'+fn+'">Download</button>'+(it.source_url?('<a class="dl-btn ghost" href="'+esc(it.source_url)+'" target="_blank">Source</a>'):'')+'<button class="dl-btn del" data-id="'+it.id+'">Delete</button></div></div>';
     });
     box.innerHTML=h;
-    box.querySelectorAll('.dld').forEach(function(b){ b.onclick=function(){ dlFile(b.dataset.u, b.dataset.n); }; });
+    box.querySelectorAll('.dld').forEach(function(b){ b.onclick=function(){ dlFile(b.dataset.u,b.dataset.n); }; });
     box.querySelectorAll('.del').forEach(function(b){ b.onclick=async function(){ if(!confirm('Delete this item from the library?'))return; b.textContent='…'; var d=await sb.functions.invoke('ig-grab',{body:{action:'delete',id:Number(b.dataset.id)}}); if(d.data&&d.data.ok) DL.load(); else { b.textContent='Delete'; alert('Delete failed'); } }; });
   };
   checkSession();
