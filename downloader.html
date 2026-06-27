@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>TBI Admin — Social Media</title>
+<title>TBI Admin — Downloader</title>
 <link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -166,6 +166,21 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 }
 </style>
 <style id="tbi-brand-img">.admin-header h1 .brand-mark{display:inline-block;vertical-align:middle;line-height:0}.admin-header h1 .brand-mark svg{height:1.0em;width:auto;display:block}.admin-header h1 .adm{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.53em;letter-spacing:.15em;font-weight:400;color:#8d8d8d;vertical-align:middle;margin-left:9px}.admin-header h1 a{position:relative;top:5px;display:inline-block}</style>
+<style>
+.dl-install{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:14px 0 18px;font-size:14px;line-height:1.7}
+.dl-bm{display:inline-block;background:#1E1B1B;color:#fff;padding:8px 14px;border-radius:9px;text-decoration:none;font-weight:700;margin:0 4px;cursor:grab}
+.dl-hint{color:#8a8178;font-size:12.5px;margin-top:8px;line-height:1.5}
+.dl-bar{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}
+.dl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.dl-card{background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.dl-media{width:100%;aspect-ratio:1/1;object-fit:cover;background:#f0ebe1;display:block}
+.dl-meta{padding:8px 10px 2px;font-size:11.5px;color:#8a8178}
+.dl-actions{display:flex;gap:6px;padding:6px 10px 10px;flex-wrap:wrap;margin-top:auto}
+.dl-btn{font-size:11.5px;font-weight:600;padding:5px 9px;border-radius:6px;border:1px solid var(--border);background:#1E1B1B;color:#fff;text-decoration:none;cursor:pointer}
+.dl-btn.ghost{background:#fff;color:#1E1B1B}
+.dl-btn.del{background:#fff;color:#b3261e;border-color:#e8c9c5}
+.dl-empty{color:#8a8178;padding:44px;text-align:center;grid-column:1/-1}
+</style>
 </head>
 <body>
 <div id="login-screen">
@@ -198,45 +213,20 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     </div>
   </header>
   <nav class="admin-subnav">
-    <a href="/social-analytics" class="active">Analytics</a>
+    <a href="/social-analytics">Analytics</a>
     <a href="/social">Post</a>
     <a href="/social?sec=schedule">Queue &amp; Schedule</a>
-    <a href="/downloader">Downloader</a>
+    <a href="/downloader" class="active">Downloader</a>
     <a href="/settings" class="subnav-settings">Go to settings</a>
   </nav>
   <div class="page-wrap">
-    <h2 class="section-title">Social analytics</h2>
-    <p class="section-sub">How your posts perform across channels. <span id="sa-updated"></span></p>
-
-    <div class="sa-controls">
-      <div class="sa-windows" id="sa-windows"></div>
-      <div class="sa-custom" id="sa-custom" style="display:none">
-        <input type="date" id="sa-from"><span>to</span><input type="date" id="sa-to">
-      </div>
-      <div class="sa-spacer"></div>
-      <button class="btn btn-sm" id="sa-refresh">&#8635; Refresh</button>
-    </div>
-
-    <div id="sa-loading" class="sa-loading"><span class="sa-spin"></span>Loading metrics&hellip;</div>
-    <div id="sa-error" class="sa-error" style="display:none"></div>
-
-    <div id="sa-body" style="display:none">
-      <div class="sa-tiles" id="sa-tiles"></div>
-      <div class="sa-card">
-        <div class="sa-chart-head">
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <div class="sa-charttype" id="sa-charttype"></div>
-            <div class="sa-metricsel" id="sa-metricsel"></div>
-          </div>
-          <div class="sa-toggles" id="sa-toggles"></div>
-        </div>
-        <div class="sa-chart-wrap"><canvas id="sa-chart"></canvas></div>
-      </div>
-      <div class="sa-card">
-        <div class="sa-scroll"><table class="sa-table" id="sa-table"></table></div>
-      </div>
-    </div>
-    <div id="sa-posts-view" style="display:none"></div>
+    <h2 class="section-title">Instagram Downloader</h2>
+    <p class="section-sub">Full-res photos, whole carousels, and reels saved straight into your library. It runs in your own browser as you &mdash; no third-party site, no extra account.</p>
+    <div class="dl-install"><b>Install once:</b> drag this button to your bookmarks bar &rarr; <a class="dl-bm" id="dl-bm" href="#" onclick="return false">&#128229; IG &rarr; Admin</a><span id="dl-bm-wait" style="color:#8a8178;font-size:12.5px"> (loading&hellip;)</span>
+      <div class="dl-hint">Then open any Instagram post or reel (logged in) and click <b>IG &rarr; Admin</b> in your bookmarks bar &mdash; the media uploads here automatically. First click, Chrome may ask to allow it; say yes.</div></div>
+    <div class="dl-bar"><b>Your library</b><button class="btn btn-sm" id="dl-refresh">&#8635; Refresh</button></div>
+    <div class="dl-grid" id="dl-grid"></div>
+    <textarea id="bm-src" style="display:none">(async()=&gt;{try{ var m=location.pathname.match(/\/(p|reel|reels|tv)\/([^/]+)/);if(!m){alert('Open an Instagram post or reel first.');return;} var s=m[2],A='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',d=0n; for(var i=0;i&lt;s.length;i++){var v=A.indexOf(s[i]);if(v&lt;0){alert('Unrecognized Instagram URL.');return;}d=d*64n+BigInt(v);} var cs=(document.cookie.match(/csrftoken=([^;]+)/)||[])[1]||''; var r=await fetch('/api/v1/media/'+d+'/info/',{headers:{'x-ig-app-id':'936619743392459','x-csrftoken':cs},credentials:'include'}); if(!r.ok){alert('Instagram returned '+r.status+' - make sure you are logged into Instagram here.');return;} var j=await r.json(),it=(j.items||[])[0];if(!it){alert('No media found.');return;} var u=(it.user&amp;&amp;it.user.username)||'ig',cap=((it.caption&amp;&amp;it.caption.text)||''),ns=it.carousel_media||[it]; var md=ns.map(function(n){var vv=n.video_versions;if(vv&amp;&amp;vv.length)return{u:vv[0].url,e:'mp4'};var c=n.image_versions2&amp;&amp;n.image_versions2.candidates;return c&amp;&amp;c.length?{u:c[0].url,e:'jpg'}:null;}).filter(Boolean); if(!md.length){alert('No downloadable media found.');return;} var FN='https://scawgrjcjgcmvsimvash.supabase.co/functions/v1/ig-grab?action=upload',AN='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0',SE='__SECRET__',SRC='https://www.instagram.com/p/'+s+'/'; var b=document.createElement('div');b.style.cssText='position:fixed;z-index:2147483647;right:16px;bottom:16px;background:#111;color:#fff;font:13px/1.4 -apple-system,Segoe UI,sans-serif;padding:13px 30px 13px 15px;border-radius:11px;box-shadow:0 8px 30px rgba(0,0,0,.5)'; b.textContent='Saving '+md.length+' to admin...'; var X=document.createElement('span');X.textContent='x';X.style.cssText='position:absolute;top:4px;right:9px;cursor:pointer;font-size:15px;opacity:.7';X.onclick=function(){b.remove();};b.appendChild(X); document.body.appendChild(b); var ok=0,bad=0; for(var k=0;k&lt;md.length;k++){ try{var bl=await(await fetch(md[k].u)).blob();var f=new FormData();f.append('file',bl,u+'_'+s+'_'+(k+1)+'.'+md[k].e);f.append('shortcode',s);f.append('idx',String(k+1));f.append('ext',md[k].e);f.append('username',u);f.append('caption',cap);f.append('source_url',SRC);var up=await fetch(FN,{method:'POST',headers:{apikey:AN,'x-grab-secret':SE},body:f});if(up.ok)ok++;else bad++;} catch(e){bad++;} b.firstChild.textContent='Saving to admin: '+ok+'/'+md.length+(bad?(' ('+bad+' failed)'):''); await new Promise(function(z){setTimeout(z,200);}); } b.firstChild.textContent=(bad?('Saved '+ok+'/'+md.length+' - '+bad+' failed'):('Saved '+ok+' to admin')); var a=document.createElement('a');a.href='https://admin.thebolditalic.com/downloader';a.target='_blank';a.textContent='Open library';a.style.cssText='display:block;color:#FFD682;margin-top:8px;font-size:12px';b.appendChild(a); }catch(e){alert('Grab failed: '+(e&amp;&amp;e.message||e));}})()</textarea>
   </div>
 </div>
 <script>
@@ -250,319 +240,45 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
   var started=false;
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; if(!started){ started=true; SA.init(); } }
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; if(!started){ started=true; DL.init(); } }
   async function checkSession(){ var s=await sb.auth.getSession(); if(s.data&&s.data.session) showAdmin(s.data.session.user); }
   $bt.addEventListener('click', async function(){ $er.style.display='none'; var e=$em.value.trim(),p=$pw.value; if(!e||!p){ $er.textContent='Enter email and password'; $er.style.display='block'; return; } $bt.textContent='Signing in...'; $bt.disabled=true; var r=await sb.auth.signInWithPassword({email:e,password:p}); $bt.textContent='Sign In'; $bt.disabled=false; if(r.error){ $er.textContent=r.error.message; $er.style.display='block'; return; } showAdmin(r.data.user); });
   $pw.addEventListener('keydown', function(ev){ if(ev.key==='Enter') $bt.click(); });
   $out.addEventListener('click', async function(){ await sb.auth.signOut(); location.reload(); });
 
-  // ---------------- analytics dashboard ----------------
-  var CH=[['facebook','Facebook','#1877f2'],['instagram','Instagram','#d6336c'],['threads','Threads','#111111'],['bluesky','Bluesky','#06b6d4'],['x','X','#1a8f7a'],['substack','Substack','#FF6719']];
-  var METRICS=[['views','Views'],['reactions','Reactions / Likes'],['comments','Comments / Replies'],['shares','Shares / Reposts']];
-  var WINDOWS=[1,3,7,14,30,45,60,90];
-  var SA={ raw:null, win:30, custom:null, metric:'views', chartType:'line', on:{facebook:true,instagram:true,threads:true,bluesky:true,x:true,substack:true}, chart:null };
+    // ---------------- downloader ----------------
   var $=function(id){return document.getElementById(id);};
-  function fmt(n){ n=Math.round(n||0); if(n>=1000000) return (n/1000000).toFixed(1)+'M'; if(n>=1000) return (n/1000).toFixed(n>=10000?0:1)+'k'; return String(n); }
-  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-
-  SA.init=function(){
-    var w=$('sa-windows'), html='';
-    WINDOWS.forEach(function(d){ html+='<button data-w="'+d+'">'+d+'d</button>'; });
-    html+='<button data-w="custom">Custom</button>';
-    w.innerHTML=html;
-    w.querySelectorAll('button').forEach(function(b){ b.onclick=function(){
-      if(b.dataset.w==='custom'){ $('sa-custom').style.display='flex'; SA.applyCustomIfReady(); }
-      else { SA.custom=null; SA.win=parseInt(b.dataset.w,10); $('sa-custom').style.display='none'; SA.paintControls(); SA.load(false); }
-    };});
-    $('sa-from').onchange=$('sa-to').onchange=SA.applyCustomIfReady;
-    var ct=$('sa-charttype'); if(ct){ ct.innerHTML='<button data-t="line">Line</button><button data-t="bar">Bar</button>'; ct.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ SA.chartType=b.dataset.t; SA.paintControls(); SA.renderChart(); };}); }
-    var m=$('sa-metricsel'), mh='';
-    METRICS.forEach(function(x){ mh+='<button data-m="'+x[0]+'">'+x[1]+'</button>'; });
-    m.innerHTML=mh;
-    m.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ SA.metric=b.dataset.m; SA.paintControls(); SA.renderChart(); };});
-    var t=$('sa-toggles'), th='';
-    CH.forEach(function(c){ th+='<label><input type="checkbox" data-c="'+c[0]+'" checked><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</label>'; });
-    t.innerHTML=th;
-    t.querySelectorAll('input').forEach(function(cb){ cb.onchange=function(){ SA.on[cb.dataset.c]=cb.checked; SA.render(); };});
-    $('sa-refresh').onclick=function(){ SA.refresh(); };
-    document.addEventListener('keydown',function(e){ if(e.key==='Escape') SA.backToDashboard(); });
-    SA.paintControls();
-    SA.load(false);
-  };
-  SA.backToDashboard=function(){
-    var pv=$('sa-posts-view'); if(!pv||pv.style.display==='none') return;
-    pv.style.display='none'; pv.innerHTML='';
-    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='flex';
-    if(SA.raw){ $('sa-body').style.display='block'; SA.render(); }
-    try{ if(String(location.hash).indexOf('posts/')>=0) history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-  };
-  SA.openPosts=async function(channel, dateFilter){
-    var nm=((CH.filter(function(c){return c[0]===channel;})[0])||['','?'])[1];
-    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='none';
-    $('sa-body').style.display='none';
-    var pv=$('sa-posts-view'); pv.style.display='block';
-    var heading=esc(nm)+' &mdash; '+(dateFilter?('posts on '+esc(dateFilter)):'your posts');
-    var sub=dateFilter?('Everything you posted to '+esc(nm)+' on '+esc(dateFilter)+', with its results.'):('Ranked by performance, '+(SA.custom?'custom range':'last '+SA.win+' days')+'. Click a post to open it.');
-    pv.innerHTML='<button class="btn btn-sm" id="sa-back" style="background:var(--bg-alt);border:1px solid var(--border)">&larr; Back to analytics</button>'
-      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+heading+'</h3>'
-      +'<p class="section-sub" style="margin-bottom:16px">'+sub+'</p>'
-      +'<div class="sa-card" style="padding:0"><div id="sa-posts-body"><div style="padding:44px;text-align:center;color:#8a8178">Loading your posts&hellip;</div></div></div>';
-    $('sa-back').onclick=SA.backToDashboard;
-    try{ history.replaceState(null,'',location.pathname+location.search+'#posts/'+channel+(dateFilter?('/'+dateFilter):'')); }catch(e){}
+  function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function dlFile(url,name){ fetch(url).then(function(r){return r.blob();}).then(function(bl){var u=URL.createObjectURL(bl);var a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},6000);}).catch(function(){window.open(url,'_blank');}); }
+  var DL={};
+  DL.init=function(){ DL.setupBookmarklet(); DL.load(); var rf=$('dl-refresh'); if(rf) rf.onclick=DL.load; };
+  DL.setupBookmarklet=async function(){
     try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'posts',channel:channel,window_days:(SA.custom?90:SA.win)}});
-      if(r.error) throw r.error;
-      var posts=(r.data&&r.data.posts)||[];
-      if(dateFilter) posts=posts.filter(function(p){ return p.date===dateFilter; }); else if(SA.custom) posts=posts.filter(function(p){ return p.date>=SA.custom.from && p.date<=SA.custom.to; });
-      var bodyEl=$('sa-posts-body');
-      if(!posts.length){ bodyEl.innerHTML='<div style="padding:44px;text-align:center;color:#8a8178">No '+esc(nm)+' posts '+(dateFilter?('on '+esc(dateFilter)):'found in this window')+'.</div>'; return; }
-      var noViews=(channel==='bluesky');
-      var h='<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
-      posts.forEach(function(p){
-        var txt=esc(p.text||'Image (no caption)');
-        var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
-        h+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+(p.kind?(' &middot; '+esc(p.kind)):'')+'</div></td>'
-          +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
-          +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
-      });
-      h+='</table></div>';
-      if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook per-post views use Meta\'s new <b>media views</b> metric, which only counts photo, video and reel posts. Link-only posts show &mdash; (Meta has no per-post number for them). The dashboard\'s Facebook Views tile counts all impressions page-wide, so it\'s larger than these per-post views add up to.</p>';
-      bodyEl.innerHTML=h;
-    }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
+      var r=await sb.functions.invoke('ig-grab',{body:{action:'secret'}});
+      if(r.error||!r.data||!r.data.ok) throw new Error('no secret');
+      var tpl=$('bm-src').value;
+      $('dl-bm').setAttribute('href','javascript:'+encodeURIComponent(tpl.replace('__SECRET__', r.data.secret)));
+      $('dl-bm').onclick=function(){return false;};
+      var w=$('dl-bm-wait'); if(w) w.style.display='none';
+    }catch(e){ var w=$('dl-bm-wait'); if(w) w.textContent=' (installer unavailable)'; }
   };
-
-  SA.openPostsAllForDate=async function(dateFilter){
-    var chans=CH.filter(function(c){ return SA.on[c[0]]; });
-    var ctrl=document.querySelector('.sa-controls'); if(ctrl) ctrl.style.display='none';
-    $('sa-body').style.display='none';
-    var pv=$('sa-posts-view'); pv.style.display='block';
-    var heading='All channels &mdash; posts on '+esc(dateFilter);
-    var sub='Everything you posted on '+esc(dateFilter)+' across your selected channels, with each post’s results.';
-    pv.innerHTML='<button class="btn btn-sm" id="sa-back" style="background:var(--bg-alt);border:1px solid var(--border)">&larr; Back to analytics</button>'
-      +'<h3 style="font-family:var(--title-font);font-size:21px;margin:16px 0 2px">'+heading+'</h3>'
-      +'<p class="section-sub" style="margin-bottom:16px">'+sub+'</p>'
-      +'<div id="sa-posts-multi"><div style="padding:44px;text-align:center;color:#8a8178">Loading your posts&hellip;</div></div>';
-    $('sa-back').onclick=SA.backToDashboard;
-    try{ history.replaceState(null,'',location.pathname+location.search+'#postsday/'+dateFilter); }catch(e){}
-    try{
-      var results=await Promise.all(chans.map(function(c){
-        return sb.functions.invoke('social-analytics',{body:{action:'posts',channel:c[0],window_days:(SA.custom?90:SA.win)}})
-          .then(function(r){ return {c:c, posts:(!r.error&&r.data&&r.data.posts)||[]}; })
-          .catch(function(){ return {c:c, posts:[]}; });
-      }));
-      var html=''; var any=false;
-      results.forEach(function(res){
-        var dayPosts=res.posts.filter(function(p){ return p.date===dateFilter; });
-        if(!dayPosts.length) return;
-        any=true;
-        var channel=res.c[0], nm=res.c[1], color=res.c[2], noViews=(channel==='bluesky');
-        html+='<div class="sa-card" style="padding:0;margin-bottom:16px">'
-          +'<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--border)"><span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block"></span><b style="font-family:var(--title-font);font-size:15px">'+esc(nm)+'</b><span style="color:#8a8178;font-size:12px">'+dayPosts.length+' post'+(dayPosts.length>1?'s':'')+'</span></div>'
-          +'<div class="sa-scroll"><table class="sa-ptable"><tr><th class="l">Post</th>'+(noViews?'':'<th>Views</th>')+'<th>Reactions</th><th>Comments</th><th>Shares</th></tr>';
-        dayPosts.forEach(function(p){
-          var txt=esc(p.text||'Image (no caption)');
-          var cell=p.permalink?('<a href="'+esc(p.permalink)+'" target="_blank" rel="noopener">'+txt+'</a>'):txt;
-          html+='<tr><td class="ptxt">'+cell+'<div class="pdate">'+esc(p.date)+(p.kind?(' &middot; '+esc(p.kind)):'')+'</div></td>'
-            +(noViews?'':'<td class="num">'+(p.views==null?'&mdash;':fmt(p.views))+'</td>')
-            +'<td class="num">'+fmt(p.reactions)+'</td><td class="num">'+(p.comments==null?'&mdash;':fmt(p.comments))+'</td><td class="num">'+(p.shares==null?'&mdash;':fmt(p.shares))+'</td></tr>';
-        });
-        html+='</table></div></div>';
-      });
-      var body=$('sa-posts-multi');
-      if(!any){ body.innerHTML='<div class="sa-card" style="padding:44px;text-align:center;color:#8a8178">No posts on '+esc(dateFilter)+' for the channels you have selected.</div>'; return; }
-      body.innerHTML=html;
-    }catch(e){ var be=$('sa-posts-multi'); if(be) be.innerHTML='<div class="sa-card" style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
-  };
-
-  SA.applyCustomIfReady=function(){
-    var f=$('sa-from').value, t=$('sa-to').value;
-    if(f&&t&&f<=t){ SA.custom={from:f,to:t}; SA.paintControls(); SA.load(false); }
-  };
-
-  SA.paintControls=function(){
-    document.querySelectorAll('#sa-windows button').forEach(function(b){
-      var on=(b.dataset.w==='custom')?!!SA.custom:(!SA.custom&&parseInt(b.dataset.w,10)===SA.win);
-      b.classList.toggle('on',on);
+  DL.load=async function(){
+    var box=$('dl-grid'); box.innerHTML='<div class="dl-empty">Loading…</div>';
+    var r=await sb.functions.invoke('ig-grab',{body:{action:'list'}});
+    if(r.error||!r.data||!r.data.ok){ box.innerHTML='<div class="dl-empty">Could not load the library.</div>'; return; }
+    var rows=r.data.rows||[];
+    if(!rows.length){ box.innerHTML='<div class="dl-empty">No grabs yet — install the button above, then click it on any Instagram post.</div>'; return; }
+    var h='';
+    rows.forEach(function(it){
+      var media = it.kind==='video' ? '<video src="'+it.url+'" class="dl-media" controls preload="metadata"></video>' : '<img src="'+it.url+'" class="dl-media" loading="lazy">';
+      var dt = it.created_at ? new Date(it.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+      var fn = esc((it.username||'ig')+'_'+it.shortcode+'_'+it.idx+'.'+it.ext);
+      h+='<div class="dl-card">'+media+'<div class="dl-meta">@'+esc(it.username||'')+(dt?(' · '+dt):'')+'</div><div class="dl-actions"><button class="dl-btn dld" data-u="'+esc(it.url)+'" data-n="'+fn+'">Download</button>'+(it.source_url?('<a class="dl-btn ghost" href="'+esc(it.source_url)+'" target="_blank">Source</a>'):'')+'<button class="dl-btn del" data-id="'+it.id+'">Delete</button></div></div>';
     });
-    document.querySelectorAll('#sa-metricsel button').forEach(function(b){ b.classList.toggle('on',b.dataset.m===SA.metric); });
-    document.querySelectorAll('#sa-charttype button').forEach(function(b){ b.classList.toggle('on',b.dataset.t===SA.chartType); });
+    box.innerHTML=h;
+    box.querySelectorAll('.dld').forEach(function(b){ b.onclick=function(){ dlFile(b.dataset.u, b.dataset.n); }; });
+    box.querySelectorAll('.del').forEach(function(b){ b.onclick=async function(){ if(!confirm('Delete this item from the library?'))return; b.textContent='…'; var d=await sb.functions.invoke('ig-grab',{body:{action:'delete',id:Number(b.dataset.id)}}); if(d.data&&d.data.ok) DL.load(); else { b.textContent='Delete'; alert('Delete failed'); } }; });
   };
-
-  SA.load=async function(refresh){
-    $('sa-loading').style.display='block'; $('sa-loading').innerHTML='<span class="sa-spin"></span>'+(refresh?'Refreshing live metrics (this can take a moment)…':'Loading metrics…');
-    $('sa-error').style.display='none'; $('sa-body').style.display='none';
-    try{
-      var r=await sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:(SA.custom?90:SA.win),refresh:!!refresh}});
-      if(r.error) throw r.error;
-      if(!r.data||!r.data.ok) throw new Error((r.data&&r.data.error)||'No data');
-      SA.raw=r.data;
-      $('sa-loading').style.display='none'; $('sa-body').style.display='block';
-      var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-      $('sa-updated').textContent='Updated '+when+'.';
-      SA.render();
-      if(SA.custom){ var _s=(SA.raw.series||[]); if(_s.length && _s[0].date>SA.custom.from){ $('sa-updated').textContent+='  ·  data available from '+_s[0].date; } }
-    }catch(e){
-      $('sa-loading').style.display='none';
-      $('sa-error').style.display='block';
-      $('sa-error').textContent='Could not load analytics: '+((e&&e.message)||e);
-    }
-  };
-
-  // Refresh: kick the live pull off in the BACKGROUND (server-side), keep the panes visible, show a small
-  // spinner on the button, and poll the cache until the new numbers land. Safe to navigate away mid-refresh.
-  SA.refresh=async function(){
-    var btn=$('sa-refresh');
-    if(btn.dataset.busy==='1') return;
-    btn.dataset.busy='1'; btn.disabled=true;
-    var orig=btn.innerHTML; btn.innerHTML='<span class="sa-spin sa-spin-sm"></span>Refreshing…';
-    var before=(SA.raw&&SA.raw.captured_at)||'';
-    function finish(msg){ btn.disabled=false; btn.dataset.busy=''; btn.innerHTML=orig; if(msg)$('sa-updated').textContent=msg; }
-    try{ var k=await sb.functions.invoke('social-analytics',{body:{action:'refresh_async'}}); if(k&&k.error) throw k.error; }
-    catch(_e){ /* the trigger returns instantly; even if it hiccups the work runs server-side, so just poll */ }
-    var tries=0, MAX=45; // ~3 minutes, then stop politely
-    (function poll(){
-      tries++;
-      sb.functions.invoke('social-analytics',{body:{action:'summary',window_days:(SA.custom?90:SA.win),refresh:false}}).then(function(r){
-        var d=r&&r.data;
-        if(d&&d.ok&&d.captured_at&&d.captured_at!==before){
-          SA.raw=d;
-          var when=new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-          SA.render();
-          finish('Updated '+when+'.');
-          return;
-        }
-        if(tries>=MAX){ finish('Still finishing in the background; the numbers will be ready on your next visit.'); return; }
-        setTimeout(poll,4000);
-      }).catch(function(){ if(tries>=MAX) finish(); else setTimeout(poll,4000); });
-    })();
-  };
-
-  SA.seriesDays=function(){
-    var rows=(SA.raw&&SA.raw.series)||[];
-    if(SA.custom) return rows.filter(function(d){ return d.date>=SA.custom.from && d.date<=SA.custom.to; });
-    return rows;
-  };
-
-  SA.effTotals=function(){
-    if(!SA.custom) return (SA.raw&&SA.raw.totals)||{};
-    var rows=SA.seriesDays(), full=(SA.raw&&SA.raw.series)||[], wtot=(SA.raw&&SA.raw.totals)||{}, out={};
-    var METS=['views','reach','reactions','comments','shares','posts'];
-    CH.forEach(function(c){ var k=c[0], o={};
-      METS.forEach(function(m){
-        var sum=0, has=false;
-        rows.forEach(function(d){ var v=d[k]&&d[k][m]; if(typeof v==='number'){ sum+=v; if(v>0)has=true; } });
-        if(has){ o[m]=sum; }
-        else { var wt=(wtot[k]&&wtot[k][m])||0; if(wt>0){ var rv=0,fv=0; rows.forEach(function(d){ rv+=((d[k]&&d[k].views)||0); }); full.forEach(function(d){ fv+=((d[k]&&d[k].views)||0); }); o[m]=fv>0?Math.round(wt*rv/fv):0; } else o[m]=sum; }
-      });
-      out[k]=o;
-    });
-    return out;
-  };
-  SA.grand=function(){
-    var g={views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
-    var tot=SA.effTotals();
-    CH.forEach(function(c){ if(SA.on[c[0]]&&tot[c[0]]){ Object.keys(g).forEach(function(k){ g[k]+=(tot[c[0]][k]||0); }); } });
-    return g;
-  };
-
-  SA.render=function(){ if(!SA.raw) return; SA.renderTiles(); SA.renderChart(); SA.renderTable(); };
-
-  SA.renderTiles=function(){
-    var g=SA.grand();
-    var defs=[['posts','Posts',''],['views','Views',''],['reactions','Reactions / Likes',''],['comments','Comments / Replies',''],['shares','Shares / Reposts','']];
-    var html='';
-    defs.forEach(function(d){ html+='<div class="sa-tile"><div class="lbl">'+d[1]+'</div><div class="val">'+fmt(g[d[0]])+'</div><div class="sub">&nbsp;</div></div>'; });
-    $('sa-tiles').innerHTML=html;
-  };
-
-  SA.renderChart=function(){
-    var tot=SA.effTotals();
-    var mlabel=((METRICS.filter(function(x){return x[0]===SA.metric;})[0])||['',''])[1];
-    var yticks={precision:0,callback:function(v){return fmt(v);}};
-    if(SA.chart) SA.chart.destroy();
-    var ctx=$('sa-chart').getContext('2d');
-    var rows=SA.seriesDays();
-    if(SA.chartType==='bar' || !rows.length){
-      var labels=[],data=[],colors=[],bkeys=[];
-      CH.forEach(function(c){ if(!SA.on[c[0]]) return; labels.push(c[1]); bkeys.push(c[0]); data.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); colors.push(c[2]); });
-      SA.chart=new Chart(ctx,{type:'bar',data:{labels:labels,datasets:[{label:mlabel,data:data,backgroundColor:colors,borderRadius:6,maxBarThickness:96}]},options:{
-        responsive:true,maintainAspectRatio:false,
-        onHover:function(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor=(els&&els.length)?'pointer':'default'; },
-        onClick:function(e,els){ if(els&&els.length){ var k=bkeys[els[0].index]; if(k) SA.openPosts(k); } },
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y)+' — click for posts';}}}},
-        scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
-      }});
-      return;
-    }
-    // line: REAL per-day data only (no flat averages); channels without daily data for this metric are simply not plotted
-    var n=rows.length, lineDs=[];
-    if(n){ CH.forEach(function(c){ if(!SA.on[c[0]]) return; var k=c[0];
-      var daily=rows.map(function(d){ return (d[k]&&d[k][SA.metric])||0; });
-      var est=(k==='instagram'&&SA.metric==='views');
-      if(!daily.some(function(v){return v>0;})){
-        // no real per-day data for this metric (e.g. IG/Threads engagement) -> estimate by spreading
-        // the window total across the channel's daily-views shape, so it sums to the real total
-        var total=(tot[k]&&tot[k][SA.metric])||0; if(total<=0) return;
-        var shape=rows.map(function(d){ return (d[k]&&d[k].views)||0; });
-        var ssum=shape.reduce(function(a,b){return a+b;},0);
-        daily = ssum>0 ? shape.map(function(v){ return total*v/ssum; }) : rows.map(function(){ return total/n; });
-        est=true;
-      }
-      lineDs.push({label:c[1],chKey:k,data:daily,borderColor:c[2],backgroundColor:c[2],tension:0.35,pointRadius:(n<=3?3:0),pointHitRadius:14,borderWidth:2,fill:false});
-    }); }
-    // Trailing days a channel hasn't reported yet (insights lag: Threads/IG ~1-2 days, X daily-cron) read 0
-    // and look like a crash. If a channel had data within the last ~4 days, null its trailing gap (so the
-    // line doesn't dip) and mark those days "pending" for the tooltip instead of showing a false 0.
-    var pendingByIndex={};
-    lineDs.forEach(function(ds){
-      var arr=ds.data, m=arr.length, lastRep=-1;
-      for(var i=0;i<m;i++){ if(arr[i]>0) lastRep=i; }
-      if(lastRep<0 || lastRep<m-4) return;
-      for(var j=lastRep+1;j<m;j++){ (pendingByIndex[j]=pendingByIndex[j]||[]).push(ds.label); arr[j]=null; }
-    });
-    if(lineDs.length){
-      var fullDates=rows.map(function(d){ return d.date; });
-      var labels=rows.map(function(d){ return d.date.slice(5); });
-      SA.chart=new Chart(ctx,{type:'line',data:{labels:labels,datasets:lineDs},options:{
-        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        onHover:function(e,els){ if(e.native&&e.native.target) e.native.target.style.cursor=(els&&els.length)?'pointer':'default'; },
-        onClick:function(e){ var pts=SA.chart.getElementsAtEventForMode(e,'nearest',{intersect:false},true); if(!pts.length) return; var dt=fullDates[pts[0].index]; if(dt) SA.openPostsAllForDate(dt); },
-        plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:11}}},tooltip:{filter:function(it){return it.parsed.y!=null;},callbacks:{title:function(it){return it[0]?it[0].label+' — click to see posts':'';},label:function(it){return it.dataset.label+': '+fmt(it.parsed.y);},afterBody:function(items){var idx=items&&items[0]?items[0].dataIndex:null;var p=(idx!=null)?pendingByIndex[idx]:null;return (p&&p.length)?['Not yet reported: '+p.join(', ')]:[];}}}},
-        scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}}}
-      }});
-      return;
-    }
-    // no daily data for this metric -> fall back to the per-channel bar so it's never empty
-    var blabels=[],bdata=[],bcolors=[];
-    CH.forEach(function(c){ if(!SA.on[c[0]]) return; blabels.push(c[1]); bdata.push((tot[c[0]]&&tot[c[0]][SA.metric])||0); bcolors.push(c[2]); });
-    SA.chart=new Chart(ctx,{type:'bar',data:{labels:blabels,datasets:[{label:mlabel,data:bdata,backgroundColor:bcolors,borderRadius:6,maxBarThickness:96}]},options:{
-      responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(it){return mlabel+': '+fmt(it.parsed.y);}}}},
-      scales:{y:{beginAtZero:true,ticks:yticks,grid:{color:'#f0ebe1'}},x:{grid:{display:false}}}
-    }});
-  };
-
-  SA.renderTable=function(){
-    var tot=SA.effTotals(), av=(SA.raw&&SA.raw.availability)||{};
-    var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
-    CH.forEach(function(c){
-      var k=c[0], p=tot[k]||{views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
-      var st=av[k]||'ok', label='Live', cls='live';
-      if(st==='needs_insights'){ label='Reconnect for insights'; cls='warn'; }
-      else if(st==='views_need_insights'){ label='Views need reconnect'; cls='warn'; }
-      else if(st==='no_token'){ label='Not connected'; cls='na'; }
-      var noViews=(k==='bluesky');
-      html+='<tr><td><span class="sa-ch clk" data-ch="'+k+'" title="See your '+c[1]+' posts"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
-        +'<td class="num">'+(p.posts||0)+'</td>'
-        +'<td class="num">'+(noViews?'&mdash;':fmt(p.views))+'</td>'
-        +'<td class="num">'+fmt(p.reactions)+'</td>'
-        +'<td class="num">'+fmt(p.comments)+'</td>'
-        +'<td class="num">'+fmt(p.shares)+'</td>'
-        +'<td><span class="sa-pill '+cls+'">'+label+'</span></td></tr>';
-    });
-    $('sa-table').innerHTML=html;
-    document.querySelectorAll('#sa-table .sa-ch.clk').forEach(function(el){ el.onclick=function(){ SA.openPosts(el.dataset.ch); }; });
-  };
-
   checkSession();
 })();
 </script>
