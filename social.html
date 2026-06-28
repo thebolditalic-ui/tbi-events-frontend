@@ -483,7 +483,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <canvas id="ig-card" width="1080" height="1440"></canvas>
           <div class="ig-actions">
             <button class="btn btn-gold" id="ig-send">Send to Scheduling</button>
-            <button class="btn btn-outline btn-sm" id="ig-post">Post to IG now</button>
+            <button class="btn btn-outline btn-sm" id="ig-post">Post to IG feed now</button>
             <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
@@ -547,7 +547,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="cp-order" id="cp-order" style="display:none"><button id="cp-left">&lt; Move</button><span id="cp-sel-label">Photo 1 of 1</span><button id="cp-right">Move &gt;</button></div>
           <div class="ig-actions">
             <button class="btn btn-gold" id="cp-send">Send to Scheduling</button>
-            <button class="btn btn-outline btn-sm" id="cp-post">Post to IG now</button>
+            <button class="btn btn-outline btn-sm" id="cp-post">Post to IG feed now</button>
             <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
           </div>
           <div class="run-status" id="cp-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
@@ -1533,7 +1533,7 @@ async function loadStaged(){
     var vbits=['Reel'];
     if(vop){ vbits.push(vop.share_to_feed===false?'Reels tab only':'grid + Reels tab'); if(vop.cover_url) vbits.push('custom cover'); else if(vop.thumb_offset) vbits.push('cover @ '+(vop.thumb_offset/1000).toFixed(1)+'s'); if(Array.isArray(vop.collaborators)&&vop.collaborators.length) vbits.push(vop.collaborators.length+' collaborator'+(vop.collaborators.length>1?'s':'')); if(vop.location_id) vbits.push('location'); }
     var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
-      :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
+      :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG feed</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
     var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
@@ -2169,8 +2169,8 @@ function igBoot(){
       if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
       if(d.error) throw new Error(d.error);
       st.innerHTML='<span style="color:var(--green)">Posted to Instagram '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View post</a>'):'');
-      b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to Instagram"; b.disabled=false; },3000);
-    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to Instagram"; b.disabled=false; }
+      b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to IG feed"; b.disabled=false; },3000);
+    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to IG feed"; b.disabled=false; }
   };
   if($('#ig-tbwrap')){ $('#ig-tbwrap').innerHTML=tbPanelHTML('igtb'); wireTB('igtb', function(){ return state.textBox; }, render); syncTB('igtb', state.textBox); }
   loadIGCandidates();
