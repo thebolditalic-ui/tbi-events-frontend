@@ -483,7 +483,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <canvas id="ig-card" width="1080" height="1440"></canvas>
           <div class="ig-actions">
             <button class="btn btn-gold" id="ig-send">Send to Scheduling</button>
-            <button class="btn btn-outline btn-sm" id="ig-post">Post to IG feed now</button>
+            <button class="btn btn-outline btn-sm" id="ig-post">Post to IG grid now</button>
             <button class="btn btn-outline btn-sm" id="ig-create">Create (save hosted)</button>
             <button class="btn btn-outline btn-sm" id="ig-export">Download PNG</button>
             <button class="btn btn-outline btn-sm" id="ig-copy">Copy image</button>
@@ -547,7 +547,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="cp-order" id="cp-order" style="display:none"><button id="cp-left">&lt; Move</button><span id="cp-sel-label">Photo 1 of 1</span><button id="cp-right">Move &gt;</button></div>
           <div class="ig-actions">
             <button class="btn btn-gold" id="cp-send">Send to Scheduling</button>
-            <button class="btn btn-outline btn-sm" id="cp-post">Post to IG feed now</button>
+            <button class="btn btn-outline btn-sm" id="cp-post">Post to IG grid now</button>
             <button class="btn btn-outline btn-sm" id="cp-export">Download</button>
           </div>
           <div class="run-status" id="cp-post-status" style="width:100%;text-align:center;line-height:1.4"></div>
@@ -566,7 +566,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="cp-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-fld" style="margin-top:10px">Fit<div class="ig-seg" id="cp-fit"><button data-fit="cover" class="on">Fill frame</button><button data-fit="contain">Fit (letterbox)</button></div></div>
             <div class="ig-fld">Letterbox color<div class="ig-seg" id="cp-bg"><button data-bg="#ffffff" class="on">White</button><button data-bg="#000000">Black</button></div></div>
-            <div class="ig-hint">Feed posts allow 4:5 (tallest) through 1.91:1 (widest); every photo in a carousel shares the ratio. <b>9:16</b> is a Stories size &mdash; use Download and post it as a Story by hand (the feed Post/Schedule buttons only take 4:5&ndash;1.91:1).</div>
+            <div class="ig-hint">4:5 (tallest) through 1.91:1 (widest) post to your grid; every photo in a carousel shares the ratio. Pick <b>9:16</b> to compose an Instagram <b>Story</b> &mdash; the Post and Send buttons switch to Story mode (one photo).</div>
           </div></div>
           <div id="cp-coverwrap"></div>
           <div class="set-group"><h3>4 &middot; Red TBI circle</h3><div class="ig-body">
@@ -929,7 +929,7 @@ function showApp(session){
   $('#user-email').textContent=session.user.email||'';
   loadSettings(); checkConnections(); loadFeed(); loadSpend();
   routeSection();
-  setTimeout(function(){try{var raw=sessionStorage.getItem("tbi_sendto");if(!raw)return;sessionStorage.removeItem("tbi_sendto");var d=JSON.parse(raw);if(!d||!d.urls||!d.urls.length)return;if(d.dest==="custom"){var ib=document.querySelector('.subtab[data-tab="instagram"]');if(ib)ib.click();setTimeout(function(){try{if(typeof showIGView==="function")showIGView("custom");}catch(e){}if(window.cpAddImages)window.cpAddImages(d.urls);},240);}else{var cb=document.querySelector('.subtab[data-tab="compose"]');if(cb)cb.click();setTimeout(function(){if(window.cmpAddImages)window.cmpAddImages(d.urls);var s=document.getElementById("cmp-status");if(s)s.textContent=d.urls.length+" image(s) added from the Downloader.";},240);}}catch(e){}},500);
+  setTimeout(function(){try{var raw=sessionStorage.getItem("tbi_sendto");if(!raw)return;sessionStorage.removeItem("tbi_sendto");var d=JSON.parse(raw);if(!d||!d.urls||!d.urls.length)return;if(d.dest==="custom"||d.dest==="story"){var ib=document.querySelector('.subtab[data-tab="instagram"]');if(ib)ib.click();setTimeout(function(){try{if(typeof showIGView==="function")showIGView("custom");}catch(e){}if(window.cpAddImages)window.cpAddImages(d.urls);if(d.dest==="story"){try{var ab=document.querySelector('#cp-aspect button[data-h="1920"]');if(ab)ab.click();}catch(e){}}},240);}else{var cb=document.querySelector('.subtab[data-tab="compose"]');if(cb)cb.click();setTimeout(function(){if(window.cmpAddImages)window.cmpAddImages(d.urls);var s=document.getElementById("cmp-status");if(s)s.textContent=d.urls.length+" image(s) added from the Downloader.";},240);}}catch(e){}},500);
 }
 $('#login-btn').onclick=async()=>{
   $('#login-error').textContent='';
@@ -1534,7 +1534,7 @@ async function loadStaged(){
     var vbits=['Reel'];
     if(vop){ vbits.push(vop.share_to_feed===false?'Reels tab only':'grid + Reels tab'); if(vop.cover_url) vbits.push('custom cover'); else if(vop.thumb_offset) vbits.push('cover @ '+(vop.thumb_offset/1000).toFixed(1)+'s'); if(Array.isArray(vop.collaborators)&&vop.collaborators.length) vbits.push(vop.collaborators.length+' collaborator'+(vop.collaborators.length>1?'s':'')); if(vop.location_id) vbits.push('location'); }
     var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
-      :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG feed</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
+      :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG grid</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
     var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
@@ -2170,8 +2170,8 @@ function igBoot(){
       if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
       if(d.error) throw new Error(d.error);
       st.innerHTML='<span style="color:var(--green)">Posted to Instagram '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View post</a>'):'');
-      b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to IG feed"; b.disabled=false; },3000);
-    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to IG feed"; b.disabled=false; }
+      b.textContent="Posted "+CK; loadIGCandidates(); setTimeout(function(){ b.textContent="Post to IG grid"; b.disabled=false; },3000);
+    }catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent="Post to IG grid"; b.disabled=false; }
   };
   if($('#ig-tbwrap')){ $('#ig-tbwrap').innerHTML=tbPanelHTML('igtb'); wireTB('igtb', function(){ return state.textBox; }, render); syncTB('igtb', state.textBox); }
   loadIGCandidates();
@@ -2485,7 +2485,9 @@ function cpBoot(){
   $('#cp-pos').oninput=function(e){ var o=st.imgs[st.sel]; if(o){ o.posY=e.target.value/100; } var v=+e.target.value; $('#cp-posVal').textContent=v===0?'center':(v<0?'higher':'lower'); cpRender(); };
   $('#cp-posx').oninput=function(e){ var o=st.imgs[st.sel]; if(o){ o.posX=e.target.value/100; } var vx=+e.target.value; $('#cp-posxVal').textContent=vx===0?'center':(vx<0?'left':'right'); cpRender(); };
   $('#cp-zoom').oninput=function(e){ var o=st.imgs[st.sel]; if(o){ o.zoom=e.target.value/100; } $('#cp-zoomVal').textContent=e.target.value+'%'; cpRender(); };
-  document.querySelectorAll('#cp-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-aspect button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.W=+b.dataset.w; st.H=+b.dataset.h; cpRender(); }; });
+  function cpSyncStoryUI(){ var pb=$('#cp-post'); if(pb) pb.textContent=((st.W/st.H)<0.65)?'Post to IG Story now':'Post to IG grid now'; }
+  document.querySelectorAll('#cp-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-aspect button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.W=+b.dataset.w; st.H=+b.dataset.h; cpRender(); cpSyncStoryUI(); }; });
+  cpSyncStoryUI();
   document.querySelectorAll('#cp-fit button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-fit button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.fit=b.dataset.fit; cpRender(); }; });
   document.querySelectorAll('#cp-bg button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#cp-bg button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); st.bg=b.dataset.bg; cpRender(); }; });
   $('#cp-tbi').onchange=function(e){ var o=st.imgs[st.sel]; if(o){ o.tbiCircle=e.target.checked; cpRender(); } };
@@ -2515,9 +2517,9 @@ function cpBoot(){
     var ready=st.imgs.filter(function(o){return o.img;});
     if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
     var ratio=st.W/st.H;
-    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick a 4:5, 1:1, or 1.91:1 ratio before posting.</span>'; return; }
+    var isStory=ratio<0.65; if(!isStory && (ratio<0.8||ratio>1.91)){ stt.innerHTML='<span style="color:var(--red)">Pick 4:5, 1:1, or 1.91:1 (or 9:16 for a Story).</span>'; return; }
     var n=ready.length;
-    if(!window.confirm('Post '+(n>1?('this '+n+'-photo carousel'):'this photo')+' to @thebolditalic on Instagram now? This publishes to the live feed.')) return;
+    if(isStory && n>1){ stt.innerHTML='<span style="color:var(--red)">Instagram Stories take one photo. Pick a single photo.</span>'; return; } if(isStory){ if(!window.confirm('Post this photo to your @thebolditalic Instagram Story now? This publishes a live Story.')) return; } else if(!window.confirm('Post '+(n>1?('this '+n+'-photo carousel'):'this photo')+' to @thebolditalic on Instagram now? This publishes to the live grid.')) return;
     b.disabled=true; b.textContent='Posting...'; stt.textContent='Rendering + uploading '+n+' image'+(n>1?'s':'')+'...';
     try{
       var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d');
@@ -2531,25 +2533,25 @@ function cpBoot(){
         urls.push(sb.storage.from('ig-rendered').getPublicUrl(key).data.publicUrl);
       }
       stt.textContent='Publishing to Instagram (~'+(10+(n-1)*4)+'s)...';
-      var r=await sb.functions.invoke('instagram',{body:{action:'publish', image_urls:urls, caption:($('#cp-caption').value||'')}});
+      var r=isStory ? await sb.functions.invoke('dispatch',{body:{action:'post_now', channels:['instagram'], image_urls:urls, options:{ig_story:true, images:{instagram_story:urls}}}}) : await sb.functions.invoke('instagram',{body:{action:'publish', image_urls:urls, caption:($('#cp-caption').value||'')}});
       var d=r.data||{};
       if(r.error){ var m=(r.error.message||String(r.error)); try{ var jj=r.error.context&&r.error.context.json?await r.error.context.json():null; if(jj&&jj.error) m=jj.error; }catch(_e){} throw new Error(m); }
       if(d.error) throw new Error(d.error);
       stt.innerHTML='<span style="color:var(--green)">Posted to Instagram '+CK+'</span>'+(d.permalink?(' &middot; <a href="'+esc(d.permalink)+'" target="_blank" rel="noopener">View post</a>'):'');
-      b.textContent='Posted '+CK; setTimeout(function(){ b.textContent='Post to Instagram'; b.disabled=false; },3000);
-    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Post to Instagram'; b.disabled=false; }
+      if(isStory && d.ok===false) throw new Error('Story post failed: '+JSON.stringify(d.results||d)); b.textContent='Posted '+CK+(isStory?' Story':''); setTimeout(function(){ cpSyncStoryUI(); b.disabled=false; },3000);
+    }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; cpSyncStoryUI(); b.disabled=false; }
   };
   if($('#cp-send')) $('#cp-send').onclick=async function(){
     var b=$('#cp-send'), stt=$('#cp-post-status');
     var ready=st.imgs.filter(function(o){return o.img;});
     if(!ready.length){ stt.innerHTML='<span style="color:var(--red)">Add at least one photo first.</span>'; return; }
     var ratio=st.W/st.H;
-    if(ratio<0.8||ratio>1.91){ stt.innerHTML='<span style="color:var(--red)">Pick 4:5, 1:1, or 1.91:1 for IG/FB feed posts (9:16 is Stories-only).</span>'; return; }
+    var isStory=ratio<0.65; if(!isStory && (ratio<0.8||ratio>1.91)){ stt.innerHTML='<span style="color:var(--red)">Pick 4:5, 1:1, or 1.91:1 for grid, or 9:16 for a Story.</span>'; return; } if(isStory && ready.length>1){ stt.innerHTML='<span style="color:var(--red)">A Story takes one photo. Pick a single photo.</span>'; return; }
     b.disabled=true; b.textContent='Sending...'; stt.textContent='Rendering + uploading '+ready.length+' image'+(ready.length>1?'s':'')+'...';
     try{
       var oc=document.createElement('canvas'); oc.width=st.W; oc.height=st.H; var octx=oc.getContext('2d'); var blobs=[];
       for(var i=0;i<ready.length;i++){ paint(octx, ready[i], st.W, st.H); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); blobs.push(blob); }
-      await igSendToScheduling(blobs, ($('#cp-caption').value||''));
+      if(isStory){ var sid=crypto.randomUUID(); var spath='sched-'+sid+'-story.jpg'; var sup=await sb.storage.from('ig-rendered').upload(spath,blobs[0],{upsert:true,contentType:'image/jpeg'}); if(sup.error) throw sup.error; var surl=sb.storage.from('ig-rendered').getPublicUrl(spath).data.publicUrl; var sins=await sb.from('social_suggestions').insert({kind:'image_post',angle:'Custom · IG Story',content:($('#cp-caption').value||''),image_urls:[surl],options:{ig_story:true,images:{instagram_story:[surl]}},status:'staged',expires_at:new Date(Date.now()+30*864e5).toISOString()}); if(sins.error) throw sins.error; } else { await igSendToScheduling(blobs, ($('#cp-caption').value||'')); }
       stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged) to pick Instagram/Facebook and when.';
       b.textContent='Sent '+CK; setTimeout(function(){ b.textContent='Send to Scheduling'; b.disabled=false; },2600);
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
