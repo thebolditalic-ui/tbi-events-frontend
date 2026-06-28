@@ -1079,12 +1079,34 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     // Filename: <uuid>.<ext>. Path inside bucket is just the filename.
     var ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     var rand = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('bn-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10));
+
+    // 2026-06-28: compress raster creatives to WebP before upload (skip GIF to keep animation, skip existing WebP),
+    // and set a 1-year cache so the blog stops re-pulling banner bytes from Supabase egress every hour.
+    var uploadBlob = file, uploadType = file.type;
+    if (file.type === 'image/png' || file.type === 'image/jpeg') {
+      var webpBlob = await new Promise(function (resolve) {
+        var im = new Image();
+        im.onload = function () {
+          try {
+            var c = document.createElement('canvas');
+            c.width = dims.w; c.height = dims.h;
+            c.getContext('2d').drawImage(im, 0, 0, dims.w, dims.h);
+            c.toBlob(function (bb) { resolve(bb); }, 'image/webp', 0.85);
+          } catch (e) { resolve(null); }
+        };
+        im.onerror = function () { resolve(null); };
+        im.src = dims.url;
+      });
+      if (webpBlob && webpBlob.size && webpBlob.size < file.size) { uploadBlob = webpBlob; uploadType = 'image/webp'; ext = 'webp'; }
+    }
+    try { URL.revokeObjectURL(dims.url); } catch (e) {}
+
     var path = rand + '.' + ext;
 
-    var up = await sb.storage.from(BUCKET).upload(path, file, {
-      cacheControl: '3600',
+    var up = await sb.storage.from(BUCKET).upload(path, uploadBlob, {
+      cacheControl: '31536000',
       upsert: false,
-      contentType: file.type
+      contentType: uploadType
     });
     if (up.error) {
       showUploadProgress(target, 'Upload failed: ' + up.error.message);
