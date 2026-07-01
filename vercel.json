@@ -102,6 +102,7 @@
       "source": "/downloader",
       "destination": "/downloader.html"
     },
+    {"source":"/invites","destination":"/fb-invites.html"},
     {
       "source": "/(.*)",
       "destination": "/index.html"
