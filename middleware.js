@@ -33,6 +33,16 @@ export const config = {
 const SHORT_LINK_HOSTS = new Set(['tbi.fyi', 'www.tbi.fyi']);
 const SHORT_LINK_FALLBACK_URL = 'https://www.thebolditalic.com';
 
+// Stable, high-traffic short links that skip the live Supabase lookup on every
+// hit. `donate` is pinged 24/7 by automated traffic (no referer, distributed IPs);
+// there's no reason to do a DB round-trip for a destination that never changes.
+// If any of these destinations ever change, update them here.
+const STATIC_LINKS = {
+  'donate':         'https://donate.mazloweb.com/donate/the-bold-italic',
+  'donate_email':   'https://donate.mazloweb.com/donate/the-bold-italic',
+  'donate_website': 'https://donate.mazloweb.com/donate/the-bold-italic',
+};
+
 const SUPABASE_URL = 'https://scawgrjcjgcmvsimvash.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
 
@@ -163,8 +173,9 @@ async function handleShortLink(request, url) {
   }
 
   // ---- Look up the slug ----
-  let destination = '';
+  let destination = STATIC_LINKS[slug] || '';
   try {
+    if (!destination) {
     const lookupUrl = SUPABASE_URL
       + '/rest/v1/short_links'
       + '?slug=eq.' + encodeURIComponent(slug)
@@ -183,6 +194,7 @@ async function handleShortLink(request, url) {
       if (rows && rows.length > 0 && rows[0].destination_url) {
         destination = rows[0].destination_url;
       }
+    }
     }
   } catch (_) {
     // fall through to fallback
