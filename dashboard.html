@@ -65,6 +65,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .card th { text-align: left; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; color: #888; }
 .card th.r, .card td.r { text-align: right; }
 .card td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.card tr.live-game-row td { background:#fff3c4; border-bottom-color:#f3e4a8; }
+.card tr.live-game-row td:first-child { padding-left:9px; border-radius:8px 0 0 8px; }
+.card tr.live-game-row td:last-child { padding-right:9px; border-radius:0 8px 8px 0; }
 .card tr:last-child td { border-bottom: none; }
 .card a { color: var(--blue); text-decoration: none; }
 .card a:hover { text-decoration: underline; }
@@ -405,7 +408,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           var act = (!isGame && slug && slug.indexOf('/') < 0)
             ? ' <a href="#" class="qcrawl" data-slug="' + esc(slug) + '" data-title="' + esc(x.title || slug) + '" data-path="' + esc(x.path) + '" style="font-size:11.5px;color:#8a8178;white-space:nowrap">· queue for social crawl</a>'
             : '';
-          return '<tr><td><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(isGame ? 'Fog City Frenzy — A game by The Bold Italic' : (x.title || x.path)) + '</a>' + act + '</td><td class="r">' + x.n + '</td></tr>';
+          return '<tr' + (isGame ? ' class="live-game-row"' : '') + '><td><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(isGame ? 'Fog City Frenzy — A game by The Bold Italic' : (x.title || x.path)) + '</a>' + act + '</td><td class="r">' + x.n + '</td></tr>';
         }).join('')
       : '<tr><td colspan="2" class="emptymsg">Quiet right now.</td></tr>';
     body.querySelectorAll('.qcrawl').forEach(function (a) {
