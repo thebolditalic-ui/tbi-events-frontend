@@ -214,6 +214,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       <div class="stat"><div class="label">Events page, 7 days</div><div class="num" id="st-visitors">—</div></div>
       <div class="stat"><div class="label">Queued social posts</div><div class="num" id="st-queue">—</div><div id="st-queue-range" style="font-size:11.5px;color:#8a8178;margin-top:3px"></div></div>
       <div class="stat"><div class="label">Active banners</div><div class="num" id="st-banners">—</div></div>
+      <div class="stat"><div class="label">Fog City Frenzy views</div><div class="num" id="st-game">—</div></div>
     </div>
 
     <div class="grid">
@@ -320,7 +321,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   function loadAll() {
     $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
-    loadLive(); loadQueue(); loadFeatured(); loadVisitors(); loadBanners(); loadMissing(); loadSocialSnap();
+    loadLive(); loadQueue(); loadFeatured(); loadVisitors(); loadBanners(); loadMissing(); loadSocialSnap(); loadGamePlays();
   }
 
   // ---- social this week (reads the cached analytics snapshot; no live API calls) ----
@@ -386,6 +387,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     }
   }
 
+  // ---- Fog City Frenzy cumulative views ----
+  async function loadGamePlays() {
+    try {
+      var r = await sb.from('game_plays').select('*', { count: 'exact', head: true }).eq('game', 'fog_city_frenzy');
+      $('st-game').textContent = r.error ? '—' : (r.count || 0).toLocaleString('en-US');
+    } catch (e) { $('st-game').textContent = '—'; }
+  }
+
   // ---- live readers ----
   async function loadLive() {
     var since = new Date(Date.now() - 150000).toISOString();
@@ -400,10 +409,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     body.innerHTML = rows.length
       ? rows.map(function (x) {
           var slug = String(x.path || '').replace(/^\/+|\/+$/g, '');
-          var act = (slug && slug.indexOf('/') < 0)
+          var isGame = x.path && x.path.indexOf('/fog_city_frenzy') === 0;
+          var url = isGame ? ('https://games.thebolditalic.com' + x.path) : (GHOST_URL + x.path);
+          var act = (!isGame && slug && slug.indexOf('/') < 0)
             ? ' <a href="#" class="qcrawl" data-slug="' + esc(slug) + '" data-title="' + esc(x.title || slug) + '" data-path="' + esc(x.path) + '" style="font-size:11.5px;color:#8a8178;white-space:nowrap">· queue for social crawl</a>'
             : '';
-          return '<tr><td><a href="' + esc(GHOST_URL + x.path) + '" target="_blank" rel="noopener">' + esc(x.title || x.path) + '</a>' + act + '</td><td class="r">' + x.n + '</td></tr>';
+          return '<tr><td><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(x.title || x.path) + '</a>' + act + '</td><td class="r">' + x.n + '</td></tr>';
         }).join('')
       : '<tr><td colspan="2" class="emptymsg">Quiet right now.</td></tr>';
     body.querySelectorAll('.qcrawl').forEach(function (a) {
