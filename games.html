@@ -210,6 +210,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     GAMES=r.data||[]; $status.textContent='';
     if($orderCard) $orderCard.style.display='';
     renderOrder(); renderPanels();
+    if(!window.__uiv) window.__uiv=setInterval(refreshUsage,30000);
   }
   function renderOrder(){
     if(!$orderList) return; $orderList.innerHTML='';
@@ -231,7 +232,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       if(settings.cascade_bias===undefined && g.key!=='fog_city_frenzy') return;
       var bias=(typeof settings.cascade_bias==='number')?settings.cascade_bias:0.45;
       var card=document.createElement('div'); card.className='ga-card';
+      card.setAttribute('data-key', g.key);
       card.innerHTML='<h3>'+esc(g.title)+'</h3>'+
+        '<div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage…</div>'+
         '<div class="slider-row"><label>Cascade bias</label><span class="slider-val">'+fmt(bias)+'</span></div>'+
         '<input type="range" class="cascade-range" min="0" max="1" step="0.05" value="'+bias+'">'+
         '<p class="ga-hint">Higher = more chain-reaction cascades (easier, more “slot machine” payoff). 0 = pure random.</p>'+
@@ -246,8 +249,22 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         else { g.settings=ns; saved.textContent='Saved ✓'; saved.className='ga-saved cascade-saved ok'; setTimeout(function(){saved.textContent='';},2500); }
       });
       $panels.appendChild(card);
+      loadUsage(g.key, card);
     });
   }
+  async function loadUsage(key, card){
+    var el=card.querySelector('.ga-usage'); if(!el) return;
+    try {
+      var v=await sb.from('game_plays').select('*',{count:'exact',head:true}).eq('game',key).eq('event','view');
+      var p=await sb.from('game_plays').select('*',{count:'exact',head:true}).eq('game',key).eq('event','play');
+      if(v.error||p.error){ el.innerHTML='<span class="ga-hint">Usage needs the <code>event</code> column — run the ALTER SQL in Supabase, then reload.</span>'; return; }
+      var since=new Date(Date.now()-180000).toISOString();
+      var live=await sb.from('reader_presence').select('session_id').eq('path','/'+key+'/').gte('at',since).limit(2000);
+      var now=0; if(!live.error){ var ss={}; (live.data||[]).forEach(function(x){ss[x.session_id]=1;}); now=Object.keys(ss).length; }
+      el.innerHTML='<b style="color:'+(now?'#2e7d32':'#555')+'">'+now+'</b> playing now &nbsp;·&nbsp; <b>'+(v.count||0).toLocaleString()+'</b> views &nbsp;·&nbsp; <b>'+(p.count||0).toLocaleString()+'</b> plays';
+    } catch(e){ el.innerHTML='<span class="ga-hint">Usage unavailable</span>'; }
+  }
+  function refreshUsage(){ if(!$panels) return; Array.prototype.forEach.call($panels.querySelectorAll('.ga-card'),function(card){ var k=card.getAttribute('data-key'); if(k) loadUsage(k,card); }); }
   var $saveOrder=document.getElementById('save-order'), $orderSaved=document.getElementById('order-saved');
   if($saveOrder) $saveOrder.addEventListener('click',async function(){
     $orderSaved.textContent='Saving…'; $orderSaved.className='ga-saved';
