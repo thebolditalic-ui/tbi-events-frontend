@@ -102,6 +102,29 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 }
 </style>
 <style id="tbi-brand-img">.admin-header h1 .brand-mark{display:inline-block;vertical-align:middle;line-height:0}.admin-header h1 .brand-mark svg{height:1.0em;width:auto;display:block}.admin-header h1 .adm{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.53em;letter-spacing:.15em;font-weight:400;color:#8d8d8d;vertical-align:middle;margin-left:9px}.admin-header h1 a{position:relative;top:5px;display:inline-block}</style>
+<style>
+.games-status{font-size:13px;color:#8a8178;margin:0 0 16px;}
+.games-status.err{color:var(--red);}
+.games-status code{background:#f0e9db;padding:1px 5px;border-radius:4px;font-size:12px;}
+.ga-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin:0 0 18px;max-width:560px;box-shadow:0 1px 4px rgba(0,0,0,.04);}
+.ga-card h3{font-family:var(--title-font);font-size:18px;margin:0 0 10px;}
+.ga-hint{color:#8a8178;font-size:12.5px;line-height:1.5;margin:8px 0 14px;}
+.order-list{list-style:none;margin:0 0 14px;padding:0;}
+.order-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0ece2;}
+.order-row:last-child{border-bottom:none;}
+.ord-arrows{display:inline-flex;flex-direction:column;gap:2px;}
+.ord-arrows button{width:26px;height:20px;line-height:1;border:1px solid var(--border);background:var(--bg-alt);border-radius:5px;cursor:pointer;font-size:12px;color:#555;}
+.ord-arrows button:disabled{opacity:.35;cursor:default;}
+.ord-title{flex:1;font-weight:600;font-size:14px;}
+.ord-en{font-size:12px;color:#777;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.slider-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:6px;}
+.slider-row label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;}
+.slider-val{font-family:var(--title-font);font-size:18px;font-weight:600;color:var(--dark);}
+.cascade-range{width:100%;}
+.ga-saved{font-size:12px;margin-left:10px;color:#8a8178;}
+.ga-saved.ok{color:var(--green);}
+.ga-saved.err{color:var(--red);}
+</style>
 </head>
 <body>
 <div id="login-screen">
@@ -141,12 +164,15 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 </nav>
   <div class="page-wrap">
     <h2 class="section-title">Games</h2>
-    <p class="section-sub">Interactive bits and games for The Bold Italic.</p>
-    <div class="coming-soon">
-      <div class="cs-badge">In the works</div>
-      <h3>Coming soon</h3>
-      <p>The Games section will be built out here.</p>
+    <p class="section-sub">Order the games on the site and tune each game’s settings.</p>
+    <div id="games-status" class="games-status"></div>
+    <div id="games-order" class="ga-card" style="display:none">
+      <h3>Main page order</h3>
+      <p class="ga-hint">Set the order games appear on the games page, and use "Shown" to hide a game from the page.</p>
+      <ul id="order-list" class="order-list"></ul>
+      <button type="button" class="btn btn-gold btn-sm" id="save-order">Save order</button> <span class="ga-saved" id="order-saved"></span>
     </div>
+    <div id="games-panels"></div>
   </div>
 </div>
 <script>
@@ -159,11 +185,80 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $em=document.getElementById('login-email'),$pw=document.getElementById('login-pass');
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; }
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); }
   async function checkSession(){ var s=await sb.auth.getSession(); if(s.data&&s.data.session) showAdmin(s.data.session.user); }
   $bt.addEventListener('click', async function(){ $er.style.display='none'; var e=$em.value.trim(),p=$pw.value; if(!e||!p){ $er.textContent='Enter email and password'; $er.style.display='block'; return; } $bt.textContent='Signing in...'; $bt.disabled=true; var r=await sb.auth.signInWithPassword({email:e,password:p}); $bt.textContent='Sign In'; $bt.disabled=false; if(r.error){ $er.textContent=r.error.message; $er.style.display='block'; return; } showAdmin(r.data.user); });
   $pw.addEventListener('keydown', function(ev){ if(ev.key==='Enter') $bt.click(); });
   $out.addEventListener('click', async function(){ await sb.auth.signOut(); location.reload(); });
+  var GAMES=[];
+  var $status=document.getElementById('games-status');
+  var $orderCard=document.getElementById('games-order');
+  var $orderList=document.getElementById('order-list');
+  var $panels=document.getElementById('games-panels');
+  function esc(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function fmt(v){ return (Math.round(v*100)/100).toFixed(2); }
+  async function loadGames(){
+    if(!$status) return;
+    $status.textContent='Loading…'; $status.className='games-status';
+    var r=await sb.from('games').select('*').order('sort_order',{ascending:true});
+    if(r.error){
+      var m=r.error.message||'';
+      if(/schema cache|does not exist|find the table/i.test(m)){ $status.innerHTML='The <code>games</code> table isn’t set up yet. Run the setup SQL in Supabase (SQL editor), then reload this page.'; }
+      else { $status.textContent='Error loading games: '+m; }
+      $status.className='games-status err'; return;
+    }
+    GAMES=r.data||[]; $status.textContent='';
+    if($orderCard) $orderCard.style.display='';
+    renderOrder(); renderPanels();
+  }
+  function renderOrder(){
+    if(!$orderList) return; $orderList.innerHTML='';
+    GAMES.forEach(function(g,i){
+      var li=document.createElement('li'); li.className='order-row'; li.setAttribute('data-key',g.key);
+      li.innerHTML='<span class="ord-arrows"><button type="button" class="ord-up" '+(i===0?'disabled':'')+'>↑</button><button type="button" class="ord-dn" '+(i===GAMES.length-1?'disabled':'')+'>↓</button></span>'+
+        '<span class="ord-title">'+esc(g.title)+'</span>'+
+        '<label class="ord-en"><input type="checkbox" '+(g.enabled===false?'':'checked')+'> Shown</label>';
+      li.querySelector('.ord-up').addEventListener('click',function(){ if(i>0){ var t=GAMES[i-1]; GAMES[i-1]=GAMES[i]; GAMES[i]=t; renderOrder(); } });
+      li.querySelector('.ord-dn').addEventListener('click',function(){ if(i<GAMES.length-1){ var t=GAMES[i+1]; GAMES[i+1]=GAMES[i]; GAMES[i]=t; renderOrder(); } });
+      li.querySelector('.ord-en input').addEventListener('change',function(){ g.enabled=this.checked; });
+      $orderList.appendChild(li);
+    });
+  }
+  function renderPanels(){
+    if(!$panels) return; $panels.innerHTML='';
+    GAMES.forEach(function(g){
+      var settings=g.settings||{};
+      if(settings.cascade_bias===undefined && g.key!=='fog_city_frenzy') return;
+      var bias=(typeof settings.cascade_bias==='number')?settings.cascade_bias:0.45;
+      var card=document.createElement('div'); card.className='ga-card';
+      card.innerHTML='<h3>'+esc(g.title)+'</h3>'+
+        '<div class="slider-row"><label>Cascade bias</label><span class="slider-val">'+fmt(bias)+'</span></div>'+
+        '<input type="range" class="cascade-range" min="0" max="1" step="0.05" value="'+bias+'">'+
+        '<p class="ga-hint">Higher = more chain-reaction cascades (easier, more “slot machine” payoff). 0 = pure random.</p>'+
+        '<button type="button" class="btn btn-gold btn-sm cascade-save">Save</button> <span class="ga-saved cascade-saved"></span>';
+      var range=card.querySelector('.cascade-range'), valEl=card.querySelector('.slider-val'), saved=card.querySelector('.cascade-saved');
+      range.addEventListener('input',function(){ valEl.textContent=fmt(parseFloat(this.value)); });
+      card.querySelector('.cascade-save').addEventListener('click',async function(){
+        var val=parseFloat(range.value); var ns=Object.assign({},g.settings||{},{cascade_bias:val});
+        saved.textContent='Saving…'; saved.className='ga-saved cascade-saved';
+        var r=await sb.from('games').update({settings:ns,updated_at:new Date().toISOString()}).eq('key',g.key);
+        if(r.error){ saved.textContent='Error: '+r.error.message; saved.className='ga-saved cascade-saved err'; }
+        else { g.settings=ns; saved.textContent='Saved ✓'; saved.className='ga-saved cascade-saved ok'; setTimeout(function(){saved.textContent='';},2500); }
+      });
+      $panels.appendChild(card);
+    });
+  }
+  var $saveOrder=document.getElementById('save-order'), $orderSaved=document.getElementById('order-saved');
+  if($saveOrder) $saveOrder.addEventListener('click',async function(){
+    $orderSaved.textContent='Saving…'; $orderSaved.className='ga-saved';
+    var ok=true, msg='';
+    for(var i=0;i<GAMES.length;i++){ var g=GAMES[i];
+      var r=await sb.from('games').update({sort_order:i,enabled:(g.enabled!==false),updated_at:new Date().toISOString()}).eq('key',g.key);
+      if(r.error){ ok=false; msg=r.error.message; break; } g.sort_order=i;
+    }
+    if(ok){ $orderSaved.textContent='Saved ✓'; $orderSaved.className='ga-saved ok'; setTimeout(function(){$orderSaved.textContent='';},2500); }
+    else { $orderSaved.textContent='Error: '+msg; $orderSaved.className='ga-saved err'; }
+  });
   checkSession();
 })();
 </script>
