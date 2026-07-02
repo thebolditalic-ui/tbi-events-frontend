@@ -393,7 +393,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var body = $('live-body');
     if (r.error) { body.innerHTML = '<tr><td colspan="2" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
     var byPage = {}, sess = {};
-    (r.data || []).forEach(function (x) { if (x.path && x.path.indexOf('/fog_city_frenzy') === 0) return; sess[x.session_id] = 1; var k = x.path || '?'; (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1; });
+    (r.data || []).forEach(function (x) { sess[x.session_id] = 1; var k = x.path || '?'; (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1; });
     var rows = Object.keys(byPage).map(function (k) { return { path: k, title: byPage[k].title, n: Object.keys(byPage[k].s).length }; }).sort(function (a, b) { return b.n - a.n; });
     var total = Object.keys(sess).length;
     $('st-readers').innerHTML = total + ' <small>reader' + (total === 1 ? '' : 's') + '</small>';
