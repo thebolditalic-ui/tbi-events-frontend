@@ -43,6 +43,11 @@ const STATIC_LINKS = {
   'donate_website': 'https://donate.mazloweb.com/donate/the-bold-italic',
 };
 
+// Slugs whose clicks we do NOT log. `donate` is pinged 24/7 by automated traffic
+// with real-looking UAs (so the bot filter misses it); its click rows are ~90%
+// noise. We still redirect it, just don't write a click row on every hit.
+const NO_LOG_SLUGS = new Set(['donate']);
+
 const SUPABASE_URL = 'https://scawgrjcjgcmvsimvash.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
 
@@ -211,7 +216,7 @@ async function handleShortLink(request, url) {
   // analytics.
   const ua = request.headers.get('user-agent') || '';
   const referer = request.headers.get('referer') || '';
-  if (!isBotUA(ua) && !isPrefetchRequest(request) && !isSelfReferer(referer, destination)) {
+  if (!NO_LOG_SLUGS.has(slug) && !isBotUA(ua) && !isPrefetchRequest(request) && !isSelfReferer(referer, destination)) {
     try {
       await fetch(SUPABASE_URL + '/rest/v1/short_link_clicks', {
         method: 'POST',
