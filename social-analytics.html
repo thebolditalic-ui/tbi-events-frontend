@@ -368,6 +368,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var noViews=(channel==='bluesky');
       var h=SA.mkTable(posts,noViews).html;
       if(channel==='facebook') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Facebook per-post views use Meta\'s new <b>media views</b> metric, which only counts photo, video and reel posts. Link-only posts show &mdash; (Meta has no per-post number for them). The dashboard\'s Facebook Views tile counts all impressions page-wide, so it\'s larger than these per-post views add up to.</p>';
+      if(channel==='instagram') h+='<p style="font-size:11px;color:#b3a99c;padding:12px 14px;margin:0">Instagram\'s account <b>Views</b> (the dashboard tile) also count your Stories and posts you\'re a collaborator on, which don\'t appear as individual rows here, so the tile runs larger than these per-post views add up to.</p>';
       bodyEl.innerHTML=h;
     }catch(e){ var be=$('sa-posts-body'); if(be) be.innerHTML='<div style="padding:44px;text-align:center;color:var(--red)">Could not load: '+esc((e&&e.message)||e)+'</div>'; }
   };
