@@ -121,6 +121,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .slider-row label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#666;}
 .slider-val{font-family:var(--title-font);font-size:18px;font-weight:600;color:var(--dark);}
 .cascade-range{width:100%;}
+.icon-block{margin:12px 0 2px;}
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:8px;margin:6px 0 2px;}
+.icon-opt{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px 6px;border:1.5px solid #e5e0d5;border-radius:10px;background:#faf8f3;cursor:pointer;text-align:center;opacity:.5;transition:opacity .12s,border-color .12s,background .12s;}
+.icon-opt.on{opacity:1;border-color:#e0b64a;background:#fffdf4;}
+.icon-opt img{width:38px;height:38px;object-fit:contain;}
+.icon-opt span{font-size:11px;color:#5b5347;line-height:1.15;}
+.icon-opt input{position:absolute;opacity:0;width:0;height:0;}
 .ga-saved{font-size:12px;margin-left:10px;color:#8a8178;}
 .ga-saved.ok{color:var(--green);}
 .ga-saved.err{color:var(--red);}
@@ -225,28 +232,67 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       $orderList.appendChild(li);
     });
   }
+  var ICON_CATALOG = {
+    fog_city_frenzy: [
+      {key:'cablecar', name:'Cable car', img:'https://games.thebolditalic.com/assets/cablecar.webp'},
+      {key:'bridge', name:'Golden Gate', img:'https://games.thebolditalic.com/assets/bridge.webp'},
+      {key:'pride', name:'Pride flag', img:'https://games.thebolditalic.com/assets/pride.webp'},
+      {key:'sourdough', name:'Sourdough', img:'https://games.thebolditalic.com/assets/sourdough.webp'},
+      {key:'victorian', name:'Painted Lady', img:'https://games.thebolditalic.com/assets/victorian.webp'},
+      {key:'fog', name:'Karl the Fog', img:'https://games.thebolditalic.com/assets/fog.webp'},
+      {key:'parrot', name:'Wild parrot', img:'https://games.thebolditalic.com/assets/conure.webp'}
+    ]
+  };
+  var MIN_ICONS = 3;
   function renderPanels(){
     if(!$panels) return; $panels.innerHTML='';
     GAMES.forEach(function(g){
       var settings=g.settings||{};
+      var catalog=ICON_CATALOG[g.key];
       if(settings.cascade_bias===undefined && g.key!=='fog_city_frenzy') return;
       var bias=(typeof settings.cascade_bias==='number')?settings.cascade_bias:0.45;
+      var rcv=(typeof settings.rainbow_chance==='number')?settings.rainbow_chance:0.03;
+      var rcPct=Math.round(rcv*1000)/10;
+      var enabled=Array.isArray(settings.icons)?settings.icons:(catalog?catalog.map(function(i){return i.key;}):[]);
+      var iconsHtml='';
+      if(catalog){
+        iconsHtml='<div class="icon-block"><div class="slider-row"><label>Icons in play</label><span class="slider-val icons-count"></span></div><div class="icon-grid">'+
+          catalog.map(function(ic){ var on=enabled.indexOf(ic.key)!==-1;
+            return '<label class="icon-opt'+(on?' on':'')+'"><input type="checkbox" class="icon-cb" data-key="'+ic.key+'"'+(on?' checked':'')+'><img src="'+ic.img+'" alt="'+esc(ic.name)+'" loading="lazy"><span>'+esc(ic.name)+'</span></label>';
+          }).join('')+
+          '</div><p class="ga-hint">Which tiles appear in the game. Pick at least '+MIN_ICONS+'.</p></div>';
+      }
       var card=document.createElement('div'); card.className='ga-card';
       card.setAttribute('data-key', g.key);
       card.innerHTML='<h3>'+esc(g.title)+'</h3>'+
-        '<div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage…</div>'+
-        '<div class="slider-row"><label>Cascade bias</label><span class="slider-val">'+fmt(bias)+'</span></div>'+
+        '<div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage&hellip;</div>'+
+        '<div class="slider-row"><label>Cascade bias</label><span class="slider-val cascade-val">'+fmt(bias)+'</span></div>'+
         '<input type="range" class="cascade-range" min="0" max="1" step="0.05" value="'+bias+'">'+
-        '<p class="ga-hint">Higher = more chain-reaction cascades (easier, more “slot machine” payoff). 0 = pure random.</p>'+
-        '<button type="button" class="btn btn-gold btn-sm cascade-save">Save</button> <span class="ga-saved cascade-saved"></span>';
-      var range=card.querySelector('.cascade-range'), valEl=card.querySelector('.slider-val'), saved=card.querySelector('.cascade-saved');
-      range.addEventListener('input',function(){ valEl.textContent=fmt(parseFloat(this.value)); });
-      card.querySelector('.cascade-save').addEventListener('click',async function(){
-        var val=parseFloat(range.value); var ns=Object.assign({},g.settings||{},{cascade_bias:val});
-        saved.textContent='Saving…'; saved.className='ga-saved cascade-saved';
+        '<p class="ga-hint">Higher = more chain-reaction cascades (easier, more slot-machine payoff). 0 = pure random.</p>'+
+        '<div class="slider-row"><label>Rainbow Cloud Bomb frequency</label><span class="slider-val rainbow-val">'+rcPct.toFixed(1)+'%</span></div>'+
+        '<input type="range" class="rainbow-range" min="0" max="10" step="0.5" value="'+rcPct+'">'+
+        '<p class="ga-hint">Chance the Rainbow Cloud drops in on each new tile. 0% = never.</p>'+
+        iconsHtml+
+        '<button type="button" class="btn btn-gold btn-sm ga-save">Save</button> <span class="ga-saved ga-msg"></span>';
+      var cRange=card.querySelector('.cascade-range'), cVal=card.querySelector('.cascade-val');
+      cRange.addEventListener('input',function(){ cVal.textContent=fmt(parseFloat(this.value)); });
+      var rRange=card.querySelector('.rainbow-range'), rVal=card.querySelector('.rainbow-val');
+      rRange.addEventListener('input',function(){ rVal.textContent=parseFloat(this.value).toFixed(1)+'%'; });
+      var cbs=Array.prototype.slice.call(card.querySelectorAll('.icon-cb'));
+      var cnt=card.querySelector('.icons-count');
+      function refreshCount(){ if(!cnt) return; cnt.textContent=cbs.filter(function(c){return c.checked;}).length+' of '+cbs.length; }
+      cbs.forEach(function(cb){ cb.addEventListener('change',function(){ cb.parentNode.classList.toggle('on',cb.checked); refreshCount(); }); });
+      refreshCount();
+      var saved=card.querySelector('.ga-msg');
+      card.querySelector('.ga-save').addEventListener('click',async function(){
+        var icons=cbs.filter(function(c){return c.checked;}).map(function(c){return c.getAttribute('data-key');});
+        if(catalog && icons.length<MIN_ICONS){ saved.textContent='Pick at least '+MIN_ICONS+' icons'; saved.className='ga-saved ga-msg err'; return; }
+        var ns=Object.assign({},g.settings||{},{cascade_bias:parseFloat(cRange.value), rainbow_chance:parseFloat(rRange.value)/100});
+        if(catalog) ns.icons=icons;
+        saved.textContent='Saving...'; saved.className='ga-saved ga-msg';
         var r=await sb.from('games').update({settings:ns,updated_at:new Date().toISOString()}).eq('key',g.key);
-        if(r.error){ saved.textContent='Error: '+r.error.message; saved.className='ga-saved cascade-saved err'; }
-        else { g.settings=ns; saved.textContent='Saved ✓'; saved.className='ga-saved cascade-saved ok'; setTimeout(function(){saved.textContent='';},2500); }
+        if(r.error){ saved.textContent='Error: '+r.error.message; saved.className='ga-saved ga-msg err'; }
+        else { g.settings=ns; saved.textContent='Saved ✓'; saved.className='ga-saved ga-msg ok'; setTimeout(function(){saved.textContent='';},2500); }
       });
       $panels.appendChild(card);
       loadUsage(g.key, card);
