@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crossword Studio — TBI Admin</title>
+<link rel="icon" href="https://www.thebolditalic.com/content/images/size/w256h256/2025/04/TBILogo-copy.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js" crossorigin></script>
+<style>
+  html,body{margin:0;background:#f2ecdf;}
+  body{font-family:'DM Sans',system-ui,-apple-system,sans-serif;color:#15110d;}
+  .studio-topbar{display:flex;align-items:center;gap:14px;padding:11px 18px;background:#1b1a17;color:#e9e3d5;position:sticky;top:0;z-index:5;}
+  .studio-topbar a.back{color:#e9e3d5;text-decoration:none;font-weight:600;font-size:13.5px;border:1px solid rgba(255,255,255,.25);padding:6px 12px;border-radius:8px;}
+  .studio-topbar a.back:hover{background:rgba(255,255,255,.10);}
+  .studio-topbar .t{font-weight:700;letter-spacing:.02em;font-size:14px;}
+  #gate{max-width:520px;margin:80px auto;padding:24px;text-align:center;font-size:15px;color:#5b5346;}
+  #gate a{color:#1d5c8f;font-weight:600;}
+  #xw-studio-wrap{display:none;}
+</style>
+</head>
+<body>
+  <div class="studio-topbar"><a class="back" href="/games">&larr; Games settings</a><span class="t">Crossword Studio</span></div>
+  <div id="gate">Checking your admin session&hellip;</div>
+  <div id="xw-studio-wrap"><div id="xw-studio-root"></div></div>
+  <script>
+  (function(){
+    var SUPABASE_URL='https://scawgrjcjgcmvsimvash.supabase.co';
+    var SUPABASE_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+    var sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON);
+    window.__sb=sb;
+    sb.auth.getSession().then(function(s){
+      var gate=document.getElementById('gate'), wrap=document.getElementById('xw-studio-wrap');
+      if(s && s.data && s.data.session){ gate.style.display='none'; wrap.style.display='block'; }
+      else { gate.innerHTML='Please sign in through the <a href="/admin">admin dashboard</a> first, then return here.'; }
+    });
+  })();
+  </script>
+  <script type="text/babel" data-presets="react" src="crossword-studio.jsx?v=2"></script>
+</body>
+</html>

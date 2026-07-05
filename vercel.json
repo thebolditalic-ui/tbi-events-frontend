@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/crossword-studio", "destination": "/crossword-studio.html" },
     {
       "source": "/settings",
       "destination": "/settings.html"
