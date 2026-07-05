@@ -40,7 +40,7 @@
           sb.from('crosswords').select('*').eq('slug',loadSlug).single().then(function(r){
             if(r.error||!r.data) return;
             var row=r.data;
-            var p={title:row.title,subtitle:row.subtitle,number:row.number,date:row.puzzle_date,size:row.size,symmetry:row.symmetry,grid:row.grid,clues:row.clues};
+            var p={slug:row.slug,title:row.title,subtitle:row.subtitle,number:row.number,date:row.puzzle_date,size:row.size,symmetry:row.symmetry,grid:row.grid,clues:row.clues};
             if(window.__xwStudioLoad) window.__xwStudioLoad(p); else window.__xwLoadPuzzle=p;
           });
         }

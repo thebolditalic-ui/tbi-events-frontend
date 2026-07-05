@@ -335,6 +335,7 @@ function Studio() {
   const [editDir, setEditDir] = useState("A");
   const [mode, setMode] = useState("build"); // build | play
   const [io, setIo] = useState("");
+  const [editingSlug, setEditingSlug] = useState(null);
   const [msg, setMsg] = useState(null);
   const fileRef = useRef(null);
 
@@ -441,7 +442,7 @@ function Studio() {
     const sbx = window.__sb;
     if (!sbx) { flash("Not signed in — reload and log in", true); return; }
     const p = buildPuzzle();
-    const slug = ((p.title || "puzzle") + " " + (p.number || 1)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const slug = editingSlug || ((p.title || "puzzle") + " " + (p.number || 1)).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const row = { slug, title: p.title, subtitle: p.subtitle, number: Number(p.number) || 1, puzzle_date: p.date || null, size: p.size, symmetry: p.symmetry, grid: p.grid, clues: p.clues, published: true };
     flash("Publishing…");
     try {
@@ -468,14 +469,14 @@ function Studio() {
   const onFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => loadFromText(String(rd.result)); rd.readAsText(f); };
   const flash = (text, bad) => { setMsg({ text, bad }); setTimeout(() => setMsg(null), 2600); };
   useEffect(() => {
-    window.__xwStudioLoad = (p) => { try { loadPuzzleObj(p); flash("Loaded “" + (p.title || "puzzle") + (p.number ? " No. " + p.number : "") + "” to edit"); } catch (e) {} };
+    window.__xwStudioLoad = (p) => { try { loadPuzzleObj(p); setEditingSlug(p.slug || null); flash("Loaded “" + (p.title || "puzzle") + (p.number ? " No. " + p.number : "") + "” to edit"); } catch (e) {} };
     if (window.__xwLoadPuzzle) { const lp = window.__xwLoadPuzzle; window.__xwLoadPuzzle = null; window.__xwStudioLoad(lp); }
     return () => { window.__xwStudioLoad = null; };
   }, []);
 
   const startNew = () => {
     setCells(Array.from({ length: size }, () => Array.from({ length: size }, () => "")));
-    setClues({}); setSel([0, 0]); setMeta((m) => ({ ...m, number: (Number(m.number) || 0) + 1 }));
+    setClues({}); setSel([0, 0]); setMeta((m) => ({ ...m, number: (Number(m.number) || 0) + 1 })); setEditingSlug(null);
     flash("Blank grid ready");
   };
 
