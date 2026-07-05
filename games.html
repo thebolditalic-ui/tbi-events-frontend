@@ -46,6 +46,23 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .coming-soon h3{font-family:var(--title-font);font-size:24px;margin:0 0 8px;}
 .coming-soon p{color:#8a8178;font-size:14px;margin:0;}
 @media(max-width:768px){html,body{overflow-x:hidden;}.admin-header{flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px;}.admin-header-left{flex-direction:column;align-items:stretch;gap:8px;}.admin-header h1{font-size:17px;}.admin-nav{flex-wrap:wrap;overflow:visible;row-gap:4px;}.admin-nav a{white-space:nowrap;}.admin-header .user-info{width:100%;justify-content:space-between;}.admin-subnav{padding:0 12px;}}
+
+    .xw-list{margin:8px 0 16px;}
+    .xw-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 4px;border-bottom:1px solid var(--border);}
+    .xw-row:last-child{border-bottom:none;}
+    .xw-meta{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;min-width:0;}
+    .xw-title{font-weight:600;font-size:15px;color:var(--dark);}
+    .xw-num{font-size:12.5px;font-weight:600;color:#8a8073;}
+    .xw-date{font-size:12.5px;font-weight:400;color:#b3a892;}
+    .xw-draft{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#9a6a1e;background:#f6ecd6;padding:2px 7px;border-radius:20px;}
+    .xw-actions{display:flex;gap:4px;flex-shrink:0;}
+    .xw-act{font-size:12.5px;font-weight:600;text-decoration:none;padding:5px 10px;border-radius:7px;cursor:pointer;color:#6a625a;transition:background .12s,color .12s;white-space:nowrap;}
+    .xw-act.xw-play{color:var(--blue);}
+    .xw-act.xw-play:hover{background:rgba(91,123,213,.12);}
+    .xw-act.xw-edit:hover{background:var(--bg-alt);color:var(--dark);}
+    .xw-act.xw-del{color:var(--red);}
+    .xw-act.xw-del:hover{background:rgba(231,76,60,.10);}
+    @media(max-width:560px){.xw-row{flex-direction:column;align-items:flex-start;gap:7px;}.xw-actions{gap:2px;}}
 </style>
 <style>/* tbi-nav-normalize-v5 — uniform header (desktop+mobile) + centered pill nav + EdsMarket brand + pinned user box */
 @font-face{font-family:'EdsMarket';src:url('https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/EdsMarketRegularSlant.woff2') format('woff2');font-display:swap;}
@@ -183,7 +200,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <div id="xw-card" class="ga-card" style="margin-top:24px">
       <h3>Crosswords</h3>
       <p class="ga-hint">San Francisco puzzles on the site&rsquo;s crossword page, newest first. Build and publish new ones in the studio.</p>
-      <ul id="xw-list" class="order-list"><li class="ga-hint">Loading&hellip;</li></ul>
+      <div id="xw-list" class="xw-list"><div class="ga-hint">Loading&hellip;</div></div>
       <a class="btn btn-gold btn-sm" href="/crossword-studio">Open Crossword Studio &rarr;</a>
     </div>
   </div>
@@ -199,15 +216,43 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
   function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); loadCrosswords(); }
+  function fmtXwDate(d){ if(!d) return ''; try{ var dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return d; } }
+  function onXwClick(e){
+    var del=e.target.closest('.xw-del'); if(!del) return; e.preventDefault();
+    var row=del.closest('.xw-row'); if(!row) return;
+    var slug=row.getAttribute('data-slug'); var title=(row.querySelector('.xw-title')||{}).textContent||slug;
+    if(!window.confirm('Delete “'+title+'”? This permanently removes it from the site.')) return;
+    del.textContent='Deleting…';
+    sb.from('crosswords').delete().eq('slug',slug).then(function(r){
+      if(r.error){ window.alert('Delete failed: '+r.error.message); del.textContent='Delete'; return; }
+      loadCrosswords();
+    });
+  }
   async function loadCrosswords(){
     var el=document.getElementById('xw-list'); if(!el) return;
+    if(!el.__wired){ el.__wired=true; el.addEventListener('click', onXwClick); }
     try{
       var r=await sb.from('crosswords').select('slug,title,number,puzzle_date,published').order('puzzle_date',{ascending:false}).order('number',{ascending:false});
-      if(r.error){ el.innerHTML='<li class="ga-hint">Table not set up yet, or couldn’t load.</li>'; return; }
+      if(r.error){ el.innerHTML='<div class="ga-hint">Table not set up yet, or couldn’t load.</div>'; return; }
       var rows=r.data||[];
-      if(!rows.length){ el.innerHTML='<li class="ga-hint">No puzzles yet — open the studio to publish one.</li>'; return; }
-      el.innerHTML=rows.map(function(p){ return '<li>'+esc(p.title)+' No. '+esc(p.number)+' · '+esc(p.puzzle_date||'')+(p.published?'':' · <em>draft</em>')+'</li>'; }).join('');
-    }catch(e){ el.innerHTML='<li class="ga-hint">Couldn’t load puzzles</li>'; }
+      if(!rows.length){ el.innerHTML='<div class="ga-hint">No puzzles yet — open the studio to publish one.</div>'; return; }
+      el.innerHTML=rows.map(function(p){
+        var d=fmtXwDate(p.puzzle_date);
+        var playUrl='https://games.thebolditalic.com/crosswords/?p='+encodeURIComponent(p.slug);
+        var editUrl='/crossword-studio?load='+encodeURIComponent(p.slug);
+        return '<div class="xw-row" data-slug="'+esc(p.slug)+'">'
+          +'<div class="xw-meta"><span class="xw-title">'+esc(p.title)+'</span>'
+          +'<span class="xw-num">No. '+esc(p.number)+'</span>'
+          +(d?'<span class="xw-date">'+esc(d)+'</span>':'')
+          +(p.published?'':'<span class="xw-draft">Draft</span>')
+          +'</div>'
+          +'<div class="xw-actions">'
+          +'<a class="xw-act xw-play" href="'+playUrl+'" target="_blank" rel="noopener">Play</a>'
+          +'<a class="xw-act xw-edit" href="'+editUrl+'">Edit</a>'
+          +'<a class="xw-act xw-del" role="button" tabindex="0">Delete</a>'
+          +'</div></div>';
+      }).join('');
+    }catch(e){ el.innerHTML='<div class="ga-hint">Couldn’t load puzzles</div>'; }
   }
   async function checkSession(){ var s=await sb.auth.getSession(); if(s.data&&s.data.session) showAdmin(s.data.session.user); }
   $bt.addEventListener('click', async function(){ $er.style.display='none'; var e=$em.value.trim(),p=$pw.value; if(!e||!p){ $er.textContent='Enter email and password'; $er.style.display='block'; return; } $bt.textContent='Signing in...'; $bt.disabled=true; var r=await sb.auth.signInWithPassword({email:e,password:p}); $bt.textContent='Sign In'; $bt.disabled=false; if(r.error){ $er.textContent=r.error.message; $er.style.display='block'; return; } showAdmin(r.data.user); });

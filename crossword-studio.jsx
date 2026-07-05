@@ -452,20 +452,26 @@ function Studio() {
   };
   const copyIo = async () => { const txt = JSON.stringify(buildPuzzle(), null, 2); setIo(txt); try { await navigator.clipboard.writeText(txt); flash("Copied to clipboard"); } catch { flash("JSON shown below — select and copy"); } };
 
+  const loadPuzzleObj = (p) => {
+    if (!p || !p.grid || !Array.isArray(p.grid)) { flash("That puzzle looks invalid", true); return; }
+    const sz = p.size || p.grid.length;
+    setSize(sz); setSym(p.symmetry !== false);
+    setCells(p.grid.map((row) => row.padEnd(sz, " ").split("").slice(0, sz).map((ch) => (ch === "#" ? "#" : ch === " " ? "" : ch.toUpperCase()))));
+    setClues(p.clues || {});
+    setMeta({ title: p.title || "Crossword", subtitle: p.subtitle || "", number: p.number || 1, date: p.date || "" });
+    setSel([0, 0]);
+  };
   const loadFromText = (text) => {
-    try {
-      const p = JSON.parse(text);
-      if (!p.grid || !Array.isArray(p.grid)) throw new Error("missing grid");
-      const sz = p.size || p.grid.length;
-      setSize(sz); setSym(p.symmetry !== false);
-      setCells(p.grid.map((row) => row.padEnd(sz, " ").split("").slice(0, sz).map((ch) => (ch === "#" ? "#" : ch === " " ? "" : ch.toUpperCase()))));
-      setClues(p.clues || {});
-      setMeta({ title: p.title || "Crossword", subtitle: p.subtitle || "", number: p.number || 1, date: p.date || "" });
-      setSel([0, 0]); flash("Loaded puzzle");
-    } catch (err) { flash("Couldn't parse JSON: " + err.message, true); }
+    try { loadPuzzleObj(JSON.parse(text)); flash("Loaded puzzle"); }
+    catch (err) { flash("Couldn't parse JSON: " + err.message, true); }
   };
   const onFile = (e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => loadFromText(String(rd.result)); rd.readAsText(f); };
   const flash = (text, bad) => { setMsg({ text, bad }); setTimeout(() => setMsg(null), 2600); };
+  useEffect(() => {
+    window.__xwStudioLoad = (p) => { try { loadPuzzleObj(p); flash("Loaded “" + (p.title || "puzzle") + (p.number ? " No. " + p.number : "") + "” to edit"); } catch (e) {} };
+    if (window.__xwLoadPuzzle) { const lp = window.__xwLoadPuzzle; window.__xwLoadPuzzle = null; window.__xwStudioLoad(lp); }
+    return () => { window.__xwStudioLoad = null; };
+  }, []);
 
   const startNew = () => {
     setCells(Array.from({ length: size }, () => Array.from({ length: size }, () => "")));
