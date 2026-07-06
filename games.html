@@ -200,6 +200,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <div id="xw-card" class="ga-card" style="margin-top:24px">
       <h3>Crosswords</h3>
       <p class="ga-hint">San Francisco puzzles on the site&rsquo;s crossword page, newest first. Build and publish new ones in the studio.</p>
+      <div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage&hellip;</div>
       <div id="xw-list" class="xw-list"><div class="ga-hint">Loading&hellip;</div></div>
       <a class="btn btn-gold btn-sm" href="/crossword-studio">Open Crossword Studio &rarr;</a>
     </div>
@@ -215,7 +216,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $em=document.getElementById('login-email'),$pw=document.getElementById('login-pass');
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); loadCrosswords(); }
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); loadCrosswords(); var _xw=document.getElementById("xw-card"); if(_xw) loadUsage("crosswords", _xw); }
   function fmtXwDate(d){ if(!d) return ''; try{ var dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return d; } }
   function onXwClick(e){
     var del=e.target.closest('.xw-del'); if(!del) return; e.preventDefault();
@@ -371,7 +372,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       el.innerHTML='<b style="color:'+(now?'#2e7d32':'#555')+'">'+now+'</b> playing now &nbsp;·&nbsp; <b>'+(v.count||0).toLocaleString()+'</b> views &nbsp;·&nbsp; <b>'+(p.count||0).toLocaleString()+'</b> plays';
     } catch(e){ el.innerHTML='<span class="ga-hint">Usage unavailable</span>'; }
   }
-  function refreshUsage(){ if(!$panels) return; Array.prototype.forEach.call($panels.querySelectorAll('.ga-card'),function(card){ var k=card.getAttribute('data-key'); if(k) loadUsage(k,card); }); }
+  function refreshUsage(){ var _xw=document.getElementById("xw-card"); if(_xw) loadUsage("crosswords", _xw); if(!$panels) return; Array.prototype.forEach.call($panels.querySelectorAll('.ga-card'),function(card){ var k=card.getAttribute('data-key'); if(k) loadUsage(k,card); }); }
   var $saveOrder=document.getElementById('save-order'), $orderSaved=document.getElementById('order-saved');
   if($saveOrder) $saveOrder.addEventListener('click',async function(){
     $orderSaved.textContent='Saving…'; $orderSaved.className='ga-saved';
