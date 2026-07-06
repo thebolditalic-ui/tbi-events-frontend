@@ -371,15 +371,22 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           + '<div class="earn-prow"><span>Paid members</span><span>' + (subs.paid || 0) + '</span></div></div>';
         // upcoming payouts: Mediavine (from API) + Meta (computed; Meta pays ~the 21st monthly for the prior month, $100 min)
         function nextMeta(m) { if (!m) return null; var n = new Date(), y = n.getFullYear(), mo = n.getMonth(), day = n.getDate();
-          if (day <= 21 && (m.last_month || 0) > 0) return { date: new Date(y, mo, 21), amount: m.last_month, label: new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long' }), partial: false };
+          if (day < 25 && (m.last_month || 0) > 0) return { date: new Date(y, mo, 21), amount: m.last_month, label: new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long' }), partial: false };
           return { date: new Date(y, mo + 1, 21), amount: m.mtd || 0, label: new Date(y, mo, 1).toLocaleDateString('en-US', { month: 'long' }), partial: true }; }
         var pays = [];
-        if (mv.next_payout && mv.next_payout.value != null) pays.push({ src: 'Mediavine', est: false, date: new Date(mv.next_payout.date), amount: mv.next_payout.value, min: 0 });
+        // Mediavine: pick the next payout from the payments list, but HOLD this month's payout until the 25th
+        // (don't flip to next month while the current one is still pending receipt). Real amount from the payment.
+        (function () { var mp = mv.payments || [], nowD = new Date(), cut = nowD.getDate() < 25 ? new Date(nowD.getFullYear(), nowD.getMonth(), 1) : nowD, pick = null;
+          mp.forEach(function (p) { var pd = new Date(p.payout_date); if (!isNaN(pd) && pd >= cut && (!pick || pd < new Date(pick.payout_date))) pick = p; });
+          if (!pick && mv.next_payout && mv.next_payout.value != null) pick = { payout_date: mv.next_payout.date, value: mv.next_payout.value };
+          if (pick) pays.push({ src: 'Mediavine', est: false, date: new Date(pick.payout_date), amount: Number(pick.value) || 0, min: 0 }); })();
         var mp = nextMeta(meta); if (mp && mp.amount > 0) pays.push({ src: 'Meta', est: true, date: mp.date, amount: mp.amount, min: 100 });
         // Ghost subscriptions, by month: next month's payout + a heads-up for the biggest annual-renewal months ahead
         var mk2d = function (k) { var p = String(k).split('-'); return new Date(+p[0], +p[1] - 1, 1); };
         var rn = (subs.renewals || []).filter(function (x) { return x.amount > 0; });
-        if (rn.length) { var g0 = rn[0]; pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
+        if (rn.length) { var g0 = rn[0], nowG = new Date();
+          if (nowG.getDate() < 25) pays.push({ src: 'Ghost', est: true, monthly: true, date: new Date(nowG.getFullYear(), nowG.getMonth(), 1), amount: Number(g0.baseline || g0.amount) || 0, count: g0.baseline_count || g0.count, min: 0 });
+          else pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
         pays = pays.filter(function (p) { return !isNaN(p.date); }).sort(function (a, b) { return a.date - b.date; });
         if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var tail = p.monthly ? (' · ' + p.date.toLocaleDateString('en-US', { month: 'long' })) : (' · ' + (p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + tail + '</span></div>'; }).join('') + '<div class="earn-prow earn-ptot"><span>Total</span><span>' + money(pays.reduce(function (a, p) { return a + (p.amount || 0); }, 0)) + '</span></div></div>';
         ec.innerHTML = ehtml;
