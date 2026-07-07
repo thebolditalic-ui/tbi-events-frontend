@@ -432,8 +432,8 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <h2 class="section">Image / Video</h2>
       <p class="sub">Build a card from a crawled story, start a custom post from your own photos, or upload a reel. Everything here can go to <b>Instagram and/or Facebook</b> (TikTok later) &mdash; Send to Scheduling drops it in the <b>Schedule</b> tab's Staged list, where you pick channels and timing.</p>
       <div class="ig-viewnav">
-        <button class="ig-viewbtn active" data-igview="story">From a story</button>
-        <button class="ig-viewbtn" data-igview="custom">Custom post</button>
+        <button class="ig-viewbtn active" data-igview="custom">Custom post</button>
+        <button class="ig-viewbtn" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="reel">Reel</button>
         <button class="ig-viewbtn" data-igview="jokecard">Joke / question card</button>
       </div>
@@ -470,7 +470,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
       </div>
 
-      <div class="ig-view active" id="ig-view-story">
+      <div class="ig-view" id="ig-view-story">
       <div class="ig-cand">
         <button class="btn btn-gold btn-sm" id="ig-gen">Generate cards from stories</button>
         <button class="btn btn-outline btn-sm" id="ig-cand-reload">Reload</button>
@@ -539,7 +539,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div>
       </div><!-- /ig-view-story -->
 
-      <div class="ig-view" id="ig-view-custom">
+      <div class="ig-view active" id="ig-view-custom">
       <p class="sub" style="margin-top:4px">A blank slate. Upload your own image &mdash; or several for a carousel &mdash; optionally drop the red TBI circle on top, write or AI-draft the caption. No black box, no badge unless you add them.</p>
       <div class="ig-grid">
         <div class="ig-stage">
@@ -2199,14 +2199,16 @@ function tbWrap(c, text, maxW){
   return out;
 }
 function defaultTextBox(){
-  return { on:false, mode:'float', bg:'#ffffff', bgOn:true, yPos:0.5, xPos:0, widthFrac:0.88, radius:14,
+  return { on:false, mode:'float', fade:0.5, bg:'#ffffff', bgOn:true, yPos:0.5, xPos:0, widthFrac:0.88, radius:14,
     header:{ text:'', font:'EdsMarket', color:'#141414', size:0.050, lh:1.04, on:true },
     hairlineOn:true, hairlineColor:'#d8d2c8',
     body:{ text:'', font:'Georgia', color:'#2a2a2a', size:0.030, lh:1.45, on:true } };
 }
+function tbRgba(hex,a){ hex=String(hex||'#000000').replace('#',''); if(hex.length===3){hex=hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];} var r=parseInt(hex.substr(0,2),16)||0,g=parseInt(hex.substr(2,2),16)||0,b=parseInt(hex.substr(4,2),16)||0; return 'rgba('+r+','+g+','+b+','+a+')'; }
 function drawTextBox(c, W, H, tb){
   if(!tb || !tb.on) return;
-  var bleed = tb.mode==='bleed';
+  var ombre = tb.mode==='ombre';
+  var bleed = tb.mode==='bleed' || ombre;
   var boxW = bleed ? W : Math.round(W*(tb.widthFrac==null?0.88:tb.widthFrac));
   var padX = bleed ? W*0.075 : Math.round(boxW*0.07);
   var padY = bleed ? Math.round(H*0.05) : Math.round(boxW*0.07);
@@ -2233,9 +2235,14 @@ function drawTextBox(c, W, H, tb){
   var yPos=(tb.yPos==null?0.5:tb.yPos), boxY=Math.round((H-boxH)*yPos), boxX;
   if(bleed){ boxX=0; } else { var freeX=W-boxW, xPos=(tb.xPos==null?0:tb.xPos); boxX=Math.round(freeX/2+xPos*(freeX/2)); }
   if(tb.bgOn!==false){
-    c.fillStyle=tb.bg||'#ffffff';
-    if(bleed){ c.fillRect(boxX,boxY,boxW,boxH); }
-    else { var r=Math.max(0,tb.radius==null?14:tb.radius); c.beginPath(); c.moveTo(boxX+r,boxY); c.arcTo(boxX+boxW,boxY,boxX+boxW,boxY+boxH,r); c.arcTo(boxX+boxW,boxY+boxH,boxX,boxY+boxH,r); c.arcTo(boxX,boxY+boxH,boxX,boxY,r); c.arcTo(boxX,boxY,boxX+boxW,boxY,r); c.closePath(); c.fill(); }
+    var _col=tb.bg||'#ffffff';
+    if(ombre){
+      var _oh=(tb.fade==null?0.5:tb.fade), _gTop=Math.round(H*(1-_oh));
+      var _g=c.createLinearGradient(0,_gTop,0,H); _g.addColorStop(0,tbRgba(_col,0)); _g.addColorStop(0.55,tbRgba(_col,1)); _g.addColorStop(1,tbRgba(_col,1));
+      c.fillStyle=_g; c.fillRect(0,_gTop,W,H-_gTop);
+    }
+    else if(bleed){ c.fillStyle=_col; c.fillRect(boxX,boxY,boxW,boxH); }
+    else { c.fillStyle=_col; var r=Math.max(0,tb.radius==null?14:tb.radius); c.beginPath(); c.moveTo(boxX+r,boxY); c.arcTo(boxX+boxW,boxY,boxX+boxW,boxY+boxH,r); c.arcTo(boxX+boxW,boxY+boxH,boxX,boxY+boxH,r); c.arcTo(boxX,boxY+boxH,boxX,boxY,r); c.arcTo(boxX,boxY,boxX+boxW,boxY,r); c.closePath(); c.fill(); }
   }
   c.textAlign='left'; c.textBaseline='top';
   var tx=boxX+padX, cy=boxY+padY;
@@ -2350,11 +2357,12 @@ function syncCover(p, cov){
   $(p+'-badge').checked=cov.badge!==false;
   $(p+'-badgetext').value=cov.badgeText||'The Bold Italic';
 }
-function tbPanelHTML(p){
+function tbPanelHTML(p, withOmbre){
   var fonts='<option value="EdsMarket">Eds Market (brush)</option><option value="Playfair Display">Playfair (serif)</option><option value="Georgia">Georgia (serif)</option><option value="Arial">Arial (sans)</option>';
   return '<div class="set-group"><h3>Text box (optional)</h3><div class="ig-body">'
     +'<div class="ig-toggle">Show text box<label class="switch"><input type="checkbox" id="'+p+'-on"><span class="slider-sw"></span></label></div>'
-    +'<div class="ig-fld">Style<div class="ig-seg" id="'+p+'-mode"><button data-m="float" class="on">Floating</button><button data-m="bleed">Full-bleed</button></div></div>'
+    +'<div class="ig-fld">Style<div class="ig-seg" id="'+p+'-mode"><button data-m="float" class="on">Floating</button><button data-m="bleed">Full-bleed</button>'+(withOmbre?'<button data-m="ombre">Ombr&eacute;</button>':'')+'</div></div>'
+    +(withOmbre?'<div class="ig-fld" id="'+p+'-faderow" style="display:none">Ombr&eacute; height <span class="val" id="'+p+'-fadeVal">50%</span><input type="range" id="'+p+'-fade" min="25" max="85" value="50"></div>':'')
     +'<div class="ig-toggle">Box background fill<label class="switch"><input type="checkbox" id="'+p+'-bgon" checked><span class="slider-sw"></span></label></div>'
     +'<div class="ig-fld">Box color<input type="color" id="'+p+'-bg" value="#ffffff" class="tb-color"></div>'
     +'<div class="ig-fld">Vertical position <span class="val" id="'+p+'-yVal">middle</span><input type="range" id="'+p+'-y" min="0" max="100" value="50"></div>'
@@ -2377,12 +2385,13 @@ function tbPanelHTML(p){
     +'<div class="ig-fld">Body line height <span class="val" id="'+p+'-blhVal">1.45</span><input type="range" id="'+p+'-blh" min="100" max="220" value="145"></div>'
     +'</div></div>';
 }
-function tbSyncModeRows(p, mode){ var f=(mode||'float')==='float'; var xr=document.getElementById(p+'-xrow'), wr=document.getElementById(p+'-wrow'); if(xr) xr.style.display=f?'':'none'; if(wr) wr.style.display=f?'':'none'; }
+function tbSyncModeRows(p, mode){ mode=mode||'float'; var f=(mode==='float'); var xr=document.getElementById(p+'-xrow'), wr=document.getElementById(p+'-wrow'), fr=document.getElementById(p+'-faderow'); if(xr) xr.style.display=f?'':'none'; if(wr) wr.style.display=f?'':'none'; if(fr) fr.style.display=(mode==='ombre')?'':'none'; }
 function syncTB(p, tb){
   function S(id){ return document.getElementById(p+'-'+id); }
   if(!tb) return;
   S('on').checked=!!tb.on;
   document.querySelectorAll('#'+p+'-mode button').forEach(function(b){ b.classList.toggle('on', b.dataset.m===(tb.mode||'float')); });
+  if(S('fade')){ var fv=Math.round((tb.fade==null?0.5:tb.fade)*100); S('fade').value=fv; if(S('fadeVal')) S('fadeVal').textContent=fv+'%'; }
   S('bgon').checked=tb.bgOn!==false; S('bg').value=tb.bg||'#ffffff';
   var yv=Math.round((tb.yPos==null?0.5:tb.yPos)*100); S('y').value=yv; S('yVal').textContent=yv<34?'top':(yv>66?'bottom':'middle');
   var xv=Math.round((tb.xPos==null?0:tb.xPos)*100); S('x').value=xv; S('xVal').textContent=xv===0?'center':(xv<0?'left':'right');
@@ -2400,12 +2409,13 @@ function wireTB(p, getTB, rerender){
   function S(id){ return document.getElementById(p+'-'+id); }
   function up(){ rerender(); }
   S('on').onchange=function(e){ var t=getTB(); if(t){ t.on=e.target.checked; up(); } };
-  document.querySelectorAll('#'+p+'-mode button').forEach(function(b){ b.onclick=function(){ var t=getTB(); if(!t) return; document.querySelectorAll('#'+p+'-mode button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); t.mode=b.dataset.m; tbSyncModeRows(p,t.mode); up(); }; });
+  document.querySelectorAll('#'+p+'-mode button').forEach(function(b){ b.onclick=function(){ var t=getTB(); if(!t) return; document.querySelectorAll('#'+p+'-mode button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); t.mode=b.dataset.m; if(t.mode==='ombre'){ if((t.bg||'').toLowerCase()==='#ffffff'){ t.bg='#000000'; if(S('bg')) S('bg').value='#000000'; } if((t.yPos==null?0.5:t.yPos)<0.6){ t.yPos=0.92; if(S('y')){ S('y').value=92; if(S('yVal')) S('yVal').textContent='bottom'; } } } tbSyncModeRows(p,t.mode); up(); }; });
   S('bgon').onchange=function(e){ var t=getTB(); if(t){ t.bgOn=e.target.checked; up(); } };
   S('bg').oninput=function(e){ var t=getTB(); if(t){ t.bg=e.target.value; up(); } };
   S('y').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.yPos=v/100; S('yVal').textContent=v<34?'top':(v>66?'bottom':'middle'); up(); };
   S('x').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.xPos=v/100; S('xVal').textContent=v===0?'center':(v<0?'left':'right'); up(); };
   S('w').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.widthFrac=v/100; S('wVal').textContent=v+'%'; up(); };
+  if(S('fade')) S('fade').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.fade=v/100; if(S('fadeVal')) S('fadeVal').textContent=v+'%'; up(); };
   S('hon').onchange=function(e){ var t=getTB(); if(t){ t.header.on=e.target.checked; up(); } };
   S('htext').oninput=function(e){ var t=getTB(); if(t){ t.header.text=e.target.value; up(); } };
   S('hfont').onchange=function(e){ var t=getTB(); if(t){ t.header.font=e.target.value; up(); } };
@@ -2420,7 +2430,7 @@ function wireTB(p, getTB, rerender){
   S('bsize').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.body.size=v/1000; S('bsizeVal').textContent=(v/10).toFixed(1)+'%'; up(); };
   S('blh').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.body.lh=v/100; S('blhVal').textContent=(v/100).toFixed(2); up(); };
 }
-var _igtab=document.querySelector('.subtab[data-tab="instagram"]'); if(_igtab) _igtab.addEventListener('click', initIG);
+var _igtab=document.querySelector('.subtab[data-tab="instagram"]'); if(_igtab) _igtab.addEventListener('click', initCP);
 
 /* ===== Custom Post tab (blank-slate upload + carousel + AI caption) ===== */
 var cpReady=false;
@@ -2558,7 +2568,7 @@ function cpBoot(){
     }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; b.textContent='Send to Scheduling'; b.disabled=false; }
   };
   if($('#cp-coverwrap')){ $('#cp-coverwrap').innerHTML=coverPanelHTML('cpcov'); wireCover('cpcov', function(){ return st.imgs[st.sel]?st.imgs[st.sel].cover:null; }, cpRender); syncCover('cpcov', st.imgs[st.sel]?st.imgs[st.sel].cover:null); }
-  if($('#cp-tbwrap')){ $('#cp-tbwrap').innerHTML=tbPanelHTML('cptb'); wireTB('cptb', function(){ return st.imgs[st.sel]?st.imgs[st.sel].textBox:null; }, cpRender); syncTB('cptb', st.imgs[st.sel]?st.imgs[st.sel].textBox:null); }
+  if($('#cp-tbwrap')){ $('#cp-tbwrap').innerHTML=tbPanelHTML('cptb', true); wireTB('cptb', function(){ return st.imgs[st.sel]?st.imgs[st.sel].textBox:null; }, cpRender); syncTB('cptb', st.imgs[st.sel]?st.imgs[st.sel].textBox:null); }
   loadSavedEdsMarket(cpRender);
   renderThumbs(); cpRender();
   (async function(){ try{ await Promise.all([document.fonts.load('400 120px "Permanent Marker"'), document.fonts.load('400 40px "Georgia"'), document.fonts.load('italic 800 40px "Playfair Display"')]); }catch(e){} cpRender(); })();
@@ -2568,7 +2578,8 @@ function showIGView(v){
   document.querySelectorAll('.ig-viewbtn').forEach(function(x){ x.classList.toggle('active', x.dataset.igview===v); });
   document.querySelectorAll('.ig-view').forEach(function(x){ x.classList.toggle('active', x.id===('ig-view-'+v)); });
   if(v==='custom') initCP();
-  if(v==='reel') initReel();
+  else if(v==='reel') initReel();
+  else if(v==='story') initIG();
 }
 document.querySelectorAll('.ig-viewbtn').forEach(function(b){ b.onclick=function(){ showIGView(b.dataset.igview); }; });
 
