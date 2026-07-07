@@ -2200,7 +2200,7 @@ function tbWrap(c, text, maxW){
 }
 function defaultTextBox(){
   return { on:false, mode:'float', fade:0.5, bg:'#ffffff', bgOn:true, yPos:0.5, xPos:0, widthFrac:0.88, radius:14,
-    header:{ text:'', font:'EdsMarket', color:'#141414', size:0.050, lh:1.04, on:true },
+    header:{ text:'', font:'EdsMarket', color:'#141414', size:0.050, lh:1.04, on:true, align:'left', offX:0 },
     hairlineOn:true, hairlineColor:'#d8d2c8',
     body:{ text:'', font:'Georgia', color:'#2a2a2a', size:0.030, lh:1.45, on:true } };
 }
@@ -2246,7 +2246,7 @@ function drawTextBox(c, W, H, tb){
   }
   c.textAlign='left'; c.textBaseline='top';
   var tx=boxX+padX, cy=boxY+padY;
-  if(hLines.length){ c.font='400 '+hSize+'px '+tbFontStack(h.font||'EdsMarket'); c.fillStyle=h.color||'#141414'; for(var i=0;i<hLines.length;i++){ c.fillText(hLines[i],tx,cy); cy+=hLH; } }
+  if(hLines.length){ c.font='400 '+hSize+'px '+tbFontStack(h.font||'EdsMarket'); c.fillStyle=h.color||'#141414'; var _ha=h.align||'left', _hsh=(h.offX||0)/100*(innerW/2), _hax; if(_ha==='center'){ c.textAlign='center'; _hax=boxX+boxW/2+_hsh; } else if(_ha==='right'){ c.textAlign='right'; _hax=boxX+boxW-padX+_hsh; } else { c.textAlign='left'; _hax=tx+_hsh; } for(var i=0;i<hLines.length;i++){ c.fillText(hLines[i],_hax,cy); cy+=hLH; } c.textAlign='left'; }
   if(both){ if(tb.hairlineOn){ cy+=hairGap; c.fillStyle=tb.hairlineColor||'#d8d2c8'; c.fillRect(tx,Math.round(cy),innerW,hairH); cy+=hairH+hairGap; } else { cy+=gapHB; } }
   if(bLines.length){ c.font='400 '+bSize+'px '+tbFontStack(b.font||'Georgia'); c.fillStyle=b.color||'#2a2a2a'; for(var j=0;j<bLines.length;j++){ c.fillText(bLines[j],tx,cy); cy+=bLH; } }
 }
@@ -2373,6 +2373,8 @@ function tbPanelHTML(p, withOmbre){
     +'<textarea id="'+p+'-htext" class="tb-ta"></textarea>'
     +'<div class="ig-fld">Header font<select id="'+p+'-hfont" class="tb-sel">'+fonts+'</select></div>'
     +'<div class="ig-fld">Header color<input type="color" id="'+p+'-hcolor" value="#141414" class="tb-color"></div>'
+    +'<div class="ig-fld">Header alignment<div class="ig-seg" id="'+p+'-halign"><button data-a="left" class="on">Left</button><button data-a="center">Center</button><button data-a="right">Right</button></div></div>'
+    +'<div class="ig-fld">Header horizontal <span class="val" id="'+p+'-hoxVal">center</span><input type="range" id="'+p+'-hox" min="-100" max="100" value="0"></div>'
     +'<div class="ig-fld">Header size <span class="val" id="'+p+'-hsizeVal">5.0%</span><input type="range" id="'+p+'-hsize" min="20" max="110" value="50"></div>'
     +'<div class="ig-fld">Header line height <span class="val" id="'+p+'-hlhVal">1.04</span><input type="range" id="'+p+'-hlh" min="85" max="180" value="104"></div>'
     +'<div class="ig-toggle">Hairline under header<label class="switch"><input type="checkbox" id="'+p+'-hair" checked><span class="slider-sw"></span></label></div>'
@@ -2397,6 +2399,8 @@ function syncTB(p, tb){
   var xv=Math.round((tb.xPos==null?0:tb.xPos)*100); S('x').value=xv; S('xVal').textContent=xv===0?'center':(xv<0?'left':'right');
   var wv=Math.round((tb.widthFrac==null?0.88:tb.widthFrac)*100); S('w').value=wv; S('wVal').textContent=wv+'%';
   var h=tb.header||{}; S('hon').checked=h.on!==false; S('htext').value=h.text||''; S('hfont').value=h.font||'EdsMarket'; S('hcolor').value=h.color||'#141414';
+  document.querySelectorAll('#'+p+'-halign button').forEach(function(b){ b.classList.toggle('on', b.dataset.a===(h.align||'left')); });
+  if(S('hox')){ var _hox=(h.offX||0); S('hox').value=_hox; if(S('hoxVal')) S('hoxVal').textContent=_hox===0?'center':(_hox<0?'left':'right'); }
   var hs=Math.round((h.size==null?0.050:h.size)*1000); S('hsize').value=hs; S('hsizeVal').textContent=(hs/10).toFixed(1)+'%';
   var hl=Math.round((h.lh==null?1.04:h.lh)*100); S('hlh').value=hl; S('hlhVal').textContent=(hl/100).toFixed(2);
   S('hair').checked=tb.hairlineOn!==false;
@@ -2420,6 +2424,8 @@ function wireTB(p, getTB, rerender){
   S('htext').oninput=function(e){ var t=getTB(); if(t){ t.header.text=e.target.value; up(); } };
   S('hfont').onchange=function(e){ var t=getTB(); if(t){ t.header.font=e.target.value; up(); } };
   S('hcolor').oninput=function(e){ var t=getTB(); if(t){ t.header.color=e.target.value; up(); } };
+  document.querySelectorAll('#'+p+'-halign button').forEach(function(b){ b.onclick=function(){ var t=getTB(); if(!t) return; document.querySelectorAll('#'+p+'-halign button').forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); t.header.align=b.dataset.a; up(); }; });
+  if(S('hox')) S('hox').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.header.offX=v; if(S('hoxVal')) S('hoxVal').textContent=v===0?'center':(v<0?'left':'right'); up(); };
   S('hsize').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.header.size=v/1000; S('hsizeVal').textContent=(v/10).toFixed(1)+'%'; up(); };
   S('hlh').oninput=function(e){ var t=getTB(); if(!t) return; var v=+e.target.value; t.header.lh=v/100; S('hlhVal').textContent=(v/100).toFixed(2); up(); };
   S('hair').onchange=function(e){ var t=getTB(); if(t){ t.hairlineOn=e.target.checked; up(); } };
