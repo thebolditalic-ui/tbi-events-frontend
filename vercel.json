@@ -1,6 +1,9 @@
 {
   "rewrites": [
-    { "source": "/crossword-studio", "destination": "/crossword-studio.html" },
+    {
+      "source": "/crossword-studio",
+      "destination": "/crossword-studio.html"
+    },
     {
       "source": "/settings",
       "destination": "/settings.html"
@@ -103,7 +106,14 @@
       "source": "/downloader",
       "destination": "/downloader.html"
     },
-    {"source":"/invites","destination":"/fb-invites.html"},
+    {
+      "source": "/invites",
+      "destination": "/fb-invites.html"
+    },
+    {
+      "source": "/this-old-victorian",
+      "destination": "/tov.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
