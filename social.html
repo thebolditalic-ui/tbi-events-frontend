@@ -433,6 +433,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       <p class="sub">Build a card from a crawled story, start a custom post from your own photos, or upload a reel. Everything here can go to <b>Instagram and/or Facebook</b> (TikTok later) &mdash; Send to Scheduling drops it in the <b>Schedule</b> tab's Staged list, where you pick channels and timing.</p>
       <div class="ig-viewnav">
         <button class="ig-viewbtn active" data-igview="custom">Custom post</button>
+        <button class="ig-viewbtn" data-igview="collage">Collage</button>
         <button class="ig-viewbtn" data-igview="story">From a story</button>
         <button class="ig-viewbtn" data-igview="reel">Reel</button>
         <button class="ig-viewbtn" data-igview="jokecard">Joke / question card</button>
@@ -591,6 +592,50 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
       </div>
       </div><!-- /ig-view-custom -->
+
+      <div class="ig-view" id="ig-view-collage">
+      <p class="sub" style="margin-top:4px">Three of your photos in a grid, dragged into place, sent to <b>Facebook</b>. Upload three, drag each onto a box, frame them, set the divider, then Send to Scheduling.</p>
+      <div class="ig-grid">
+        <div class="ig-stage">
+          <canvas id="col-card" width="1080" height="1350" style="touch-action:none"></canvas>
+          <div class="cp-thumbs" id="col-thumbs"></div>
+          <div class="ig-actions">
+            <button class="btn btn-gold" id="col-send">Send to Scheduling</button>
+            <button class="btn btn-outline btn-sm" id="col-export" disabled>Download</button>
+          </div>
+          <div class="run-status" id="col-status" style="width:100%;text-align:center;line-height:1.4"></div>
+        </div>
+        <div class="ig-ctrl">
+          <div class="set-group"><h3>1 &middot; Photos</h3><div class="ig-body">
+            <div class="ig-drop" id="col-drop"><b>Drop 3 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
+            <input type="file" id="col-file" accept="image/*" multiple hidden>
+            <div class="ig-hint" id="col-count" style="margin-top:8px">No photos yet.</div>
+          </div></div>
+          <div class="set-group"><h3>2 &middot; Layout</h3><div class="ig-body">
+            <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button></div></div>
+            <div class="ig-fld">Aspect ratio<div class="ig-seg" id="col-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
+            <div class="ig-hint">Drag a thumbnail onto a box to place it. Drag one box onto another in the preview to swap them.</div>
+          </div></div>
+          <div class="set-group"><h3>3 &middot; Framing <span class="val" id="col-selbox">(box 1)</span></h3><div class="ig-body">
+            <div class="ig-fld">Zoom <span class="val" id="col-zoomVal">100%</span><input type="range" id="col-zoom" min="100" max="260" value="100"></div>
+            <div class="ig-fld">Vertical <span class="val" id="col-posVal">center</span><input type="range" id="col-pos" min="-100" max="100" value="0"></div>
+            <div class="ig-fld">Horizontal <span class="val" id="col-posxVal">center</span><input type="range" id="col-posx" min="-100" max="100" value="0"></div>
+            <div class="ig-hint">Click a box in the preview to select it, then adjust its framing.</div>
+          </div></div>
+          <div class="set-group"><h3>4 &middot; Divider &amp; frame</h3><div class="ig-body">
+            <div class="ig-fld">Divider width <span class="val" id="col-gapVal">3px</span><input type="range" id="col-gap" min="0" max="40" value="3"></div>
+            <div class="ig-fld">Divider color<input type="color" id="col-gapcolor" value="#ffffff" class="tb-color"></div>
+            <div class="ig-toggle">Frame the outside too<label class="switch"><input type="checkbox" id="col-frame"><span class="slider-sw"></span></label></div>
+            <div class="ig-hint">Default is 3px white. The outer frame uses the same width and color.</div>
+          </div></div>
+          <div class="set-group"><h3>5 &middot; Post text</h3><div class="ig-body">
+            <textarea id="col-caption" placeholder="Write the Facebook post text here..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <button class="btn btn-outline btn-sm" id="col-cap-copy" style="margin-top:6px">Copy text</button>
+          </div></div>
+        </div>
+      </div>
+      </div><!-- /ig-view-collage -->
+
 
       <div class="ig-view" id="ig-view-reel">
       <p class="sub" style="margin-top:4px">Upload a finished vertical video and send it out as a <b>Reel</b> on Instagram and Facebook. Best results: <b>9:16</b>, up to <b>90 seconds</b> (Facebook's limit; Instagram allows longer), MP4, under <b>50MB</b>. Text and the TBI mark below get burned into the video before posting, so they show on both networks.</p>
@@ -2584,6 +2629,7 @@ function showIGView(v){
   document.querySelectorAll('.ig-viewbtn').forEach(function(x){ x.classList.toggle('active', x.dataset.igview===v); });
   document.querySelectorAll('.ig-view').forEach(function(x){ x.classList.toggle('active', x.id===('ig-view-'+v)); });
   if(v==='custom') initCP();
+  else if(v==='collage') initCollage();
   else if(v==='reel') initReel();
   else if(v==='story') initIG();
 }
@@ -2603,6 +2649,84 @@ async function igSendToScheduling(blobs, caption){
   if(ins.error) throw new Error(ins.error.message);
   return urls.length;
 }
+
+/* ===== Collage tab (3-photo grid -> Facebook) ===== */
+var colReady=false;
+function initCollage(){ if(colReady) return; colReady=true; colBoot(); }
+function colBoot(){
+  var canvas=document.getElementById('col-card'); if(!canvas) return; var ctx=canvas.getContext('2d');
+  function $(id){ return document.getElementById(id); }
+  var COL={ W:1080,H:1350, layout:'t1b2', gap:3, gapColor:'#ffffff', frame:false, sel:0,
+    photos:[], boxes:[{photoIdx:null,posX:0,posY:0,zoom:1},{photoIdx:null,posX:0,posY:0,zoom:1},{photoIdx:null,posX:0,posY:0,zoom:1}], dragPhoto:null };
+  function rects(){
+    var W=COL.W,H=COL.H,g=COL.gap,m=COL.frame?g:0,x0=m,y0=m,iw=W-2*m,ih=H-2*m,L=COL.layout;
+    function R(x,y,w,h){ return {x:x,y:y,w:w,h:h}; }
+    if(L==='t2b1'){ var th=Math.round((ih-g)*0.5),bw=Math.round((iw-g)/2); return [R(x0,y0,bw,th),R(x0+bw+g,y0,iw-bw-g,th),R(x0,y0+th+g,iw,ih-th-g)]; }
+    if(L==='l1r2'){ var lw=Math.round((iw-g)*0.56),rh=Math.round((ih-g)/2); return [R(x0,y0,lw,ih),R(x0+lw+g,y0,iw-lw-g,rh),R(x0+lw+g,y0+rh+g,iw-lw-g,ih-rh-g)]; }
+    if(L==='cols3'){ var cw=Math.round((iw-2*g)/3); return [R(x0,y0,cw,ih),R(x0+cw+g,y0,cw,ih),R(x0+2*(cw+g),y0,iw-2*(cw+g),ih)]; }
+    if(L==='rows3'){ var rr=Math.round((ih-2*g)/3); return [R(x0,y0,iw,rr),R(x0,y0+rr+g,iw,rr),R(x0,y0+2*(rr+g),iw,ih-2*(rr+g))]; }
+    var th1=Math.round((ih-g)*0.56),bw1=Math.round((iw-g)/2); return [R(x0,y0,iw,th1),R(x0,y0+th1+g,bw1,ih-th1-g),R(x0+bw1+g,y0+th1+g,iw-bw1-g,ih-th1-g)];
+  }
+  function drawBox(c,o,bx,r){
+    var iw=o.img.width,ih=o.img.height,s=Math.max(r.w/iw,r.h/ih)*(bx.zoom||1),dw=iw*s,dh=ih*s;
+    var dx=r.x+(r.w-dw)/2+((bx.posX||0)*(dw-r.w)/2),dy=r.y+(r.h-dh)/2+((bx.posY||0)*(dh-r.h)/2);
+    c.save(); c.beginPath(); c.rect(r.x,r.y,r.w,r.h); c.clip(); c.drawImage(o.img,dx,dy,dw,dh); c.restore();
+  }
+  function paint(c,W,H,forExport){
+    c.fillStyle=COL.gapColor; c.fillRect(0,0,W,H);
+    var rs=rects();
+    for(var i=0;i<rs.length;i++){
+      var r=rs[i],bx=COL.boxes[i],o=(bx&&bx.photoIdx!=null)?COL.photos[bx.photoIdx]:null;
+      if(o&&o.img){ drawBox(c,o,bx,r); }
+      else if(!forExport){ c.fillStyle='#efe9dd'; c.fillRect(r.x,r.y,r.w,r.h); c.fillStyle='#b7ab97'; c.font='600 '+Math.round(W*0.028)+'px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('Drag photo '+(i+1),r.x+r.w/2,r.y+r.h/2); }
+      if(!forExport&&i===COL.sel){ var lw=Math.max(3,Math.round(W*0.006)); c.strokeStyle='#5b7bd5'; c.lineWidth=lw; c.strokeRect(r.x+lw/2,r.y+lw/2,r.w-lw,r.h-lw); }
+    }
+  }
+  function allPlaced(){ var rs=rects(); for(var i=0;i<rs.length;i++){ var bx=COL.boxes[i]; if(!bx||bx.photoIdx==null||!(COL.photos[bx.photoIdx]&&COL.photos[bx.photoIdx].img)) return false; } return true; }
+  function render(){ if(canvas.width!==COL.W)canvas.width=COL.W; if(canvas.height!==COL.H)canvas.height=COL.H; paint(ctx,COL.W,COL.H,false); var e=$('col-export'); if(e) e.disabled=!allPlaced(); }
+  function thumbs(){
+    var host=$('col-thumbs'); if(!host) return; host.innerHTML='';
+    COL.photos.forEach(function(p,idx){
+      var d=document.createElement('div'); d.style.cssText='position:relative;width:60px;height:60px;border-radius:7px;overflow:hidden;border:1px solid var(--border);background:#000;cursor:grab'; d.draggable=true;
+      d.ondragstart=function(e){ COL.dragPhoto=idx; try{ e.dataTransfer.setData('text/plain',String(idx)); e.dataTransfer.effectAllowed='move'; }catch(_e){} };
+      var g=document.createElement('img'); g.src=p.url; g.style.cssText='width:100%;height:100%;object-fit:cover;pointer-events:none'; d.appendChild(g);
+      var inb=COL.boxes.findIndex(function(b){ return b.photoIdx===idx; });
+      var tag=document.createElement('span'); tag.textContent=inb>=0?('box '+(inb+1)):'drag in'; tag.style.cssText='position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;text-align:center;padding:1px 0'; d.appendChild(tag);
+      var x=document.createElement('span'); x.textContent='×'; x.style.cssText='position:absolute;top:0;right:0;background:rgba(0,0,0,.6);color:#fff;width:17px;height:17px;line-height:16px;text-align:center;cursor:pointer;font-size:12px'; x.onclick=function(ev){ ev.stopPropagation(); removePhoto(idx); }; d.appendChild(x);
+      host.appendChild(d);
+    });
+    var cnt=$('col-count'); if(cnt) cnt.textContent=COL.photos.length?(COL.photos.length+' photo'+(COL.photos.length>1?'s':'')+' uploaded, drag onto the boxes'):'No photos yet.';
+  }
+  function syncFraming(){ var bx=COL.boxes[COL.sel]||{}; var sl=$('col-selbox'); if(sl) sl.textContent='(box '+(COL.sel+1)+')'; var z=$('col-zoom'); if(z){ z.value=Math.round((bx.zoom||1)*100); $('col-zoomVal').textContent=z.value+'%'; } var p=$('col-pos'); if(p){ p.value=Math.round((bx.posY||0)*100); $('col-posVal').textContent=(+p.value===0?'center':(+p.value<0?'higher':'lower')); } var px=$('col-posx'); if(px){ px.value=Math.round((bx.posX||0)*100); $('col-posxVal').textContent=(+px.value===0?'center':(+px.value<0?'left':'right')); } }
+  function assign(p,b){ var a=COL.boxes.findIndex(function(bx){ return bx.photoIdx===p; }); if(a>=0&&a!==b){ var t=COL.boxes[a]; COL.boxes[a]=COL.boxes[b]; COL.boxes[b]=t; } else if(a<0){ COL.boxes[b]={photoIdx:p,posX:0,posY:0,zoom:1}; } COL.sel=b; render(); thumbs(); syncFraming(); }
+  function swapBoxes(a,b){ if(a===b) return; var t=COL.boxes[a]; COL.boxes[a]=COL.boxes[b]; COL.boxes[b]=t; COL.sel=b; render(); thumbs(); syncFraming(); }
+  function removePhoto(idx){ COL.photos.splice(idx,1); COL.boxes.forEach(function(b){ if(b.photoIdx===idx) b.photoIdx=null; else if(b.photoIdx!=null&&b.photoIdx>idx) b.photoIdx--; }); render(); thumbs(); syncFraming(); }
+  function addFiles(files){ Array.prototype.slice.call(files||[]).forEach(function(f){ if(!/^image\//.test(f.type)) return; var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,name:f.name}; COL.photos.push(o); var myIdx=COL.photos.length-1; img.onload=function(){ o.img=img; var empty=COL.boxes.findIndex(function(b){ return b.photoIdx==null; }); if(empty>=0&&COL.boxes.every(function(b){ return b.photoIdx!==myIdx; })) COL.boxes[empty]={photoIdx:myIdx,posX:0,posY:0,zoom:1}; render(); thumbs(); syncFraming(); }; img.src=url; }); }
+  function hit(clientX,clientY){ var rc=canvas.getBoundingClientRect(); var px=(clientX-rc.left)*(canvas.width/rc.width),py=(clientY-rc.top)*(canvas.height/rc.height); var rs=rects(); for(var i=0;i<rs.length;i++){ var r=rs[i]; if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) return i; } return -1; }
+  canvas.addEventListener('dragover',function(e){ e.preventDefault(); try{ e.dataTransfer.dropEffect='move'; }catch(_e){} });
+  canvas.addEventListener('drop',function(e){ e.preventDefault(); var b=hit(e.clientX,e.clientY); if(b<0) return; var p=COL.dragPhoto; if(p==null){ try{ p=parseInt(e.dataTransfer.getData('text/plain'),10); }catch(_e){} } if(p!=null&&!isNaN(p)&&COL.photos[p]) assign(p,b); COL.dragPhoto=null; });
+  var pdn=null;
+  canvas.addEventListener('pointerdown',function(e){ var b=hit(e.clientX,e.clientY); if(b<0) return; pdn={box:b,x:e.clientX,y:e.clientY,moved:false}; COL.sel=b; render(); syncFraming(); });
+  canvas.addEventListener('pointermove',function(e){ if(pdn&&Math.abs(e.clientX-pdn.x)+Math.abs(e.clientY-pdn.y)>8) pdn.moved=true; });
+  canvas.addEventListener('pointerup',function(e){ if(!pdn) return; if(pdn.moved){ var tb=hit(e.clientX,e.clientY); if(tb>=0&&tb!==pdn.box) swapBoxes(pdn.box,tb); } pdn=null; });
+  canvas.addEventListener('pointerleave',function(){ pdn=null; });
+  var drop=$('col-drop'),fi=$('col-file');
+  if(drop){ drop.onclick=function(){ fi&&fi.click(); }; drop.addEventListener('dragover',function(e){ e.preventDefault(); drop.classList.add('hot'); }); drop.addEventListener('dragleave',function(){ drop.classList.remove('hot'); }); drop.addEventListener('drop',function(e){ e.preventDefault(); drop.classList.remove('hot'); if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length) addFiles(e.dataTransfer.files); }); }
+  if(fi) fi.onchange=function(e){ addFiles(e.target.files); e.target.value=''; };
+  document.querySelectorAll('#col-layout button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-layout button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.layout=b.dataset.l; render(); }; });
+  document.querySelectorAll('#col-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-aspect button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.W=+b.dataset.w; COL.H=+b.dataset.h; render(); }; });
+  var z=$('col-zoom'); if(z) z.oninput=function(e){ var bx=COL.boxes[COL.sel]; if(bx) bx.zoom=e.target.value/100; $('col-zoomVal').textContent=e.target.value+'%'; render(); };
+  var pv=$('col-pos'); if(pv) pv.oninput=function(e){ var bx=COL.boxes[COL.sel]; if(bx) bx.posY=e.target.value/100; var v=+e.target.value; $('col-posVal').textContent=v===0?'center':(v<0?'higher':'lower'); render(); };
+  var pxv=$('col-posx'); if(pxv) pxv.oninput=function(e){ var bx=COL.boxes[COL.sel]; if(bx) bx.posX=e.target.value/100; var v=+e.target.value; $('col-posxVal').textContent=v===0?'center':(v<0?'left':'right'); render(); };
+  var g=$('col-gap'); if(g) g.oninput=function(e){ COL.gap=+e.target.value; $('col-gapVal').textContent=e.target.value+'px'; render(); };
+  var gc=$('col-gapcolor'); if(gc) gc.oninput=function(e){ COL.gapColor=e.target.value; render(); };
+  var fr=$('col-frame'); if(fr) fr.onchange=function(e){ COL.frame=e.target.checked; render(); };
+  var cpc=$('col-cap-copy'); if(cpc) cpc.onclick=function(){ var ta=$('col-caption'); navigator.clipboard.writeText(ta?ta.value:''); cpc.textContent='Copied '+CK; setTimeout(function(){ cpc.textContent='Copy text'; },1400); };
+  var ex=$('col-export'); if(ex) ex.onclick=function(){ if(!allPlaced()) return; var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); oc.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tbi-collage.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
+  var snd=$('col-send'); if(snd) snd.onclick=async function(){ var stt=$('col-status'); if(!allPlaced()){ stt.innerHTML='<span style="color:var(--red)">Place a photo in all three boxes first.</span>'; return; } snd.disabled=true; snd.textContent='Sending...'; stt.textContent='Rendering + uploading...'; try{ var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); var ta=$('col-caption'); await igSendToScheduling([blob], ta?ta.value:''); stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged), pick <b>Facebook</b>, and post or set a time.'; snd.textContent='Sent '+CK; setTimeout(function(){ snd.textContent='Send to Scheduling'; snd.disabled=false; },2600); }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; snd.textContent='Send to Scheduling'; snd.disabled=false; } };
+  render(); thumbs(); syncFraming();
+}
+
 // ---- Reel (video) upload view: upload, overlay editor (text + TBI mark), cover picker, IG options ----
 var REEL_ST={file:null, url:null, dur:0, w:0, h:0, wired:false, rafOn:false,
   cover:{mode:'auto', frameMs:0, file:null},
