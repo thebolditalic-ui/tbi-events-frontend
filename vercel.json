@@ -122,5 +122,16 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "functions": {
+    "api/meshy-webhook.js": {
+      "maxDuration": 60
+    },
+    "api/meshy-reconcile.js": {
+      "maxDuration": 60
+    },
+    "api/meshy-generate.js": {
+      "maxDuration": 30
+    }
+  }
 }

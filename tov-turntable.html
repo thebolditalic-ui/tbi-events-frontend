@@ -685,6 +685,10 @@
     A('ap-mode').addEventListener('change', function(){ var isNew=A('ap-mode').value==='new'; A('ap-name').disabled=!isNew; A('ap-zone').disabled=!isNew; if(!isNew){A('ap-slug').textContent=A('ap-mode').value;} else {_refreshSlug();} });
     ['ap-zone','ap-name'].forEach(function(id){ A(id).addEventListener('input', _refreshSlug); });
     if(_sb){ refreshApprove(); _loadFurniture(); }
+    (function(){ try{ var gp=new URLSearchParams(location.search).get('glb'); if(gp&&_sb){ if(A('ap-status'))A('ap-status').textContent='Loading model from catalog...';
+      _sb.storage.from(_BUCKET).createSignedUrl(gp,3600).then(function(s){ if(s&&s.data&&s.data.signedUrl)return fetch(s.data.signedUrl); throw new Error('sign failed'); })
+        .then(function(r){ return r.arrayBuffer(); }).then(function(buf){ glbBytes=buf; loadGLB(buf, gp.split('/').pop()); if(A('ap-status'))A('ap-status').textContent=''; })
+        .catch(function(e){ log('Catalog preload failed: '+(e.message||e),'bad'); }); } }catch(e){} })();
   }
 
 })();
