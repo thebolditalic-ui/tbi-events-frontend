@@ -115,6 +115,10 @@
       "destination": "/tov.html"
     },
     {
+      "source": "/tov-turntable",
+      "destination": "/tov-turntable.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
