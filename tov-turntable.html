@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Turntable — isometric sprite photoshoot</title>
+<style>
+  :root{
+    --bg:#171A14; --panel:#1F231B; --panel-2:#262B21;
+    --line:#3A402F; --ink:#E4E2D6; --dim:#8E9481;
+    --sage:#8FA97A; --brass:#C9A227; --warn:#C4643B;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header{
+    padding:22px 26px 18px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+  }
+  h1{
+    font:400 27px/1 var(--serif); letter-spacing:.02em; margin:0;
+  }
+  header .sub{color:var(--dim); font-size:13px}
+  main{display:grid; grid-template-columns: minmax(0,1fr) 348px; gap:1px; background:var(--line)}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+
+  .stage{background:var(--bg); padding:26px; display:flex; flex-direction:column; align-items:center; gap:16px; min-height:60vh}
+  #drop{
+    width:100%; max-width:560px; border:1px dashed var(--line); border-radius:3px;
+    padding:34px 20px; text-align:center; color:var(--dim); cursor:pointer; background:var(--panel);
+  }
+  #drop.hot{border-color:var(--sage); color:var(--ink)}
+  #drop strong{display:block; color:var(--ink); font:400 19px/1.3 var(--serif); margin-bottom:6px}
+  #view{
+    max-width:100%; height:auto; image-rendering:pixelated;
+    background:
+      linear-gradient(45deg,#1c2018 25%,transparent 25%),
+      linear-gradient(-45deg,#1c2018 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#1c2018 75%),
+      linear-gradient(-45deg,transparent 75%,#1c2018 75%);
+    background-size:16px 16px; background-position:0 0,0 8px,8px -8px,-8px 0px;
+    border:1px solid var(--line);
+  }
+  .readout{
+    font:12px/1.7 var(--mono); color:var(--dim); text-align:center; max-width:620px;
+    white-space:pre-line;
+  }
+  .readout b{color:var(--brass); font-weight:400}
+
+  aside{background:var(--panel); padding:22px 20px 40px; display:flex; flex-direction:column; gap:22px}
+  fieldset{border:0; border-top:1px solid var(--line); margin:0; padding:16px 0 0}
+  legend{
+    font:400 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase;
+    color:var(--sage); padding:0 8px 0 0;
+  }
+  label.row{display:flex; justify-content:space-between; align-items:center; gap:10px; margin:9px 0; font-size:13px; color:var(--dim)}
+  label.row span{flex:1}
+  input[type=number], select{
+    width:88px; background:var(--panel-2); color:var(--ink); border:1px solid var(--line);
+    border-radius:2px; padding:5px 7px; font:13px var(--mono); text-align:right;
+  }
+  input:focus-visible, select:focus-visible, button:focus-visible, #drop:focus-visible{
+    outline:2px solid var(--brass); outline-offset:2px;
+  }
+  button{
+    width:100%; padding:11px 14px; border:1px solid var(--line); border-radius:2px;
+    background:var(--panel-2); color:var(--ink); font:13px/1 inherit; cursor:pointer;
+    letter-spacing:.02em;
+  }
+  button:hover:not(:disabled){border-color:var(--sage)}
+  button.primary{background:var(--sage); border-color:var(--sage); color:#12160F; font-weight:600}
+  button.primary:hover:not(:disabled){filter:brightness(1.1)}
+  button:disabled{opacity:.35; cursor:not-allowed}
+  .clip{
+    display:flex; align-items:center; gap:9px; padding:7px 0; border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  .clip:last-child{border-bottom:0}
+  .clip input[type=checkbox]{accent-color:var(--sage); width:15px; height:15px}
+  .clip .nm{flex:1; font-family:var(--mono); font-size:12px}
+  .clip .dur{color:var(--dim); font:11px var(--mono)}
+  .clip input[type=number]{width:56px}
+  #log{
+    font:11px/1.6 var(--mono); color:var(--dim); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:2px; padding:10px; height:110px; overflow:auto;
+    white-space:pre-wrap;
+  }
+  #log .ok{color:var(--sage)} #log .bad{color:var(--warn)}
+  .bar{height:2px; background:var(--line); margin-top:-1px}
+  .bar i{display:block; height:2px; background:var(--brass); width:0; transition:width .12s linear}
+  @media (prefers-reduced-motion:reduce){ .bar i{transition:none} }
+  .hint{font-size:12px; color:var(--dim); line-height:1.6}
+  code{font:12px var(--mono); color:var(--brass)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Turntable</h1>
+  <div class="sub">Photograph a 3D model into isometric sprites. Nothing leaves this page.</div>
+</header>
+
+<main>
+  <section class="stage">
+    <div id="drop" tabindex="0" role="button" aria-label="Choose a GLB file">
+      <strong>Drop a .glb here</strong>
+      or click to choose one. Meshy's rigged export works as-is.
+    </div>
+    <canvas id="view" width="192" height="224"></canvas>
+    <div class="readout" id="readout">Load a model, or press <b>Test cube</b> to check the camera first.</div>
+  </section>
+
+  <aside>
+    <fieldset>
+      <legend>The grid</legend>
+      <label class="row"><span>Tile width, pixels</span><input type="number" id="tileW" value="128" min="16" max="512" step="2"></label>
+      <label class="row"><span>Tile size, meters</span><input type="number" id="tileM" value="1" min="0.25" max="4" step="0.25"></label>
+      <p class="hint">One tile is one meter of floor. Gus is 1.7 m, so he lands a little taller than a tile is wide.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>The object</legend>
+      <label class="row"><span>Footprint, tiles across</span><input type="number" id="footX" value="1" min="1" max="8" step="1"></label>
+      <label class="row"><span>Footprint, tiles deep</span><input type="number" id="footZ" value="1" min="1" max="8" step="1"></label>
+      <label class="row"><span>Scale</span><input type="number" id="scale" value="1" min="0.001" max="1000" step="0.01"></label>
+      <label class="row"><span>Real height, metres</span><input type="number" id="realH" value="1.7" min="0.05" max="10" step="0.05"></label>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button id="fitFoot" type="button">Fill footprint</button>
+        <button id="fitH" type="button">Set height</button>
+      </div>
+      <p class="hint">Meshy exports a rigged person at true height. It exports furniture at whatever size it likes. Use <b>Fill footprint</b> for a sofa, <b>Set height</b> for a person.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>The frame</legend>
+      <label class="row"><span>Frame width</span><input type="number" id="frameW" value="192" min="32" max="1024" step="2"></label>
+      <label class="row"><span>Frame height</span><input type="number" id="frameH" value="224" min="32" max="1024" step="2"></label>
+      <label class="row"><span>Feet above bottom</span><input type="number" id="originY" value="40" min="0" max="400" step="1"></label>
+      <button id="suggest" type="button" style="margin-top:8px">Suggest frame size</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>The turntable</legend>
+      <label class="row"><span>Directions</span>
+        <select id="dirs"><option>4</option><option selected>8</option><option>16</option></select></label>
+      <label class="row"><span>Facing offset °</span><input type="number" id="facing" value="0" min="-180" max="180" step="15"></label>
+      <label class="row"><span>Drop model to floor</span><input type="checkbox" id="drop2floor" checked style="width:15px;height:15px;accent-color:var(--sage)"></label>
+      <label class="row"><span>Ground shadow</span><input type="checkbox" id="shadow" checked style="width:15px;height:15px;accent-color:var(--sage)"></label>
+      <p class="hint">Direction 0 should face the way tile‑x increases. Nudge the offset until it does, once, ever.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>Clips</legend>
+      <div id="clips"><p class="hint">No model loaded.</p></div>
+    </fieldset>
+
+    <div style="display:flex; flex-direction:column; gap:9px">
+      <button id="cube">Test cube</button>
+      <button id="render" class="primary" disabled>Render sprite sheets</button>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div id="log">Ready.</div>
+  </aside>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var ELEV = Math.PI/6;   // 30 degrees above horizontal -> 2:1 tiles
+  var YAW  = Math.PI/4;   // 45 degrees
+
+  var $ = function(id){ return document.getElementById(id); };
+  var view = $('view'), logEl = $('log'), bar = $('bar');
+
+  function log(msg, cls){
+    var s = document.createElement('span');
+    if(cls) s.className = cls;
+    s.textContent = msg + "\n";
+    logEl.appendChild(s);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ---------- scene ----------
+  var renderer = new THREE.WebGLRenderer({canvas:view, alpha:true, antialias:true, preserveDrawingBuffer:true});
+  renderer.setPixelRatio(1);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.OrthographicCamera(-1,1,1,-1,0.01,200);
+
+  var pivot = new THREE.Group();        // the turntable. only this rotates.
+  scene.add(pivot);
+
+  var helpers = new THREE.Group();      // tile diamond, preview only
+  scene.add(helpers);
+
+  var hemi = new THREE.HemisphereLight(0xd8dce8, 0x5a5344, 0.55);
+  scene.add(hemi);
+  var key = new THREE.DirectionalLight(0xfff4e0, 1.15);
+  key.position.set(3.4, 6.2, 2.1);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048,2048);
+  var sc = key.shadow.camera;
+  sc.left=-3; sc.right=3; sc.top=3; sc.bottom=-3; sc.near=0.5; sc.far=20;
+  scene.add(key);
+  scene.add(new THREE.DirectionalLight(0xbfd0ff, 0.25).translateX(-4).translateZ(-3));
+
+  var shadowPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(24,24),
+    new THREE.ShadowMaterial({opacity:0.32})
+  );
+  shadowPlane.rotation.x = -Math.PI/2;
+  shadowPlane.receiveShadow = true;
+  scene.add(shadowPlane);
+
+  // tile diamond outline, drawn in the preview only
+  function buildTile(m, ax, az){
+    helpers.clear();
+    var y = 0.004;
+    var hx = ax*m/2, hz = az*m/2;
+    var faint = new THREE.LineBasicMaterial({color:0x4A5340});
+    var bold  = new THREE.LineBasicMaterial({color:0x8FA97A});
+    // interior tile lines
+    for(var i=1;i<ax;i++){
+      var x = -hx + i*m;
+      helpers.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+        [new THREE.Vector3(x,y,-hz), new THREE.Vector3(x,y,hz)]), faint));
+    }
+    for(var k=1;k<az;k++){
+      var z = -hz + k*m;
+      helpers.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(
+        [new THREE.Vector3(-hx,y,z), new THREE.Vector3(hx,y,z)]), faint));
+    }
+    // outer footprint
+    var pts = [
+      new THREE.Vector3(-hx,y,-hz), new THREE.Vector3(hx,y,-hz),
+      new THREE.Vector3(hx,y,hz),   new THREE.Vector3(-hx,y,hz),
+      new THREE.Vector3(-hx,y,-hz)
+    ];
+    helpers.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), bold));
+  }
+
+  // ---------- camera ----------
+  var state = { model:null, mixer:null, clips:[], height:0 };
+
+  function settings(){
+    return {
+      tileW:  +$('tileW').value,
+      tileM:  +$('tileM').value,
+      frameW: +$('frameW').value,
+      frameH: +$('frameH').value,
+      originY:+$('originY').value,
+      dirs:   +$('dirs').value,
+      facing: +$('facing').value * Math.PI/180,
+      shadow: $('shadow').checked,
+      footX:  +$('footX').value,
+      footZ:  +$('footZ').value,
+      scale:  +$('scale').value
+    };
+  }
+
+  function setupCamera(){
+    var s = settings();
+    // pixels per world metre, measured across the screen
+    var ppu = s.tileW / (s.tileM * Math.SQRT2);
+    var W = s.frameW / ppu, H = s.frameH / ppu;
+    camera.left = -W/2; camera.right = W/2;
+    camera.top = H/2;  camera.bottom = -H/2;
+
+    // put world y=0 exactly originY pixels above the bottom of the frame
+    var targetY = (s.frameH/2 - s.originY) / (ppu * Math.cos(ELEV));
+
+    var d = 40;
+    var dir = new THREE.Vector3(
+      Math.cos(ELEV)*Math.cos(YAW), Math.sin(ELEV), Math.cos(ELEV)*Math.sin(YAW)
+    );
+    camera.position.copy(dir).multiplyScalar(d).add(new THREE.Vector3(0,targetY,0));
+    camera.up.set(0,1,0);
+    camera.lookAt(0,targetY,0);
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(s.frameW, s.frameH, false);
+    shadowPlane.visible = s.shadow;
+    buildTile(s.tileM, s.footX, s.footZ);
+    return {ppu:ppu, s:s};
+  }
+
+  function readout(){
+    var r = setupCamera();
+    var s = r.s;
+    var spriteH = state.height ? (state.height * Math.cos(ELEV) * r.ppu) : 0;
+    var oy = ((s.frameH - s.originY) / s.frameH).toFixed(4);
+    var txt = 'tile ' + s.tileW + '\u00d7' + (s.tileW/2) + ' px  \u00b7  ' +
+              r.ppu.toFixed(1) + ' px per metre  \u00b7  footprint ' + s.footX + '\u00d7' + s.footZ + '\n';
+    if(state.size){
+      txt += 'object ' + state.size.x.toFixed(2) + ' \u00d7 ' + state.size.z.toFixed(2) +
+             ' \u00d7 ' + state.size.y.toFixed(2) + ' m  \u2192  <b>' + Math.round(spriteH) + ' px tall</b>';
+      var over = state.size.x > s.footX*s.tileM + 1e-3 || state.size.z > s.footZ*s.tileM + 1e-3;
+      if(over) txt += '  \u00b7  <b style="color:#C4643B">overhangs its footprint</b>';
+      txt += '\n';
+    }
+    txt += 'Phaser: <b>setOrigin(0.5, ' + oy + ')</b>';
+    $('readout').innerHTML = txt;
+  }
+
+  function draw(){
+    setupCamera();
+    helpers.visible = true;
+    renderer.render(scene, camera);
+  }
+
+  // ---------- loading ----------
+  function clearModel(){
+    while(pivot.children.length) pivot.remove(pivot.children[0]);
+    state.model = null; state.mixer = null; state.clips = [];
+    $('render').disabled = true;
+  }
+
+  function measureRaw(obj){
+    obj.scale.setScalar(1);
+    obj.position.set(0,0,0);
+    obj.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(obj);
+    var size = new THREE.Vector3(); box.getSize(size);
+    state.raw = size;
+  }
+
+  function fitModel(obj){
+    var s = settings();
+    obj.scale.setScalar(s.scale);
+    obj.position.set(0,0,0);
+    obj.updateMatrixWorld(true);
+    var box = new THREE.Box3().setFromObject(obj);
+    var size = new THREE.Vector3(); box.getSize(size);
+    var ctr = new THREE.Vector3(); box.getCenter(ctr);
+    obj.position.x = -ctr.x;
+    obj.position.z = -ctr.z;
+    if($('drop2floor').checked) obj.position.y = -box.min.y;
+    state.height = size.y;
+    state.size = size;
+  }
+
+  function fitToFootprint(){
+    if(!state.model || !state.raw) return;
+    var s = settings();
+    var k = Math.min(s.footX * s.tileM / state.raw.x, s.footZ * s.tileM / state.raw.z);
+    $('scale').value = k.toFixed(4);
+    fitModel(state.model);
+    log('Scaled ' + k.toFixed(3) + '\u00d7 to fill ' + s.footX + '\u00d7' + s.footZ + ' tiles.', 'ok');
+    readout(); draw();
+  }
+
+  function fitToHeight(){
+    if(!state.model || !state.raw) return;
+    var target = +$('realH').value;
+    var k = target / state.raw.y;
+    $('scale').value = k.toFixed(4);
+    fitModel(state.model);
+    log('Scaled ' + k.toFixed(3) + '\u00d7 so it stands ' + target + ' m tall.', 'ok');
+    readout(); draw();
+  }
+
+  function suggestFrame(){
+    var s = settings();
+    var ppu = s.tileW / (s.tileM * Math.SQRT2);
+    var w = Math.ceil(((s.footX + s.footZ) / 2 * s.tileW) * 1.25 / 2) * 2;
+    var footH = (s.footX + s.footZ) / 4 * s.tileW;
+    var objH = (state.height || 1) * Math.cos(ELEV) * ppu;
+    var h = Math.ceil((objH + footH + 24) / 2) * 2;
+    $('frameW').value = Math.max(32, w);
+    $('frameH').value = Math.max(32, h);
+    $('originY').value = Math.round(footH / 2 + 12);
+    log('Frame set to ' + $('frameW').value + '\u00d7' + $('frameH').value + '.', 'ok');
+    readout(); draw();
+  }
+
+  function loadGLB(buf, name){
+    clearModel();
+    var loader = new THREE.GLTFLoader();
+    loader.parse(buf, '', function(gltf){
+      var root = gltf.scene;
+      root.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.frustumCulled = false; } });
+      pivot.add(root);
+      measureRaw(root);
+      fitModel(root);
+      state.model = root;
+      state.clips = gltf.animations || [];
+      if(state.clips.length){
+        state.mixer = new THREE.AnimationMixer(root);
+      }
+      renderClipList();
+      $('render').disabled = false;
+      log('Loaded ' + name, 'ok');
+      log('  height ' + state.height.toFixed(3) + ' m, ' + state.clips.length + ' clip(s)');
+      readout(); draw();
+    }, function(e){
+      log('Could not read that file: ' + e, 'bad');
+    });
+  }
+
+  function renderClipList(){
+    var box = $('clips'); box.innerHTML = '';
+    if(!state.clips.length){
+      var p = document.createElement('p'); p.className='hint';
+      p.textContent = 'No animations in this file. It will render one still frame per direction, which is what furniture wants.';
+      box.appendChild(p);
+      return;
+    }
+    state.clips.forEach(function(clip, i){
+      var row = document.createElement('div'); row.className='clip';
+      var frames = Math.max(4, Math.min(24, Math.round(clip.duration * 12)));
+      row.innerHTML =
+        '<input type="checkbox" id="c'+i+'" checked>' +
+        '<label class="nm" for="c'+i+'">' + clip.name + '</label>' +
+        '<span class="dur">' + clip.duration.toFixed(2) + 's</span>' +
+        '<input type="number" id="f'+i+'" value="'+frames+'" min="1" max="48" step="1" title="frames">';
+      box.appendChild(row);
+    });
+  }
+
+  // ---------- test cube ----------
+  function testCube(){
+    clearModel();
+    var s = settings();
+    var g = new THREE.BoxGeometry(s.tileM, s.tileM, s.tileM);
+    g.translate(0, s.tileM/2, 0);
+    var m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({color:0xb8b3a4, roughness:.85}));
+    m.castShadow = true;
+    pivot.add(m);
+    state.model = m; state.height = s.tileM;
+    renderClipList();
+    $('render').disabled = false;
+    log('Test cube: ' + s.tileM + ' m on a side.', 'ok');
+    log('  Its base should sit exactly on the green diamond.');
+    readout(); draw();
+  }
+
+  // ---------- rendering ----------
+  function sleep(){ return new Promise(function(r){ setTimeout(r, 0); }); }
+
+  function captureSheet(clip, frameCount, s){
+    // grid: columns = frames, rows = directions
+    var sheet = document.createElement('canvas');
+    sheet.width = frameCount * s.frameW;
+    sheet.height = s.dirs * s.frameH;
+    var ctx = sheet.getContext('2d');
+    var frames = {};
+
+    var action = null;
+    if(clip && state.mixer){
+      state.mixer.stopAllAction();
+      action = state.mixer.clipAction(clip);
+      action.play();
+    }
+
+    helpers.visible = false;
+    for(var d = 0; d < s.dirs; d++){
+      pivot.rotation.y = s.facing + d * (2*Math.PI / s.dirs);
+      for(var f = 0; f < frameCount; f++){
+        if(action) state.mixer.setTime(clip.duration * f / frameCount);
+        renderer.render(scene, camera);
+        ctx.drawImage(view, f * s.frameW, d * s.frameH);
+        var nm = (clip ? clip.name.replace(/[^A-Za-z0-9_]/g,'_') : 'static') +
+                 '_' + d + '_' + String(f).padStart(3,'0');
+        frames[nm] = {
+          frame:{x:f*s.frameW, y:d*s.frameH, w:s.frameW, h:s.frameH},
+          rotated:false, trimmed:false,
+          spriteSourceSize:{x:0,y:0,w:s.frameW,h:s.frameH},
+          sourceSize:{w:s.frameW,h:s.frameH}
+        };
+      }
+    }
+    pivot.rotation.y = 0;
+    helpers.visible = true;
+    return {canvas:sheet, frames:frames};
+  }
+
+  async function renderAll(){
+    var s = setupCamera();
+    s = s.s;
+    var zip = new JSZip();
+    logEl.innerHTML = '';
+    $('render').disabled = true; $('cube').disabled = true;
+
+    var jobs = [];
+    if(state.clips.length){
+      state.clips.forEach(function(c,i){
+        if($('c'+i) && $('c'+i).checked) jobs.push({clip:c, frames:+$('f'+i).value});
+      });
+    } else {
+      jobs.push({clip:null, frames:1});
+    }
+    if(!jobs.length){ log('Tick at least one clip.', 'bad'); $('render').disabled=false; $('cube').disabled=false; return; }
+
+    var total = jobs.length, done = 0;
+    for(var i=0;i<jobs.length;i++){
+      var j = jobs[i];
+      var name = j.clip ? j.clip.name.replace(/[^A-Za-z0-9_]/g,'_') : 'static';
+      var w = j.frames * s.frameW, h = s.dirs * s.frameH;
+      log('Rendering ' + name + ': ' + j.frames + ' frames \u00d7 ' + s.dirs + ' directions  (' + w + '\u00d7' + h + ' px)');
+      if(w > 4096 || h > 4096) log('  sheet exceeds 4096 px; some phones will refuse it', 'bad');
+      await sleep();
+      var out = captureSheet(j.clip, j.frames, s);
+      var blob = await new Promise(function(res){ out.canvas.toBlob(res, 'image/png'); });
+      zip.file(name + '.png', blob);
+      zip.file(name + '.json', JSON.stringify({
+        frames: out.frames,
+        meta:{app:'Turntable', image:name+'.png', format:'RGBA8888',
+              size:{w:out.canvas.width,h:out.canvas.height}, scale:'1'}
+      }, null, 1));
+      done++; bar.style.width = (done/total*100) + '%';
+      log('  done', 'ok');
+      await sleep();
+    }
+
+    var oy = ((s.frameH - s.originY) / s.frameH).toFixed(4);
+    zip.file('read-me.txt',
+      'Turntable output\n\n' +
+      'Tile width      ' + s.tileW + ' px  (tile height ' + (s.tileW/2) + ' px)\n' +
+      'Frame size      ' + s.frameW + ' x ' + s.frameH + ' px\n' +
+      'Directions      ' + s.dirs + '  (index 0 = facing +x, then counter-clockwise)\n' +
+      'Model height    ' + state.height.toFixed(3) + ' m\n\n' +
+      'In Phaser:\n' +
+      '  this.load.atlas("gus", "walk.png", "walk.json");\n' +
+      '  sprite.setOrigin(0.5, ' + oy + ');   // puts the feet on the tile\n' +
+      '  sprite.setScale(1);                  // never resize these\n' +
+      '  sprite.setDepth(sprite.y);\n\n' +
+      'Frame names look like:  Walking_3_007\n' +
+      '  clipname _ direction _ frame\n\n' +
+      'The last frame of a looping clip is NOT rendered, because it is the same\n' +
+      'picture as frame 0. Play frames 0 through N-1 and it loops cleanly.\n'
+    );
+
+    var out = await zip.generateAsync({type:'blob'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(out);
+    a.download = 'sprites.zip';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    log('Wrote sprites.zip', 'ok');
+    $('render').disabled = false; $('cube').disabled = false;
+    bar.style.width = '0';
+    draw();
+  }
+
+  // ---------- wiring ----------
+  var drop = $('drop');
+  var input = document.createElement('input');
+  input.type = 'file'; input.accept = '.glb,.gltf'; input.style.display='none';
+  document.body.appendChild(input);
+
+  function handleFile(file){
+    if(!file) return;
+    log('Reading ' + file.name + ' (' + (file.size/1e6).toFixed(1) + ' MB)…');
+    var fr = new FileReader();
+    fr.onload = function(){ loadGLB(fr.result, file.name); };
+    fr.readAsArrayBuffer(file);
+  }
+  drop.addEventListener('click', function(){ input.click(); });
+  drop.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); input.click(); } });
+  input.addEventListener('change', function(){ handleFile(input.files[0]); });
+  ['dragenter','dragover'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('hot'); });
+  });
+  ['dragleave','drop'].forEach(function(ev){
+    drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('hot'); });
+  });
+  drop.addEventListener('drop', function(e){ handleFile(e.dataTransfer.files[0]); });
+
+  ['tileW','tileM','frameW','frameH','originY','dirs','facing','footX','footZ'].forEach(function(id){
+    $(id).addEventListener('input', function(){ readout(); draw(); });
+  });
+  $('scale').addEventListener('input', function(){
+    if(state.model) fitModel(state.model);
+    readout(); draw();
+  });
+  ['drop2floor','shadow'].forEach(function(id){
+    $(id).addEventListener('change', function(){
+      if(state.model) fitModel(state.model);
+      readout(); draw();
+    });
+  });
+  $('fitFoot').addEventListener('click', fitToFootprint);
+  $('fitH').addEventListener('click', fitToHeight);
+  $('suggest').addEventListener('click', suggestFrame);
+  $('cube').addEventListener('click', testCube);
+  $('render').addEventListener('click', function(){ renderAll().catch(function(e){ log('Failed: '+e, 'bad'); $('render').disabled=false; $('cube').disabled=false; }); });
+
+  readout();
+  draw();
+  log('Camera: orthographic, 45\u00b0 yaw, 30\u00b0 elevation. 2:1 tiles.');
+})();
+</script>
+</body>
+</html>
