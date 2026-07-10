@@ -227,6 +227,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <div class="tov-tabs">
       <button class="tov-tab on" data-tab="assets">Assets</button>
       <button class="tov-tab" data-tab="config">Config</button>
+      <button class="tov-tab" data-tab="turntable">Turntable</button>
     </div>
     <div id="tab-assets">
       <div class="tov-bar">
@@ -253,6 +254,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         <button class="btn btn-gold btn-sm" id="cfg-save">Save config</button>
         <span id="cfg-status" class="tov-hint"></span>
       </div>
+    </div>
+    <div id="tab-turntable" style="display:none">
+      <p class="tov-hint" style="margin:0 0 8px">Isometric sprite photoshoot — drop a 3D model (GLTF / GLB), set the tile grid, directions and frame, and render sprite sheets for the engine. <a href="/tov-turntable" target="_blank" rel="noopener" style="color:#5b7bd5;text-decoration:none">Open full-page &#8599;</a></p>
+      <iframe src="/tov-turntable" title="Turntable" style="width:100%;height:78vh;min-height:620px;border:1px solid #e0d8cc;border-radius:10px;background:#fff"></iframe>
     </div>
   </div>
 </div>
@@ -294,7 +299,7 @@ if($out)$out.addEventListener('click',async function(){await sb.auth.signOut();l
 var ASSETS=[],CONFIG={},SIGNED={},VIEW='grid',CFGTOPIC='map-spec',MCUR=null;
 var STYLES=['shared','kai','gus','rocco','karlotta'];
 
-document.querySelectorAll('.tov-tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tov-tab').forEach(function(x){x.classList.remove('on');});b.classList.add('on');var t=b.dataset.tab;$('tab-assets').style.display=t==='assets'?'':'none';$('tab-config').style.display=t==='config'?'':'none';};});
+document.querySelectorAll('.tov-tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tov-tab').forEach(function(x){x.classList.remove('on');});b.classList.add('on');var t=b.dataset.tab;$('tab-assets').style.display=t==='assets'?'':'none';$('tab-config').style.display=t==='config'?'':'none';$('tab-turntable').style.display=t==='turntable'?'':'none';};});
 document.querySelectorAll('#tov-view button').forEach(function(b){b.onclick=function(){document.querySelectorAll('#tov-view button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');VIEW=b.dataset.v;renderAssets();};});
 ['f-kind','f-zone','f-style','f-state'].forEach(function(id){$(id).onchange=renderAssets;});
 $('f-q').oninput=renderAssets;
