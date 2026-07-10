@@ -132,7 +132,9 @@
         <button id="fitFoot" type="button">Fill footprint</button>
         <button id="fitH" type="button">Set height</button>
       </div>
+      <label class="row" style="margin-top:12px"><span>Slice into one sprite per tile</span><input type="checkbox" id="split" style="width:15px;height:15px;accent-color:var(--sage)"></label>
       <p class="hint">Meshy exports a rigged person at true height. It exports furniture at whatever size it likes. Use <b>Fill footprint</b> for a sofa, <b>Set height</b> for a person.</p>
+      <p class="hint">Slicing is only for tall, free‑standing objects a character can walk both behind and in front of. Needs 4 directions. Anything against a wall does not need it.</p>
     </fieldset>
 
     <fieldset>
@@ -151,6 +153,15 @@
       <label class="row"><span>Drop model to floor</span><input type="checkbox" id="drop2floor" checked style="width:15px;height:15px;accent-color:var(--sage)"></label>
       <label class="row"><span>Ground shadow</span><input type="checkbox" id="shadow" checked style="width:15px;height:15px;accent-color:var(--sage)"></label>
       <p class="hint">Direction 0 should face the way tile‑x increases. Nudge the offset until it does, once, ever.</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>The finish</legend>
+      <label class="row"><span>Supersample</span>
+        <select id="ss"><option value="1">1×</option><option value="2" selected>2×</option><option value="3">3×</option></select></label>
+      <label class="row"><span>Ink outline</span><input type="checkbox" id="outline" style="width:15px;height:15px;accent-color:var(--sage)"></label>
+      <label class="row"><span>Outline width, px</span><input type="number" id="outlineW" value="2" min="1" max="4" step="1"></label>
+      <p class="hint">Textures get anisotropic filtering automatically, which is what fixes blurry seats and tabletops. The outline is a drawing convention, not a sharpness fix; turn it on if your art has ink lines.</p>
     </fieldset>
 
     <fieldset>
@@ -284,11 +295,15 @@
       shadow: $('shadow').checked,
       footX:  +$('footX').value,
       footZ:  +$('footZ').value,
-      scale:  +$('scale').value
+      scale:  +$('scale').value,
+      ss:     +$('ss').value,
+      outline: $('outline').checked,
+      outlineW: +$('outlineW').value
     };
   }
 
-  function setupCamera(){
+  function setupCamera(offX, offZ){
+    offX = offX || 0; offZ = offZ || 0;
     var s = settings();
     // pixels per world metre, measured across the screen
     var ppu = s.tileW / (s.tileM * Math.SQRT2);
@@ -303,12 +318,13 @@
     var dir = new THREE.Vector3(
       Math.cos(ELEV)*Math.cos(YAW), Math.sin(ELEV), Math.cos(ELEV)*Math.sin(YAW)
     );
-    camera.position.copy(dir).multiplyScalar(d).add(new THREE.Vector3(0,targetY,0));
+    var target = new THREE.Vector3(offX, targetY, offZ);
+    camera.position.copy(dir).multiplyScalar(d).add(target);
     camera.up.set(0,1,0);
-    camera.lookAt(0,targetY,0);
+    camera.lookAt(target);
     camera.updateProjectionMatrix();
 
-    renderer.setSize(s.frameW, s.frameH, false);
+    renderer.setSize(s.frameW * s.ss, s.frameH * s.ss, false);
     shadowPlane.visible = s.shadow;
     buildTile(s.tileM, s.footX, s.footZ);
     return {ppu:ppu, s:s};
@@ -403,12 +419,36 @@
     readout(); draw();
   }
 
+  function sharpenTextures(root){
+    var maxA = renderer.capabilities.getMaxAnisotropy();
+    var n = 0;
+    root.traverse(function(o){
+      if(!o.isMesh) return;
+      var mats = Array.isArray(o.material) ? o.material : [o.material];
+      mats.forEach(function(m){
+        if(!m) return;
+        ['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap'].forEach(function(k){
+          if(m[k]){
+            m[k].anisotropy = maxA;
+            m[k].minFilter = THREE.LinearMipmapLinearFilter;
+            m[k].magFilter = THREE.LinearFilter;
+            m[k].needsUpdate = true;
+            n++;
+          }
+        });
+        m.needsUpdate = true;
+      });
+    });
+    return {count:n, max:maxA};
+  }
+
   function loadGLB(buf, name){
     clearModel();
     var loader = new THREE.GLTFLoader();
     loader.parse(buf, '', function(gltf){
       var root = gltf.scene;
       root.traverse(function(o){ if(o.isMesh){ o.castShadow = true; o.frustumCulled = false; } });
+      var sharp = sharpenTextures(root);
       pivot.add(root);
       measureRaw(root);
       fitModel(root);
@@ -422,6 +462,7 @@
       if(window._tovRefreshApprove){try{window._tovRefreshApprove();}catch(e){}}
       log('Loaded ' + name, 'ok');
       log('  height ' + state.height.toFixed(3) + ' m, ' + state.clips.length + ' clip(s)');
+      log('  sharpened ' + sharp.count + ' texture(s) at ' + sharp.max + '\u00d7 anisotropy', 'ok');
       readout(); draw();
     }, function(e){
       log('Could not read that file: ' + e, 'bad');
@@ -468,12 +509,109 @@
   // ---------- rendering ----------
   function sleep(){ return new Promise(function(r){ setTimeout(r, 0); }); }
 
+  // Slice a multi-tile object into one sprite per tile, cut in 3D at the tile
+  // boundaries. Shadows are NOT clipped when cast, only where they land, so the
+  // pieces reassemble with a continuous shadow.
+  function captureSplitSheet(s){
+    var cells = s.footX * s.footZ;
+    var sheet = document.createElement('canvas');
+    sheet.width  = cells * s.frameW;
+    sheet.height = s.dirs * s.frameH;
+    var ctx = sheet.getContext('2d');
+    var frames = {}, m = s.tileM;
+
+    helpers.visible = false;
+    renderer.localClippingEnabled = false;
+
+    for(var d = 0; d < s.dirs; d++){
+      var quarter = Math.round(d * (4 / s.dirs)) % 4;   // 0,1,2,3
+      pivot.rotation.y = quarter * Math.PI/2;
+
+      // after a quarter turn the footprint swaps its axes
+      var A = (quarter % 2 === 0) ? s.footX : s.footZ;   // tiles across world x
+      var B = (quarter % 2 === 0) ? s.footZ : s.footX;   // tiles across world z
+
+      var slot = 0;
+      for(var i = 0; i < A; i++){
+        for(var j = 0; j < B; j++){
+          var x0 = -A*m/2 + i*m, x1 = x0 + m;
+          var z0 = -B*m/2 + j*m, z1 = z0 + m;
+          var cx = (x0 + x1)/2, cz = (z0 + z1)/2;
+
+          renderer.clippingPlanes = [
+            new THREE.Plane(new THREE.Vector3( 1,0,0), -x0),
+            new THREE.Plane(new THREE.Vector3(-1,0,0),  x1),
+            new THREE.Plane(new THREE.Vector3(0,0, 1), -z0),
+            new THREE.Plane(new THREE.Vector3(0,0,-1),  z1)
+          ];
+          setupCamera(cx, cz);
+          renderer.render(scene, camera);
+          ctx.drawImage(view, slot * s.frameW, d * s.frameH);
+
+          var nm = 'd' + d + '_t' + i + '_' + j;
+          frames[nm] = {
+            frame:{x:slot*s.frameW, y:d*s.frameH, w:s.frameW, h:s.frameH},
+            rotated:false, trimmed:false,
+            spriteSourceSize:{x:0,y:0,w:s.frameW,h:s.frameH},
+            sourceSize:{w:s.frameW,h:s.frameH}
+          };
+          slot++;
+        }
+      }
+    }
+
+    renderer.clippingPlanes = [];
+    pivot.rotation.y = 0;
+    helpers.visible = true;
+    setupCamera();
+    return {canvas:sheet, frames:frames};
+  }
+
+  // draw a dark contour into the transparent pixels that touch the silhouette
+  function inkOutline(ctx, w, h, radius){
+    var img = ctx.getImageData(0,0,w,h);
+    var d = img.data;
+    var alpha = new Uint8Array(w*h);
+    for(var i=0;i<w*h;i++) alpha[i] = d[i*4+3];
+    var out = new Uint8Array(w*h);
+    var r = Math.max(1, Math.min(4, radius|0));
+    for(var y=0;y<h;y++){
+      for(var x=0;x<w;x++){
+        var idx = y*w+x;
+        if(alpha[idx] > 96) continue;             // already solid
+        var hit = false;
+        for(var dy=-r; dy<=r && !hit; dy++){
+          var yy = y+dy; if(yy<0||yy>=h) continue;
+          for(var dx=-r; dx<=r; dx++){
+            var xx = x+dx; if(xx<0||xx>=w) continue;
+            if(dx*dx+dy*dy > r*r) continue;
+            if(alpha[yy*w+xx] > 96){ hit = true; break; }
+          }
+        }
+        if(hit) out[idx] = 1;
+      }
+    }
+    for(var j=0;j<w*h;j++){
+      if(out[j]){
+        d[j*4]   = 60; d[j*4+1] = 44; d[j*4+2] = 36; d[j*4+3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  var tmp = document.createElement('canvas');
+  var tctx = tmp.getContext('2d');
+
   function captureSheet(clip, frameCount, s){
-    // grid: columns = frames, rows = directions
     var sheet = document.createElement('canvas');
     sheet.width = frameCount * s.frameW;
     sheet.height = s.dirs * s.frameH;
     var ctx = sheet.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    tmp.width = s.frameW; tmp.height = s.frameH;
+    tctx.imageSmoothingEnabled = true;
+    tctx.imageSmoothingQuality = 'high';
     var frames = {};
 
     var action = null;
@@ -489,7 +627,11 @@
       for(var f = 0; f < frameCount; f++){
         if(action) state.mixer.setTime(clip.duration * f / frameCount);
         renderer.render(scene, camera);
-        ctx.drawImage(view, f * s.frameW, d * s.frameH);
+        // supersampled canvas -> frame-sized canvas
+        tctx.clearRect(0,0,s.frameW,s.frameH);
+        tctx.drawImage(view, 0,0, view.width, view.height, 0,0, s.frameW, s.frameH);
+        if(s.outline && s.outlineW > 0) inkOutline(tctx, s.frameW, s.frameH, s.outlineW);
+        ctx.drawImage(tmp, f * s.frameW, d * s.frameH);
         var nm = (clip ? clip.name.replace(/[^A-Za-z0-9_]/g,'_') : 'static') +
                  '_' + d + '_' + String(f).padStart(3,'0');
         frames[nm] = {
@@ -513,6 +655,31 @@
     $('render').disabled = true; $('cube').disabled = true;
 
     var jobs = [];
+    var splitting = $('split').checked;
+
+    if(splitting){
+      if(state.clips.length) { log('Split mode ignores animations. Untick it for characters.', 'bad'); }
+      if(s.dirs !== 4 && s.dirs !== 1){
+        log('Split mode needs 4 directions. A footprint only lines up with the grid at quarter turns.', 'bad');
+        $('render').disabled=false; $('cube').disabled=false; return;
+      }
+      log('Slicing into ' + (s.footX*s.footZ) + ' tile pieces \u00d7 ' + s.dirs + ' directions');
+      await sleep();
+      var out = captureSplitSheet(s);
+      var blob = await new Promise(function(res){ out.canvas.toBlob(res, 'image/png'); });
+      zip.file('sliced.png', blob);
+      zip.file('sliced.json', JSON.stringify({
+        frames: out.frames,
+        meta:{app:'Turntable', image:'sliced.png', format:'RGBA8888',
+              size:{w:out.canvas.width,h:out.canvas.height}, scale:'1'}
+      }, null, 1));
+      bar.style.width = '100%';
+      log('  done', 'ok');
+      await writeReadme(zip, s, true);
+      await finish(zip);
+      return;
+    }
+
     if(state.clips.length){
       state.clips.forEach(function(c,i){
         if($('c'+i) && $('c'+i).checked) jobs.push({clip:c, frames:+$('f'+i).value});
@@ -543,24 +710,50 @@
       await sleep();
     }
 
+    await writeReadme(zip, s, false);
+    await finish(zip);
+  }
+
+  function writeReadme(zip, s, sliced){
     var oy = ((s.frameH - s.originY) / s.frameH).toFixed(4);
-    zip.file('read-me.txt',
+    var txt =
       'Turntable output\n\n' +
       'Tile width      ' + s.tileW + ' px  (tile height ' + (s.tileW/2) + ' px)\n' +
       'Frame size      ' + s.frameW + ' x ' + s.frameH + ' px\n' +
       'Directions      ' + s.dirs + '  (index 0 = facing +x, then counter-clockwise)\n' +
-      'Model height    ' + state.height.toFixed(3) + ' m\n\n' +
-      'In Phaser:\n' +
-      '  this.load.atlas("gus", "walk.png", "walk.json");\n' +
-      '  sprite.setOrigin(0.5, ' + oy + ');   // puts the feet on the tile\n' +
+      'Footprint       ' + s.footX + ' x ' + s.footZ + ' tiles\n' +
+      'Object height   ' + (state.height||0).toFixed(3) + ' m\n\n' +
+      'In Phaser, for every sprite from this pipeline:\n' +
+      '  sprite.setOrigin(0.5, ' + oy + ');   // puts its floor contact on the tile\n' +
       '  sprite.setScale(1);                  // never resize these\n' +
-      '  sprite.setDepth(sprite.y);\n\n' +
-      'Frame names look like:  Walking_3_007\n' +
-      '  clipname _ direction _ frame\n\n' +
-      'The last frame of a looping clip is NOT rendered, because it is the same\n' +
-      'picture as frame 0. Play frames 0 through N-1 and it loops cleanly.\n'
-    );
+      '  sprite.setDepth(sprite.y);\n\n';
 
+    if(sliced){
+      txt +=
+        'SLICED OUTPUT\n' +
+        'This object was cut in 3D at its tile boundaries. Each piece is its own\n' +
+        'sprite and must be placed on its own tile, with its own depth.\n\n' +
+        'Frame names look like:  d1_t0_1\n' +
+        '  d = direction index, t = the tile offset within the footprint\n\n' +
+        'If the object sits at base tile (bx, by), place frame d{D}_t{i}_{j} at\n' +
+        '  tile (bx + i, by + j)\n' +
+        'using the same tileToScreen() you use for everything else. Each piece\n' +
+        'then sorts correctly against a character walking around the object.\n\n' +
+        'Mark all ' + (s.footX*s.footZ) + ' tiles unwalkable.\n\n' +
+        'You only need this for tall free-standing objects. Anything against a\n' +
+        'wall can be one sprite anchored at its frontmost tile.\n';
+    } else {
+      txt +=
+        'Frame names look like:  Walking_3_007\n' +
+        '  clipname _ direction _ frame\n\n' +
+        'The last frame of a looping clip is NOT rendered, because it is the same\n' +
+        'picture as frame 0. Play frames 0 through N-1 and it loops cleanly.\n';
+    }
+    zip.file('read-me.txt', txt);
+    return Promise.resolve();
+  }
+
+  async function finish(zip){
     var out = await zip.generateAsync({type:'blob'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(out);
@@ -597,9 +790,10 @@
   });
   drop.addEventListener('drop', function(e){ handleFile(e.dataTransfer.files[0]); });
 
-  ['tileW','tileM','frameW','frameH','originY','dirs','facing','footX','footZ'].forEach(function(id){
+  ['tileW','tileM','frameW','frameH','originY','dirs','facing','footX','footZ','ss'].forEach(function(id){
     $(id).addEventListener('input', function(){ readout(); draw(); });
   });
+  ['ss'].forEach(function(id){ $(id).addEventListener('change', function(){ readout(); draw(); }); });
   $('scale').addEventListener('input', function(){
     if(state.model) fitModel(state.model);
     readout(); draw();
@@ -619,7 +813,6 @@
   readout();
   draw();
   log('Camera: orthographic, 45\u00b0 yaw, 30\u00b0 elevation. 2:1 tiles.');
-
   // ============ Save to TOV catalog (Meshy -> turntable -> builder) ============
   var glbBytes=null;
   var _SBURL='https://scawgrjcjgcmvsimvash.supabase.co', _ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0', _BUCKET='tov-assets', _PV=3;
@@ -690,7 +883,6 @@
         .then(function(r){ return r.arrayBuffer(); }).then(function(buf){ glbBytes=buf; loadGLB(buf, gp.split('/').pop()); if(A('ap-status'))A('ap-status').textContent=''; })
         .catch(function(e){ log('Catalog preload failed: '+(e.message||e),'bad'); }); } }catch(e){} })();
   }
-
 })();
 </script>
 </body>
