@@ -157,6 +157,24 @@
       <legend>Clips</legend>
       <div id="clips"><p class="hint">No model loaded.</p></div>
     </fieldset>
+    <fieldset id="ap-box">
+      <legend>Save to builder</legend>
+      <div id="ap-auth" class="hint" style="margin-bottom:6px">Checking sign-in...</div>
+      <div id="ap-login" style="display:none; margin-bottom:8px">
+        <label class="row"><span>Admin email</span><input type="email" id="ap-email" style="width:150px;text-align:left"></label>
+        <label class="row"><span>Password</span><input type="password" id="ap-pass" style="width:150px;text-align:left"></label>
+        <button id="ap-signin" type="button">Sign in</button>
+      </div>
+      <label class="row"><span>Target</span>
+        <select id="ap-mode" style="width:170px"><option value="new">New piece</option></select></label>
+      <label class="row"><span>Room</span>
+        <select id="ap-zone" style="width:130px"><option>parlor</option><option>dining</option><option>kitchen</option><option>bath</option><option>foyer</option><option>decor</option></select></label>
+      <label class="row"><span>Name</span><input type="text" id="ap-name" placeholder="floral sofa" style="width:130px;text-align:left"></label>
+      <p class="hint">Slug &nbsp;<code id="ap-slug">-</code></p>
+      <button id="ap-approve" class="primary" type="button" disabled>Approve &amp; save</button>
+      <div id="ap-status" class="hint" style="margin-top:8px"></div>
+      <p class="hint">Saves a 4-direction sprite the builder rotates with <b>R</b>. Approve always renders 4 directions, whatever the Directions box says. Nudge <b>Facing offset</b> so the front faces down-right first.</p>
+    </fieldset>
 
     <div style="display:flex; flex-direction:column; gap:9px">
       <button id="cube">Test cube</button>
@@ -170,6 +188,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
   "use strict";
@@ -400,6 +419,7 @@
       }
       renderClipList();
       $('render').disabled = false;
+      if(window._tovRefreshApprove){try{window._tovRefreshApprove();}catch(e){}}
       log('Loaded ' + name, 'ok');
       log('  height ' + state.height.toFixed(3) + ' m, ' + state.clips.length + ' clip(s)');
       readout(); draw();
@@ -563,7 +583,7 @@
     if(!file) return;
     log('Reading ' + file.name + ' (' + (file.size/1e6).toFixed(1) + ' MB)…');
     var fr = new FileReader();
-    fr.onload = function(){ loadGLB(fr.result, file.name); };
+    fr.onload = function(){ glbBytes = fr.result; loadGLB(fr.result, file.name); };
     fr.readAsArrayBuffer(file);
   }
   drop.addEventListener('click', function(){ input.click(); });
@@ -599,6 +619,74 @@
   readout();
   draw();
   log('Camera: orthographic, 45\u00b0 yaw, 30\u00b0 elevation. 2:1 tiles.');
+
+  // ============ Save to TOV catalog (Meshy -> turntable -> builder) ============
+  var glbBytes=null;
+  var _SBURL='https://scawgrjcjgcmvsimvash.supabase.co', _ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0', _BUCKET='tov-assets', _PV=3;
+  var _sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(_SBURL,_ANON):null;
+  var A=function(id){return document.getElementById(id);};
+  function _slugify(s){return (s||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
+  function _curSlug(){var m=A('ap-mode').value; if(m!=='new') return m; var n=_slugify(A('ap-name').value); return n?('prop-'+A('ap-zone').value+'-'+n):''; }
+  function _refreshSlug(){ A('ap-slug').textContent=_curSlug()||'-'; }
+  async function refreshApprove(){
+    if(!_sb){ A('ap-auth').textContent='Supabase library did not load.'; return null; }
+    var r=await _sb.auth.getSession(); var s=r.data&&r.data.session;
+    if(s){ A('ap-login').style.display='none'; A('ap-auth').textContent='Signed in: '+s.user.email; A('ap-approve').disabled=!state.model; }
+    else { A('ap-login').style.display=''; A('ap-auth').textContent='Not signed in. Sign in to save.'; A('ap-approve').disabled=true; }
+    return s;
+  }
+  window._tovRefreshApprove=refreshApprove;
+  async function _loadFurniture(){
+    if(!_sb) return; var r=await _sb.from('tov_assets').select('slug').eq('kind','prop').order('slug');
+    var sel=A('ap-mode'); for(var i=sel.options.length-1;i>=1;i--) sel.remove(i);
+    (r.data||[]).forEach(function(row){ var o=document.createElement('option'); o.value=row.slug; o.textContent='Replace '+row.slug; sel.appendChild(o); });
+  }
+  function _render4(){ var s=settings(); s.dirs=4; setupCamera(); var out=captureSheet(null,1,s); return {canvas:out.canvas, s:s}; }
+  async function _approve(){
+    var sess=await refreshApprove();
+    if(!sess){ A('ap-status').textContent='Sign in first.'; return; }
+    if(!state.model){ A('ap-status').textContent='Load a model first.'; return; }
+    var slug=_curSlug(); if(!slug){ A('ap-status').textContent='Type a name.'; return; }
+    var zone=A('ap-zone').value, mode=A('ap-mode').value;
+    var name = mode==='new' ? _slugify(A('ap-name').value) : slug.replace(/^prop-[a-z]+-/,'');
+    A('ap-approve').disabled=true; A('ap-status').textContent='Rendering 4 directions...';
+    try{
+      var r4=_render4();
+      var blob=await new Promise(function(res){ r4.canvas.toBlob(res,'image/png'); });
+      var path='props/'+slug+'.png';
+      A('ap-status').textContent='Uploading sprite...';
+      var up=await _sb.storage.from(_BUCKET).upload(path,blob,{upsert:true,contentType:'image/png'});
+      if(up.error) throw up.error;
+      if(glbBytes){ try{ await _sb.storage.from(_BUCKET).upload('source/'+slug+'.glb', new Blob([glbBytes]), {upsert:true,contentType:'model/gltf-binary'}); }catch(e){} }
+      var meta={turntable:true, pipeline_version:_PV, dirs:4, frame_w:r4.s.frameW, frame_h:r4.s.frameH, origin_y:r4.s.originY,
+                tile_w:r4.s.tileW, footprint_x:r4.s.footX, footprint_z:r4.s.footZ, w:r4.s.footX, real_h:(state.height||0),
+                render:{scale:r4.s.scale, ss:r4.s.ss, outline:r4.s.outline, outlineW:r4.s.outlineW, shadow:r4.s.shadow, facing:+A('facing').value, elev:30, yaw:45}};
+      var row={slug:slug, kind:'prop', zone:zone, name:name||slug, state:'restored', style:'shared', storage_path:path,
+               width:r4.canvas.width, height:r4.canvas.height, bytes:blob.size, anchor:'bottom-center', transparent:true,
+               status:'ready', tags:['turntable','3d'], meta:meta};
+      A('ap-status').textContent='Saving catalog row...';
+      var ins=await _sb.from('tov_assets').upsert(row,{onConflict:'slug'});
+      if(ins.error) throw ins.error;
+      A('ap-status').innerHTML='<b style="color:var(--sage)">Saved '+slug+'</b>. Refresh the builder to see it.';
+      await _loadFurniture();
+    }catch(err){ A('ap-status').textContent='Failed: '+(err.message||err); }
+    A('ap-approve').disabled=false; try{draw();}catch(e){}
+  }
+  if(A('ap-approve')){
+    A('ap-approve').addEventListener('click', _approve);
+    A('ap-signin').addEventListener('click', async function(){
+      var e=A('ap-email').value.trim(), p=A('ap-pass').value;
+      if(!e||!p){ A('ap-status').textContent='Enter email and password.'; return; }
+      A('ap-signin').disabled=true; A('ap-status').textContent='Signing in...';
+      var r=await _sb.auth.signInWithPassword({email:e,password:p}); A('ap-signin').disabled=false;
+      if(r.error){ A('ap-status').textContent=r.error.message; return; }
+      A('ap-status').textContent=''; await refreshApprove(); await _loadFurniture();
+    });
+    A('ap-mode').addEventListener('change', function(){ var isNew=A('ap-mode').value==='new'; A('ap-name').disabled=!isNew; A('ap-zone').disabled=!isNew; if(!isNew){A('ap-slug').textContent=A('ap-mode').value;} else {_refreshSlug();} });
+    ['ap-zone','ap-name'].forEach(function(id){ A(id).addEventListener('input', _refreshSlug); });
+    if(_sb){ refreshApprove(); _loadFurniture(); }
+  }
+
 })();
 </script>
 </body>
