@@ -594,7 +594,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div><!-- /ig-view-custom -->
 
       <div class="ig-view" id="ig-view-collage">
-      <p class="sub" style="margin-top:4px">Three of your photos in a grid, dragged into place, sent to <b>Facebook</b>. Upload three, drag each onto a box, frame them, set the divider, then Send to Scheduling.</p>
+      <p class="sub" style="margin-top:4px">Three or four of your photos in a grid, dragged into place, sent to <b>Facebook</b>. Upload 3&ndash;4, drag each onto a box, frame them, add an optional title box, then Send to Scheduling.</p>
       <div class="ig-grid">
         <div class="ig-stage">
           <canvas id="col-card" width="1080" height="1350" style="touch-action:none"></canvas>
@@ -607,12 +607,12 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
         </div>
         <div class="ig-ctrl">
           <div class="set-group"><h3>1 &middot; Photos</h3><div class="ig-body">
-            <div class="ig-drop" id="col-drop"><b>Drop 3 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
+            <div class="ig-drop" id="col-drop"><b>Drop 3&ndash;4 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
             <input type="file" id="col-file" accept="image/*" multiple hidden>
             <div class="ig-hint" id="col-count" style="margin-top:8px">No photos yet.</div>
           </div></div>
           <div class="set-group"><h3>2 &middot; Layout</h3><div class="ig-body">
-            <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button></div></div>
+            <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button><button data-l="quad">2&times;2</button></div></div>
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="col-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-hint">Drag a thumbnail onto a box to place it. Drag one box onto another in the preview to swap them.</div>
           </div></div>
@@ -628,13 +628,26 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-toggle">Frame the outside too<label class="switch"><input type="checkbox" id="col-frame"><span class="slider-sw"></span></label></div>
             <div class="ig-hint">Default is 3px white. The outer frame uses the same width and color.</div>
           </div></div>
-          <div class="set-group"><h3>5 &middot; Red TBI circle</h3><div class="ig-body">
+                    <div class="set-group"><h3>5 &middot; Title box (optional)</h3><div class="ig-body">
+            <div class="ig-toggle">Show title box<label class="switch"><input type="checkbox" id="col-title"><span class="slider-sw"></span></label></div>
+            <div class="ig-fld" style="margin-top:8px">Row 1 text<input type="text" id="col-t1" value="MONTHLY EVENTS" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"></div>
+            <div style="display:flex;gap:8px"><div class="ig-fld" style="flex:1">Font 1<select id="col-t1font" class="tb-sel"><option value="Impact">Impact (heavy)</option><option value="Arial">Bold sans</option><option value="Playfair Display">Playfair</option><option value="Georgia">Georgia</option><option value="EdsMarket">Eds Market</option></select></div><div class="ig-fld">Text 1<input type="color" id="col-t1col" value="#111111" class="tb-color"></div></div>
+            <div class="ig-fld">Row 2 text<input type="text" id="col-t2" value="SAN FRANCISCO" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"></div>
+            <div style="display:flex;gap:8px"><div class="ig-fld" style="flex:1">Font 2<select id="col-t2font" class="tb-sel"><option value="Impact">Impact (heavy)</option><option value="Arial">Bold sans</option><option value="Playfair Display">Playfair</option><option value="Georgia">Georgia</option><option value="EdsMarket">Eds Market</option></select></div><div class="ig-fld">Text 2<input type="color" id="col-t2col" value="#1f6feb" class="tb-color"></div></div>
+            <div class="ig-toggle">Split background colors<label class="switch"><input type="checkbox" id="col-tsplit"><span class="slider-sw"></span></label></div>
+            <div style="display:flex;gap:8px"><div class="ig-fld" style="flex:1">Box color<input type="color" id="col-tbg1" value="#ffffff" class="tb-color"></div><div class="ig-fld" style="flex:1;display:none" id="col-tbg2row">Bottom color<input type="color" id="col-tbg2" value="#ffffff" class="tb-color"></div></div>
+            <div class="ig-fld">Box width <span class="val" id="col-twVal">90%</span><input type="range" id="col-tw" min="40" max="100" value="90"></div>
+            <div class="ig-fld">Text size <span class="val" id="col-tszVal">11%</span><input type="range" id="col-tsz" min="4" max="20" value="11"></div>
+            <div class="ig-fld">Vertical position <span class="val" id="col-tyVal">center</span><input type="range" id="col-ty" min="0" max="100" value="50"></div>
+            <div class="ig-hint">Two rows, each its own font + color. Split for a two-color band, like the Monthly Events cover.</div>
+          </div></div>
+          <div class="set-group"><h3>6 &middot; Red TBI circle</h3><div class="ig-body">
             <div class="ig-toggle">Show red &ldquo;TBI&rdquo; circle<label class="switch"><input type="checkbox" id="col-tbi" checked><span class="slider-sw"></span></label></div>
             <div class="ig-fld">Corner<div class="ig-seg" id="col-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
-            <div class="ig-fld">Size <span class="val" id="col-tbiscaleVal">70%</span><input type="range" id="col-tbiscale" min="40" max="220" value="70"></div>
+            <div class="ig-fld">Size <span class="val" id="col-tbiscaleVal">40%</span><input type="range" id="col-tbiscale" min="40" max="220" value="40"></div>
             <div class="ig-hint">Uses the TBI icon you loaded on the Image tab if there is one, otherwise the drawn red circle.</div>
           </div></div>
-          <div class="set-group"><h3>6 &middot; Post text</h3><div class="ig-body">
+          <div class="set-group"><h3>7 &middot; Post text</h3><div class="ig-body">
 
             <textarea id="col-caption" placeholder="Write the Facebook post text here..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
             <button class="btn btn-outline btn-sm" id="col-cap-copy" style="margin-top:6px">Copy text</button>
@@ -2663,12 +2676,15 @@ function initCollage(){ if(colReady) return; colReady=true; colBoot(); }
 function colBoot(){
   var canvas=document.getElementById('col-card'); if(!canvas) return; var ctx=canvas.getContext('2d');
   function $(id){ return document.getElementById(id); }
-  var COL={ W:1080,H:1350, layout:'t1b2', gap:3, gapColor:'#ffffff', frame:false, sel:0, tbi:{on:true,pos:'tr',scale:0.7}, tbiImg:null,
+  var COL={ W:1080,H:1350, layout:'t1b2', gap:3, gapColor:'#ffffff', frame:false, sel:0, tbi:{on:true,pos:'tr',scale:0.4}, tbiImg:null, title:{on:false,widthFrac:0.9,size:0.11,yPos:0.5,split:false,rows:[{text:'MONTHLY EVENTS',font:'Impact',color:'#111111',bg:'#ffffff'},{text:'SAN FRANCISCO',font:'Impact',color:'#1f6feb',bg:'#ffffff'}]},
     photos:[], boxes:[{photoIdx:null,posX:0,posY:0,zoom:1},{photoIdx:null,posX:0,posY:0,zoom:1},{photoIdx:null,posX:0,posY:0,zoom:1}], dragPhoto:null };
   function colFont(){ try{ return document.fonts.check('400 40px "EdsMarket"')?'EdsMarket':'Permanent Marker'; }catch(e){ return 'Permanent Marker'; } }
   try{ var _is=localStorage.getItem('ig_tbi_b64')||TBI_MARK_URL; var _im=new Image(); _im.crossOrigin='anonymous'; _im.onload=function(){ COL.tbiImg=_im; render(); }; _im.src=_is; }catch(e){}
   function drawTBI(c,W,H){ if(!COL.tbi||!COL.tbi.on) return; var pos=COL.tbi.pos||'tr', sc=(COL.tbi.scale==null?0.7:COL.tbi.scale); var D=W*0.115*(sc||1), M=W*0.045, rr=D/2, top=M+rr, bot=H-M-rr, left=M+rr, right=W-M-rr, cx, cyc; if(pos==='tl'){cx=left;cyc=top;} else if(pos==='bl'){cx=left;cyc=bot;} else if(pos==='br'){cx=right;cyc=bot;} else {cx=right;cyc=top;} if(COL.tbiImg){ c.drawImage(COL.tbiImg,cx-rr,cyc-rr,D,D); } else { c.beginPath(); c.arc(cx,cyc,rr,0,Math.PI*2); c.fillStyle='#f5333f'; c.fill(); c.fillStyle='#fff'; c.font='400 '+Math.round(D*0.40)+'px "'+colFont()+'", Arial, sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('TBI',cx,cyc+D*0.04); } }
 
+  function titleFont(n){ if(n==='Impact') return 'Impact,"Arial Narrow Bold","Arial Narrow",sans-serif'; if(n==='Arial') return 'Arial,Helvetica,sans-serif'; if(n==='Playfair Display') return '"Playfair Display",Georgia,serif'; if(n==='Georgia') return 'Georgia,serif'; if(n==='EdsMarket') return '"EdsMarket","Permanent Marker",cursive'; return n; }
+  function ensureBoxes(){ var n=rects().length; while(COL.boxes.length<n) COL.boxes.push({photoIdx:null,posX:0,posY:0,zoom:1}); }
+  function drawTitle(c,W,H){ var t=COL.title; if(!t||!t.on) return; var rows=t.rows||[]; if(!rows.length) return; var bw=Math.round(W*(t.widthFrac||0.9)), bx=Math.round((W-bw)/2), padX=Math.round(bw*0.045), padY=Math.round(W*0.02); var fs=Math.round(W*(t.size||0.11)); var maxW=bw-2*padX; var fits=[],rowH=[]; for(var i=0;i<rows.length;i++){ var f=fs, txt=(rows[i].text||'').trim(); c.font='700 '+f+'px '+titleFont(rows[i].font||'Impact'); while(f>10 && txt && c.measureText(txt).width>maxW){ f-=2; c.font='700 '+f+'px '+titleFont(rows[i].font||'Impact'); } fits.push(f); rowH.push(Math.round(f*1.16)); } var contentH=rowH.reduce(function(a,b){return a+b;},0), boxH=contentH+padY*2, by=Math.round((H-boxH)*(t.yPos==null?0.5:t.yPos)); c.textAlign='center'; c.textBaseline='middle'; if(t.split && rows.length>=2){ var half=boxH/2; c.fillStyle=rows[0].bg||'#fff'; c.fillRect(bx,by,bw,Math.round(half)); c.fillStyle=rows[1].bg||'#fff'; c.fillRect(bx,by+Math.round(half),bw,boxH-Math.round(half)); c.font='700 '+fits[0]+'px '+titleFont(rows[0].font||'Impact'); c.fillStyle=rows[0].color||'#111'; c.fillText((rows[0].text||'').trim(),W/2,by+half/2); c.font='700 '+fits[1]+'px '+titleFont(rows[1].font||'Impact'); c.fillStyle=rows[1].color||'#111'; c.fillText((rows[1].text||'').trim(),W/2,by+half+half/2); } else { c.fillStyle=(rows[0]&&rows[0].bg)||'#fff'; c.fillRect(bx,by,bw,boxH); var cy=by+padY; for(var j=0;j<rows.length;j++){ c.font='700 '+fits[j]+'px '+titleFont(rows[j].font||'Impact'); c.fillStyle=rows[j].color||'#111'; c.fillText((rows[j].text||'').trim(),W/2,cy+rowH[j]/2); cy+=rowH[j]; } } }
   function rects(){
     var W=COL.W,H=COL.H,g=COL.gap,m=COL.frame?g:0,x0=m,y0=m,iw=W-2*m,ih=H-2*m,L=COL.layout;
     function R(x,y,w,h){ return {x:x,y:y,w:w,h:h}; }
@@ -2676,6 +2692,7 @@ function colBoot(){
     if(L==='l1r2'){ var lw=Math.round((iw-g)*0.56),rh=Math.round((ih-g)/2); return [R(x0,y0,lw,ih),R(x0+lw+g,y0,iw-lw-g,rh),R(x0+lw+g,y0+rh+g,iw-lw-g,ih-rh-g)]; }
     if(L==='cols3'){ var cw=Math.round((iw-2*g)/3); return [R(x0,y0,cw,ih),R(x0+cw+g,y0,cw,ih),R(x0+2*(cw+g),y0,iw-2*(cw+g),ih)]; }
     if(L==='rows3'){ var rr=Math.round((ih-2*g)/3); return [R(x0,y0,iw,rr),R(x0,y0+rr+g,iw,rr),R(x0,y0+2*(rr+g),iw,ih-2*(rr+g))]; }
+    if(L==='quad'){ var qw=Math.round((iw-g)/2),qh=Math.round((ih-g)/2); return [R(x0,y0,qw,qh),R(x0+qw+g,y0,iw-qw-g,qh),R(x0,y0+qh+g,qw,ih-qh-g),R(x0+qw+g,y0+qh+g,iw-qw-g,ih-qh-g)]; }
     var th1=Math.round((ih-g)*0.56),bw1=Math.round((iw-g)/2); return [R(x0,y0,iw,th1),R(x0,y0+th1+g,bw1,ih-th1-g),R(x0+bw1+g,y0+th1+g,iw-bw1-g,ih-th1-g)];
   }
   function drawBox(c,o,bx,r){
@@ -2692,10 +2709,10 @@ function colBoot(){
       else if(!forExport){ c.fillStyle='#efe9dd'; c.fillRect(r.x,r.y,r.w,r.h); c.fillStyle='#b7ab97'; c.font='600 '+Math.round(W*0.028)+'px sans-serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('Drag photo '+(i+1),r.x+r.w/2,r.y+r.h/2); }
       if(!forExport&&i===COL.sel){ var lw=Math.max(3,Math.round(W*0.006)); c.strokeStyle='#5b7bd5'; c.lineWidth=lw; c.strokeRect(r.x+lw/2,r.y+lw/2,r.w-lw,r.h-lw); }
     }
-    drawTBI(c,W,H);
+    drawTitle(c,W,H); drawTBI(c,W,H);
   }
   function allPlaced(){ var rs=rects(); for(var i=0;i<rs.length;i++){ var bx=COL.boxes[i]; if(!bx||bx.photoIdx==null||!(COL.photos[bx.photoIdx]&&COL.photos[bx.photoIdx].img)) return false; } return true; }
-  function render(){ if(canvas.width!==COL.W)canvas.width=COL.W; if(canvas.height!==COL.H)canvas.height=COL.H; paint(ctx,COL.W,COL.H,false); var e=$('col-export'); if(e) e.disabled=!allPlaced(); }
+  function render(){ ensureBoxes(); if(canvas.width!==COL.W)canvas.width=COL.W; if(canvas.height!==COL.H)canvas.height=COL.H; paint(ctx,COL.W,COL.H,false); var e=$('col-export'); if(e) e.disabled=!allPlaced(); }
   function thumbs(){
     var host=$('col-thumbs'); if(!host) return; host.innerHTML='';
     COL.photos.forEach(function(p,idx){
@@ -2713,7 +2730,7 @@ function colBoot(){
   function assign(p,b){ var a=COL.boxes.findIndex(function(bx){ return bx.photoIdx===p; }); if(a>=0&&a!==b){ var t=COL.boxes[a]; COL.boxes[a]=COL.boxes[b]; COL.boxes[b]=t; } else if(a<0){ COL.boxes[b]={photoIdx:p,posX:0,posY:0,zoom:1}; } COL.sel=b; render(); thumbs(); syncFraming(); }
   function swapBoxes(a,b){ if(a===b) return; var t=COL.boxes[a]; COL.boxes[a]=COL.boxes[b]; COL.boxes[b]=t; COL.sel=b; render(); thumbs(); syncFraming(); }
   function removePhoto(idx){ COL.photos.splice(idx,1); COL.boxes.forEach(function(b){ if(b.photoIdx===idx) b.photoIdx=null; else if(b.photoIdx!=null&&b.photoIdx>idx) b.photoIdx--; }); render(); thumbs(); syncFraming(); }
-  function addFiles(files){ Array.prototype.slice.call(files||[]).forEach(function(f){ if(!/^image\//.test(f.type)) return; var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,name:f.name}; COL.photos.push(o); var myIdx=COL.photos.length-1; img.onload=function(){ o.img=img; var empty=COL.boxes.findIndex(function(b){ return b.photoIdx==null; }); if(empty>=0&&COL.boxes.every(function(b){ return b.photoIdx!==myIdx; })) COL.boxes[empty]={photoIdx:myIdx,posX:0,posY:0,zoom:1}; render(); thumbs(); syncFraming(); }; img.src=url; }); }
+  function addFiles(files){ Array.prototype.slice.call(files||[]).forEach(function(f){ if(!/^image\//.test(f.type)) return; var url=URL.createObjectURL(f); var img=new Image(); var o={img:null,url:url,name:f.name}; COL.photos.push(o); var myIdx=COL.photos.length-1; img.onload=function(){ o.img=img; ensureBoxes(); var empty=COL.boxes.findIndex(function(b){ return b.photoIdx==null; }); if(empty>=0&&COL.boxes.every(function(b){ return b.photoIdx!==myIdx; })) COL.boxes[empty]={photoIdx:myIdx,posX:0,posY:0,zoom:1}; render(); thumbs(); syncFraming(); }; img.src=url; }); }
   function hit(clientX,clientY){ var rc=canvas.getBoundingClientRect(); var px=(clientX-rc.left)*(canvas.width/rc.width),py=(clientY-rc.top)*(canvas.height/rc.height); var rs=rects(); for(var i=0;i<rs.length;i++){ var r=rs[i]; if(px>=r.x&&px<=r.x+r.w&&py>=r.y&&py<=r.y+r.h) return i; } return -1; }
   canvas.addEventListener('dragover',function(e){ e.preventDefault(); try{ e.dataTransfer.dropEffect='move'; }catch(_e){} });
   canvas.addEventListener('drop',function(e){ e.preventDefault(); var b=hit(e.clientX,e.clientY); if(b<0) return; var p=COL.dragPhoto; if(p==null){ try{ p=parseInt(e.dataTransfer.getData('text/plain'),10); }catch(_e){} } if(p!=null&&!isNaN(p)&&COL.photos[p]) assign(p,b); COL.dragPhoto=null; });
@@ -2736,6 +2753,20 @@ function colBoot(){
   var tcb=$('col-tbi'); if(tcb) tcb.onchange=function(e){ COL.tbi.on=e.target.checked; render(); };
   document.querySelectorAll('#col-tbipos button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-tbipos button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.tbi.pos=b.dataset.pos; render(); }; });
   var tsc=$('col-tbiscale'); if(tsc) tsc.oninput=function(e){ COL.tbi.scale=e.target.value/100; $('col-tbiscaleVal').textContent=e.target.value+'%'; render(); };
+  var _tt=$('col-title'); if(_tt) _tt.onchange=function(e){ COL.title.on=e.target.checked; render(); };
+  var _t1=$('col-t1'); if(_t1) _t1.oninput=function(e){ COL.title.rows[0].text=e.target.value; render(); };
+  var _t1f=$('col-t1font'); if(_t1f) _t1f.onchange=function(e){ COL.title.rows[0].font=e.target.value; render(); };
+  var _t1c=$('col-t1col'); if(_t1c) _t1c.oninput=function(e){ COL.title.rows[0].color=e.target.value; render(); };
+  var _t2=$('col-t2'); if(_t2) _t2.oninput=function(e){ COL.title.rows[1].text=e.target.value; render(); };
+  var _t2f=$('col-t2font'); if(_t2f) _t2f.onchange=function(e){ COL.title.rows[1].font=e.target.value; render(); };
+  var _t2c=$('col-t2col'); if(_t2c) _t2c.oninput=function(e){ COL.title.rows[1].color=e.target.value; render(); };
+  var _tsp=$('col-tsplit'); if(_tsp) _tsp.onchange=function(e){ COL.title.split=e.target.checked; var r=$('col-tbg2row'); if(r) r.style.display=e.target.checked?'':'none'; render(); };
+  var _tb1=$('col-tbg1'); if(_tb1) _tb1.oninput=function(e){ COL.title.rows[0].bg=e.target.value; render(); };
+  var _tb2=$('col-tbg2'); if(_tb2) _tb2.oninput=function(e){ COL.title.rows[1].bg=e.target.value; render(); };
+  var _tw=$('col-tw'); if(_tw) _tw.oninput=function(e){ COL.title.widthFrac=e.target.value/100; $('col-twVal').textContent=e.target.value+'%'; render(); };
+  var _tsz=$('col-tsz'); if(_tsz) _tsz.oninput=function(e){ COL.title.size=e.target.value/100; $('col-tszVal').textContent=e.target.value+'%'; render(); };
+  var _ty=$('col-ty'); if(_ty) _ty.oninput=function(e){ COL.title.yPos=e.target.value/100; var v=+e.target.value; $('col-tyVal').textContent=v<34?'top':(v>66?'bottom':'center'); render(); };
+
 
   var cpc=$('col-cap-copy'); if(cpc) cpc.onclick=function(){ var ta=$('col-caption'); navigator.clipboard.writeText(ta?ta.value:''); cpc.textContent='Copied '+CK; setTimeout(function(){ cpc.textContent='Copy text'; },1400); };
   var ex=$('col-export'); if(ex) ex.onclick=function(){ if(!allPlaced()) return; var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); oc.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tbi-collage.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
