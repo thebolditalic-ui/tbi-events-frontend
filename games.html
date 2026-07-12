@@ -148,6 +148,20 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .ga-saved{font-size:12px;margin-left:10px;color:#8a8178;}
 .ga-saved.ok{color:var(--green);}
 .ga-saved.err{color:var(--red);}
+/* --- 2-column games layout + stats pane --- */
+.games-cols{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+.games-col{min-width:0;}
+.games-col>.ga-card{max-width:none;margin:0 0 18px;}
+.games-col>.ga-card:last-child{margin-bottom:0;}
+@media(max-width:860px){.games-cols{grid-template-columns:1fr;gap:0;}.games-col>.ga-card{margin-bottom:18px;}}
+.stats-list{margin-top:2px;}
+.stat-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece2;}
+.stat-row:last-child{border-bottom:none;}
+.stat-name{font-weight:600;font-size:14px;color:var(--dark);}
+.stat-nums{font-size:13px;color:#666;white-space:nowrap;text-align:right;}
+.stat-nums b{color:var(--dark);font-weight:700;}
+.stat-now{color:#2e7d32;}
+.ga-soon .ga-hint{margin-top:0;}
 </style>
 </head>
 <body>
@@ -189,21 +203,36 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   <div class="page-wrap">
     <h2 class="section-title">Games</h2>
     <p class="section-sub">Order the games on the site and tune each game’s settings.</p>
-    <a href="/this-old-victorian" class="ga-card" style="display:block;text-decoration:none;color:inherit;margin-bottom:18px"><h3 style="margin:0 0 4px">🏚 This Old Victorian <span style="font-size:12px;color:#8a8178;font-weight:400">&mdash; asset library &amp; game config &rarr;</span></h3><p class="ga-hint" style="margin:0">Manage the isometric game’s assets (props, walls, tiles, plates, characters) and its map / style / bible config.</p></a>
     <div id="games-status" class="games-status"></div>
-    <div id="games-order" class="ga-card" style="display:none">
-      <h3>Main page order</h3>
-      <p class="ga-hint">Set the order games appear on the games page, and use "Shown" to hide a game from the page.</p>
-      <ul id="order-list" class="order-list"></ul>
-      <button type="button" class="btn btn-gold btn-sm" id="save-order">Save order</button> <span class="ga-saved" id="order-saved"></span>
-    </div>
-    <div id="games-panels"></div>
-    <div id="xw-card" class="ga-card" style="margin-top:24px">
-      <h3>Crosswords</h3>
-      <p class="ga-hint">San Francisco puzzles on the site&rsquo;s crossword page, newest first. Build and publish new ones in the studio.</p>
-      <div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage&hellip;</div>
-      <div id="xw-list" class="xw-list"><div class="ga-hint">Loading&hellip;</div></div>
-      <a class="btn btn-gold btn-sm" href="/crossword-studio">Open Crossword Studio &rarr;</a>
+    <div class="games-cols">
+      <div class="games-col" id="games-col-left">
+        <div id="games-order" class="ga-card" style="display:none">
+          <h3>Main page order</h3>
+          <p class="ga-hint">Set the order games appear on the games page, and use "Shown" to hide a game from the page.</p>
+          <ul id="order-list" class="order-list"></ul>
+          <button type="button" class="btn btn-gold btn-sm" id="save-order">Save order</button> <span class="ga-saved" id="order-saved"></span>
+        </div>
+        <div id="games-stats" class="ga-card" style="display:none">
+          <h3>Views &amp; plays</h3>
+          <p class="ga-hint">Live views and plays per game, and who’s playing right now — refreshes automatically.</p>
+          <div id="stats-list" class="stats-list"><div class="ga-hint">Loading…</div></div>
+        </div>
+      </div>
+      <div class="games-col" id="games-col-right">
+        <div class="ga-card ga-soon" data-key="trolley_problem">
+          <h3>The Trolley Problem</h3>
+          <p class="ga-hint">No tunable settings yet — the matchups, art, and vote tallies live inside the game. Controls will show up here when there’s something to tune.</p>
+          <a class="btn btn-gold btn-sm" href="https://games.thebolditalic.com/trolley_problem/" target="_blank" rel="noopener">Open game &rarr;</a>
+        </div>
+        <div id="games-panels"></div>
+        <div id="xw-card" class="ga-card">
+          <h3>Crosswords</h3>
+          <p class="ga-hint">San Francisco puzzles on the site&rsquo;s crossword page, newest first. Build and publish new ones in the studio.</p>
+          <div id="xw-list" class="xw-list"><div class="ga-hint">Loading&hellip;</div></div>
+          <a class="btn btn-gold btn-sm" href="/crossword-studio">Open Crossword Studio &rarr;</a>
+        </div>
+        <a href="/this-old-victorian" class="ga-card" style="display:block;text-decoration:none;color:inherit"><h3 style="margin:0 0 4px">🏚 This Old Victorian <span style="font-size:12px;color:#8a8178;font-weight:400">&mdash; asset library &amp; game config &rarr;</span></h3><p class="ga-hint" style="margin:0">Manage the isometric game’s assets (props, walls, tiles, plates, characters) and its map / style / bible config.</p></a>
+      </div>
     </div>
   </div>
 </div>
@@ -217,7 +246,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $em=document.getElementById('login-email'),$pw=document.getElementById('login-pass');
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); loadCrosswords(); var _xw=document.getElementById("xw-card"); if(_xw) loadUsage("crosswords", _xw); }
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; loadGames(); loadCrosswords(); }
   function fmtXwDate(d){ if(!d) return ''; try{ var dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }catch(e){ return d; } }
   function onXwClick(e){
     var del=e.target.closest('.xw-del'); if(!del) return; e.preventDefault();
@@ -279,7 +308,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     }
     GAMES=r.data||[]; $status.textContent='';
     if($orderCard) $orderCard.style.display='';
-    renderOrder(); renderPanels();
+    renderOrder(); renderPanels(); renderStats();
     if(!window.__uiv) window.__uiv=setInterval(refreshUsage,30000);
   }
   function renderOrder(){
@@ -328,7 +357,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var card=document.createElement('div'); card.className='ga-card';
       card.setAttribute('data-key', g.key);
       card.innerHTML='<h3>'+esc(g.title)+'</h3>'+
-        '<div class="ga-usage" style="margin:2px 0 14px;font-size:13.5px;color:#555">Loading usage&hellip;</div>'+
         '<div class="slider-row"><label>Cascade bias</label><span class="slider-val cascade-val">'+fmt(bias)+'</span></div>'+
         '<input type="range" class="cascade-range" min="0" max="1" step="0.05" value="'+bias+'">'+
         '<p class="ga-hint">Higher = more chain-reaction cascades (easier, more slot-machine payoff). 0 = pure random.</p>'+
@@ -358,8 +386,36 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         else { g.settings=ns; saved.textContent='Saved ✓'; saved.className='ga-saved ga-msg ok'; setTimeout(function(){saved.textContent='';},2500); }
       });
       $panels.appendChild(card);
-      loadUsage(g.key, card);
     });
+  }
+  var STATS_GAMES=[
+    {key:'trolley_problem', title:'The Trolley Problem'},
+    {key:'fog_city_frenzy', title:'Fog City Frenzy'},
+    {key:'crosswords', title:'Hump Day Crossword'}
+  ];
+  async function statFor(key){
+    var out={now:0,views:0,plays:0,ok:false};
+    try{
+      var v=await sb.from('game_plays').select('*',{count:'exact',head:true}).eq('game',key).eq('event','view');
+      var p=await sb.from('game_plays').select('*',{count:'exact',head:true}).eq('game',key).eq('event','play');
+      if(!v.error){ out.views=v.count||0; out.ok=true; }
+      if(!p.error){ out.plays=p.count||0; out.ok=true; }
+      var since=new Date(Date.now()-180000).toISOString();
+      var live=await sb.from('reader_presence').select('session_id').eq('path','/'+key+'/').gte('at',since).limit(2000);
+      if(!live.error){ var ss={}; (live.data||[]).forEach(function(x){ss[x.session_id]=1;}); out.now=Object.keys(ss).length; }
+    }catch(e){}
+    return out;
+  }
+  async function renderStats(){
+    var host=document.getElementById('games-stats'), list=document.getElementById('stats-list');
+    if(!host||!list) return; host.style.display='';
+    var rows=await Promise.all(STATS_GAMES.map(function(g){return statFor(g.key);}));
+    if(!rows.some(function(s){return s.ok;})){ list.innerHTML='<div class="ga-hint">Usage needs the <code>game_plays.event</code> column \u2014 run the ALTER SQL in Supabase, then reload.</div>'; return; }
+    list.innerHTML=STATS_GAMES.map(function(g,i){ var s=rows[i];
+      return '<div class="stat-row"><span class="stat-name">'+esc(g.title)+'</span>'+
+        '<span class="stat-nums">'+(s.now?'<b class="stat-now">'+s.now+'</b> now &nbsp;\u00b7&nbsp; ':'')+
+        '<b>'+(s.views||0).toLocaleString()+'</b> views &nbsp;\u00b7&nbsp; <b>'+(s.plays||0).toLocaleString()+'</b> plays</span></div>';
+    }).join('');
   }
   async function loadUsage(key, card){
     var el=card.querySelector('.ga-usage'); if(!el) return;
@@ -373,7 +429,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       el.innerHTML='<b style="color:'+(now?'#2e7d32':'#555')+'">'+now+'</b> playing now &nbsp;·&nbsp; <b>'+(v.count||0).toLocaleString()+'</b> views &nbsp;·&nbsp; <b>'+(p.count||0).toLocaleString()+'</b> plays';
     } catch(e){ el.innerHTML='<span class="ga-hint">Usage unavailable</span>'; }
   }
-  function refreshUsage(){ var _xw=document.getElementById("xw-card"); if(_xw) loadUsage("crosswords", _xw); if(!$panels) return; Array.prototype.forEach.call($panels.querySelectorAll('.ga-card'),function(card){ var k=card.getAttribute('data-key'); if(k) loadUsage(k,card); }); }
+  function refreshUsage(){ renderStats(); }
   var $saveOrder=document.getElementById('save-order'), $orderSaved=document.getElementById('order-saved');
   if($saveOrder) $saveOrder.addEventListener('click',async function(){
     $orderSaved.textContent='Saving…'; $orderSaved.className='ga-saved';
