@@ -74,7 +74,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
 /* ---- Banner list table ---- */
 .bn-table-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; overflow-y: visible; }
-.bn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.bn-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+.bn-table th:nth-child(2) { width: 26%; }   /* Name */
+.bn-table th:nth-child(3) { width: 11%; }   /* Status */
+.bn-table th:nth-child(6), .bn-table th:nth-child(7), .bn-table th:nth-child(8) { width: 8%; } /* Impr/Clicks/CTR */
+.bn-table td { overflow: hidden; text-overflow: ellipsis; }
 .bn-table th, .bn-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .bn-table thead th { background: var(--bg-alt); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; }
 .bn-table tbody tr { cursor: pointer; }
