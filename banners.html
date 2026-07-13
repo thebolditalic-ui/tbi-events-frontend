@@ -73,7 +73,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .toolbar h2 { font-family: var(--title-font); font-size: 18px; font-weight: 400; }
 
 /* ---- Banner list table ---- */
-.bn-table-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.bn-table-wrap { background: #fff; border: 1px solid var(--border); border-radius: 10px; overflow-x: auto; overflow-y: visible; }
 .bn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .bn-table th, .bn-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
 .bn-table thead th { background: var(--bg-alt); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; }
@@ -82,6 +82,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .bn-table tbody tr.expanded { background: var(--bg-alt); }
 .bn-table .thumb-cell { width: 80px; }
 .bn-table .thumb-cell img { width: 64px; height: 32px; object-fit: cover; border-radius: 4px; background: var(--bg-alt); display: block; }
+.thumb-ph { display: flex; align-items: center; justify-content: center; background: var(--bg-alt); border-radius: 6px; color: #b9a97f; font-size: 20px; line-height: 1; }
+.active-card .thumb.thumb-ph { width: 120px; height: 60px; flex: 0 0 auto; }
+.bn-table .thumb-cell .tph-cell { width: 64px; height: 32px; border-radius: 4px; font-size: 15px; }
 .bn-table .actions-cell { width: 80px; text-align: right; }
 .status-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .status-active    { background: rgba(39,174,96,0.12);  color: var(--green); }
@@ -98,12 +101,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 /* ---- Stats drawer (per-row, expanded) ---- */
 .stats-row td { padding: 0; background: var(--bg-alt); }
 .stats-wrap { padding: 16px 18px; }
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; margin-bottom: 14px; }
 .stats-card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
 .stats-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
 .stats-card .num { font-size: 22px; font-weight: 700; }
 .stats-card .num small { font-size: 12px; color: #888; font-weight: 400; margin-left: 6px; }
-.stats-spark-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 14px; }
+.stats-spark-wrap { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 14px; }
 .stats-spark { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
 .stats-spark .spark-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
 .stats-spark svg { display: block; width: 100%; height: 60px; }
@@ -161,7 +164,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 .confirm-box p { color: #555; font-size: 14px; line-height: 1.45; margin-bottom: 18px; }
 .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
 
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
   .form-row { grid-template-columns: 1fr; }
   .stats-grid, .stats-spark-wrap { grid-template-columns: 1fr; }
   .bn-table th:nth-child(4), .bn-table td:nth-child(4),
@@ -383,7 +386,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
       <div class="form-row single">
         <div class="form-group">
-          <label for="bn-embed">Embed URL <span style="font-weight:400;color:#999;">(game / interactive — leave Creative + Destination blank)</span></label>
+          <label for="bn-embed">Embed URL <span style="font-weight:400;color:#999;">(game / interactive. Destination optional; any image you add is an internal thumbnail, never shown live)</span></label>
           <input type="url" id="bn-embed" placeholder="https://games.thebolditalic.com/trolley_problem/embed.html">
           <div class="hint">If set, the banner renders this page as a playable iframe that fills the slot, instead of a clickable image.</div>
         </div>
@@ -705,6 +708,25 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   // The RPCs aggregate server-side and return small fixed-size results, so
   // counts stay accurate at any volume. No more 10k-row truncation pushing
   // older impressions out of the displayed numbers.
+  // Extract a game key from an embed banner's URL, e.g.
+  // https://games.thebolditalic.com/trolley_problem/embed.html -> "trolley_problem".
+  function embedGameKey(b) {
+    if (!b || !b.embed_url) return null;
+    var m = String(b.embed_url).match(/\/([a-z0-9_-]+)\/embed(?:\.html)?/i);
+    return m ? m[1] : null;
+  }
+  // Bucket play timestamps into an oldest-first daily-count array of length days.
+  function playsDailyArray(rows, days) {
+    var arr = []; for (var i = 0; i < days; i++) arr.push(0);
+    var now = Date.now();
+    (rows || []).forEach(function (r) {
+      var t = r && r.created_at ? new Date(r.created_at).getTime() : NaN;
+      if (!t) return;
+      var off = Math.floor((now - t) / 86400000);
+      if (off >= 0 && off < days) arr[days - 1 - off] += 1;
+    });
+    return arr;
+  }
   async function loadBanners() {
     var res = await sb.from('banners').select('*').order('created_at', { ascending: false });
     if (res.error) {
@@ -716,7 +738,8 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
     if (allBanners.length > 0) {
       await Promise.all(allBanners.map(async function (b) {
-        var results = await Promise.all([
+        var gameKey = embedGameKey(b);
+        var queries = [
           sb.from('banner_impressions')
             .select('*', { count: 'exact', head: true })
             .eq('banner_id', b.id),
@@ -732,15 +755,34 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
             p_days: STATS_WINDOW_DAYS,
             p_limit: TOP_PAGES_LIMIT
           })
-        ]);
-        statsCache[b.id] = {
+        ];
+        if (gameKey) {
+          // Game embeds don't get "clicks" (an iframe, not a link). Their
+          // engagement is PLAYS, logged to game_plays. Count the embed's own
+          // plays: play events for this game whose referrer is a Bold Italic
+          // story page and NOT the standalone hub at games.thebolditalic.com.
+          queries.push(
+            sb.from('game_plays')
+              .select('created_at', { count: 'exact' })
+              .eq('game', gameKey)
+              .eq('event', 'play')
+              .ilike('referrer', '%thebolditalic.com%')
+              .not('referrer', 'ilike', '%games.thebolditalic.com%')
+          );
+        }
+        var results = await Promise.all(queries);
+        var cache = {
           impressionCount: results[0].count || 0,
           clickCount:      results[1].count || 0,
-          // daily: array of { day_offset, impressions, clicks }, oldest-first
           daily:           results[2].data || [],
-          // topPages: array of { page_url, views }, ranked desc
           topPages:        results[3].data || []
         };
+        if (gameKey) {
+          cache.isGame = true;
+          cache.playCount = results[4].count || 0;
+          cache.playDaily = playsDailyArray(results[4].data || [], STATS_WINDOW_DAYS);
+        }
+        statsCache[b.id] = cache;
       }));
     }
 
@@ -782,10 +824,10 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       var tod = fmtTodLabel(live);
       if (tod) meta.push(tod);
       meta.push(s.impressionCount + ' impressions');
-      meta.push(s.clickCount + ' clicks');
+      meta.push(s.isGame ? ((s.playCount || 0) + ' plays') : (s.clickCount + ' clicks'));
       html += ''
         + '<div class="active-card">'
-        +   '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">'
+        +   (live.creative_url ? '<img class="thumb" src="' + escapeAttr(live.creative_url) + '" alt="">' : '<div class="thumb thumb-ph">' + (live.embed_url ? '🎮' : '—') + '</div>')
         +   '<div class="info">'
         +     '<div class="name">' + escapeHTML(live.name) + ' ' + statusPill(status) + '</div>'
         +     '<div class="meta">' + meta.join(' · ') + '</div>'
@@ -814,18 +856,21 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     allBanners.forEach(function (b) {
       var s = statsCache[b.id] || { impressionCount: 0, clickCount: 0, daily: [], topPages: [] };
       var imp = s.impressionCount;
+      var isGame = !!s.isGame;
+      var eng = isGame ? (s.playCount || 0) : s.clickCount;
       var clk = s.clickCount;
-      var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
+      var ctr = imp > 0 ? ((eng / imp) * 100).toFixed(1) + '%' : '—';
+      var engCell = isGame ? (eng + ' <span style="color:#888;">(plays)</span>') : eng;
       var status = bannerStatus(b);
       html += ''
         + '<tr data-id="' + b.id + '" class="' + (expandedBannerId === b.id ? 'expanded' : '') + '">'
-        +   '<td class="thumb-cell"><img src="' + escapeAttr(b.creative_url) + '" alt=""></td>'
+        +   '<td class="thumb-cell">' + (b.creative_url ? '<img src="' + escapeAttr(b.creative_url) + '" alt="">' : '<div class="thumb-ph tph-cell">' + (b.embed_url ? '🎮' : '—') + '</div>') + '</td>'
         +   '<td data-label="Name">' + escapeHTML(b.name) + '</td>'
         +   '<td data-label="Status">' + statusPill(status) + '</td>'
         +   '<td data-label="Start">' + fmtDate(b.start_at) + '</td>'
         +   '<td data-label="End">' + fmtDate(b.end_at) + '</td>'
         +   '<td data-label="Impressions">' + imp + '</td>'
-        +   '<td data-label="Clicks">' + clk + '</td>'
+        +   '<td data-label="Clicks">' + engCell + '</td>'
         +   '<td data-label="CTR">' + ctr + '</td>'
         +   '<td class="actions-cell"><button class="btn btn-outline btn-sm" data-edit="' + b.id + '">Edit</button></td>'
         + '</tr>';
@@ -856,7 +901,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       return { url: r.page_url || '', count: Number(r.views) || 0 };
     });
     var imp = s.impressionCount, clk = s.clickCount;
-    var ctr = imp > 0 ? ((clk / imp) * 100).toFixed(1) + '%' : '—';
+    var isGame = !!s.isGame;
+    var eng = isGame ? (s.playCount || 0) : clk;
+    var engDaily = isGame ? (s.playDaily || []) : clkDaily;
+    var engLabel = isGame ? 'Plays' : 'Clicks';
+    var rateLabel = isGame ? 'Play rate' : 'CTR';
+    var ctr = imp > 0 ? ((eng / imp) * 100).toFixed(1) + '%' : '—';
     var winLabel = 'Last ' + STATS_WINDOW_DAYS + ' days';
     var sparkLabel = STATS_WINDOW_DAYS + 'd';
 
@@ -864,15 +914,15 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       + '<div class="stats-wrap">'
       +   '<div class="stats-grid">'
       +     statCard('Impressions', imp, winLabel + ': ' + impDaily.reduce(sum, 0))
-      +     statCard('Clicks',      clk, winLabel + ': ' + clkDaily.reduce(sum, 0))
+      +     statCard(engLabel,      eng, winLabel + ': ' + engDaily.reduce(sum, 0))
       +   '</div>'
       +   '<div class="stats-grid" style="margin-bottom:14px;">'
-      +     statCard('CTR', ctr, '&nbsp;')
+      +     statCard(rateLabel, ctr, '&nbsp;')
       +     statCard('Status', bannerStatus(b), '&nbsp;')
       +   '</div>'
       +   '<div class="stats-spark-wrap">'
       +     '<div class="stats-spark"><div class="spark-label">Impressions, ' + sparkLabel + '</div>' + sparkline(impDaily, '#5b7bd5') + '</div>'
-      +     '<div class="stats-spark"><div class="spark-label">Clicks, ' + sparkLabel + '</div>' + sparkline(clkDaily, '#27ae60') + '</div>'
+      +     '<div class="stats-spark"><div class="spark-label">' + engLabel + ', ' + sparkLabel + '</div>' + sparkline(engDaily, '#27ae60') + '</div>'
       +   '</div>'
       +   '<div class="stats-pages">'
       +     '<div class="spark-label" style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin-bottom:4px;">Top referring pages</div>'
