@@ -720,7 +720,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     var arr = []; for (var i = 0; i < days; i++) arr.push(0);
     var now = Date.now();
     (rows || []).forEach(function (r) {
-      var t = r && r.created_at ? new Date(r.created_at).getTime() : NaN;
+      var t = r && r.at ? new Date(r.at).getTime() : NaN;
       if (!t) return;
       var off = Math.floor((now - t) / 86400000);
       if (off >= 0 && off < days) arr[days - 1 - off] += 1;
@@ -763,7 +763,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           // story page and NOT the standalone hub at games.thebolditalic.com.
           queries.push(
             sb.from('game_plays')
-              .select('created_at', { count: 'exact' })
+              .select('at', { count: 'exact' })
               .eq('game', gameKey)
               .eq('event', 'play')
               .ilike('referrer', '%thebolditalic.com%')
