@@ -358,6 +358,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     if(!rows.length){ host.innerHTML='<div class="tr-hint">Empty. Saved rounds will show here.</div>'; return; }
     var groups={},order=[];
     rows.forEach(function(x){ if(!groups[x.batch_id]){ groups[x.batch_id]=[]; order.push(x.batch_id); } groups[x.batch_id].push(x); });
+    var ORIG_B='Original 10 (baked in)';
+    order=order.filter(function(x){return x===ORIG_B;}).concat(order.filter(function(x){return x!==ORIG_B;}));
     var h='';
     order.forEach(function(b){
       var g=groups[b];
@@ -365,9 +367,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       g.forEach(function(x){
         h+='<div class="tr-pl-row'+(x.enabled?'':' off')+'">'
           +'<span class="tr-pl-no">'+esc(x.pos)+'</span>'
-          +'<span class="tr-pl-prev">'+sanit(x.a_svg)+'</span><span class="tr-pl-lbl">'+esc(x.a_label)+'</span>'
+          +(x.a_svg?'<span class="tr-pl-prev">'+sanit(x.a_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.a_label)+'</span>'
           +'<span class="tr-pl-vs">vs</span>'
-          +'<span class="tr-pl-prev">'+sanit(x.b_svg)+'</span><span class="tr-pl-lbl">'+esc(x.b_label)+'</span>'
+          +(x.b_svg?'<span class="tr-pl-prev">'+sanit(x.b_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.b_label)+'</span>'
           +'<span class="tr-pl-status">'+esc(x.status)+'</span>'
           +'<label class="tr-toggle"><input type="checkbox" data-id="'+x.id+'"'+(x.enabled?' checked':'')+'> On</label>'
           +'</div>';
