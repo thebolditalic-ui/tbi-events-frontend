@@ -242,7 +242,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   <div class="page-wrap">
     <a class="tr-back" href="/games">&larr; Back to Games</a>
     <h2 class="section-title">The Trolley Problem &mdash; Round builder</h2>
-    <p class="section-sub">Add two choices per round (art + a label), up to ten rounds per batch, and save them to the pipeline. Claude writes the matchup lines and ships them into the game from there.</p>
+    <p class="section-sub">Add two choices per round (art + a label). Start with 5 rounds, add up to 10 per batch, and save them to the pipeline. Claude writes the matchup lines and ships them into the game from there.</p>
     <div class="tr-card">
       <div class="tr-card-head"><h3>New batch</h3><span class="tr-hint">SVG only. Aim for 25&ndash;40&nbsp;KB each (shown in green). A round needs art plus a label on both sides.</span></div>
       <div id="tr-rounds"></div>
@@ -277,7 +277,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   $out.addEventListener('click', async function(){ await sb.auth.signOut(); location.reload(); });
 
   // ---- Round builder ----
-  var ROUNDS=10;
+  var ROUNDS=10, visibleRounds=5;
   var state=[];
   function blank(){ return {svg:null,label:'',size:0,name:''}; }
   function reset(){ state=[]; for(var i=0;i<ROUNDS;i++) state.push({a:blank(),b:blank()}); }
@@ -297,11 +297,18 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   function renderRounds(){
     var host=document.getElementById('tr-rounds'); if(!host) return;
     var h='';
-    for(var i=0;i<ROUNDS;i++){
+    for(var i=0;i<visibleRounds;i++){
       h+='<div class="tr-round"><div class="tr-no">'+(i+1)+'</div>'+choiceHTML(i,'a')+'<div class="tr-vs">vs</div>'+choiceHTML(i,'b')+'</div>';
+    }
+    if(visibleRounds<ROUNDS){
+      h+='<button type="button" class="btn btn-sm" id="tr-add5" style="margin-top:4px">+ Add 5 more rounds</button>';
     }
     host.innerHTML=h;
   }
+  document.addEventListener('click', function(e){
+    var b=e.target.closest&&e.target.closest('#tr-add5'); if(!b) return;
+    visibleRounds=Math.min(visibleRounds+5, ROUNDS); renderRounds();
+  });
   document.addEventListener('change', function(e){
     var inp=e.target.closest&&e.target.closest('#tr-rounds input[type=file]'); if(!inp) return;
     var i=+inp.dataset.i, side=inp.dataset.side, f=inp.files&&inp.files[0]; if(!f) return;
@@ -325,7 +332,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var name=(document.getElementById('tr-batch-name').value||'').trim();
     var batch=name||('batch-'+new Date().toISOString().slice(0,16).replace(/[:T-]/g,''));
     var rows=[];
-    for(var i=0;i<ROUNDS;i++){
+    for(var i=0;i<visibleRounds;i++){
       var r=state[i], hasA=!!r.a.svg, hasB=!!r.b.svg, labA=r.a.label.trim(), labB=r.b.label.trim();
       if(hasA&&hasB){
         if(!labA||!labB){ msg.textContent='Round '+(i+1)+' needs a label on both choices.'; msg.className='tr-save-msg err'; return; }
@@ -341,7 +348,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     btn.disabled=false; btn.textContent='Save batch to pipeline';
     if(!ok){ msg.textContent='Save failed: '+err; msg.className='tr-save-msg err'; return; }
     msg.textContent='Saved '+rows.length+' round'+(rows.length>1?'s':'')+' to the pipeline'; msg.className='tr-save-msg ok';
-    reset(); document.getElementById('tr-batch-name').value=''; renderRounds(); loadPipeline();
+    reset(); visibleRounds=5; document.getElementById('tr-batch-name').value=''; renderRounds(); loadPipeline();
   });
   async function loadPipeline(){
     var host=document.getElementById('tr-pipeline'); if(!host) return;
