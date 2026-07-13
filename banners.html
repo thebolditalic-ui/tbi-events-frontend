@@ -383,6 +383,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
       <div class="form-row single">
         <div class="form-group">
+          <label for="bn-embed">Embed URL <span style="font-weight:400;color:#999;">(game / interactive — leave Creative + Destination blank)</span></label>
+          <input type="url" id="bn-embed" placeholder="https://games.thebolditalic.com/trolley_problem/embed.html">
+          <div class="hint">If set, the banner renders this page as a playable iframe that fills the slot, instead of a clickable image.</div>
+        </div>
+      </div>
+
+      <div class="form-row single">
+        <div class="form-group">
           <label for="bn-dest">Destination URL *</label>
           <input type="url" id="bn-dest" placeholder="https://...">
           <div class="hint">Must be a TBI-owned destination (events.thebolditalic.com or sponsored editorial).</div>
@@ -968,6 +976,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       document.getElementById('bn-creative-mobile-w').value = b.natural_width_mobile || '';
       document.getElementById('bn-creative-mobile-h').value = b.natural_height_mobile || '';
       document.getElementById('bn-dest').value = b.destination_url || '';
+      document.getElementById('bn-embed').value = b.embed_url || '';
       document.getElementById('bn-alt').value = b.alt_text || '';
       document.getElementById('bn-disclosure').value = b.disclosure_label || '';
       document.getElementById('bn-paragraph').value = b.placement_paragraph || 5;
@@ -984,7 +993,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       $formDelete.style.display = '';
     } else {
       $modalTitle.textContent = 'New banner';
-      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end'].forEach(function (id) { document.getElementById(id).value = ''; });
+      ['bn-id','bn-name','bn-creative-url','bn-creative-w','bn-creative-h','bn-creative-mobile-url','bn-creative-mobile-w','bn-creative-mobile-h','bn-embed','bn-dest','bn-alt','bn-disclosure','bn-start','bn-end'].forEach(function (id) { document.getElementById(id).value = ''; });
       document.getElementById('bn-paragraph').value = 5;
       document.getElementById('bn-active').checked = false;
       // Uncheck all tod-block boxes (default = 24/7)
@@ -1138,6 +1147,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     clearStatus();
 
     var creativeUrl = document.getElementById('bn-creative-url').value.trim();
+    var embed = document.getElementById('bn-embed').value.trim();
     var name = document.getElementById('bn-name').value.trim();
     var dest = document.getElementById('bn-dest').value.trim();
     var alt = document.getElementById('bn-alt').value.trim();
@@ -1154,9 +1164,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
     if (todBlocks.length === 0) todBlocks = null;
     var isActive = document.getElementById('bn-active').checked;
 
-    if (!creativeUrl) { setStatus('Please upload a desktop creative.', 'err'); return; }
-    if (!dest)        { setStatus('Destination URL is required.', 'err'); return; }
-    if (!alt)         { setStatus('Alt text is required.', 'err'); return; }
+    if (!embed && !creativeUrl) { setStatus('Upload a desktop creative, or set an Embed URL.', 'err'); return; }
+    if (!embed && !dest)        { setStatus('Destination URL is required (or set an Embed URL).', 'err'); return; }
+    if (!embed && !alt)         { setStatus('Alt text is required.', 'err'); return; }
     if (!name)        { setStatus('Name is required.', 'err'); return; }
 
     if (startAt && endAt && new Date(endAt) <= new Date(startAt)) {
@@ -1165,13 +1175,14 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
     var record = {
       name: name,
-      creative_url: creativeUrl,
+      creative_url: creativeUrl || null,
+      embed_url: embed || null,
       creative_url_mobile: document.getElementById('bn-creative-mobile-url').value.trim() || null,
       natural_width:  parseInt(document.getElementById('bn-creative-w').value, 10) || null,
       natural_height: parseInt(document.getElementById('bn-creative-h').value, 10) || null,
       natural_width_mobile:  parseInt(document.getElementById('bn-creative-mobile-w').value, 10) || null,
       natural_height_mobile: parseInt(document.getElementById('bn-creative-mobile-h').value, 10) || null,
-      destination_url: dest,
+      destination_url: dest || null,
       alt_text: alt,
       disclosure_label: disclosure,
       placement_paragraph: paragraph,
