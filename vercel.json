@@ -99,6 +99,10 @@
       "destination": "/games.html"
     },
     {
+      "source": "/trolley-rounds",
+      "destination": "/trolley-rounds.html"
+    },
+    {
       "source": "/social-analytics",
       "destination": "/social-analytics.html"
     },
