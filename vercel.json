@@ -103,6 +103,10 @@
       "destination": "/trolley-rounds.html"
     },
     {
+      "source": "/trolley-stats",
+      "destination": "/trolley-stats.html"
+    },
+    {
       "source": "/social-analytics",
       "destination": "/social-analytics.html"
     },

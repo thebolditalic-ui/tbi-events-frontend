@@ -62,7 +62,7 @@ const ADMIN_EXACT_PATHS = new Set(['/robots.txt', '/sitemap.xml']);
 
 // Standalone static pages (served by vercel.json rewrites) that are NOT event
 // slugs — must skip the OG bot rewrite so crawlers get the real page.
-const STATIC_PAGE_PATHS = new Set(['/disclosures', '/disclosures/', '/trolley-rounds', '/trolley-rounds/']);
+const STATIC_PAGE_PATHS = new Set(['/disclosures', '/disclosures/', '/trolley-rounds', '/trolley-rounds/', '/trolley-stats', '/trolley-stats/']);
 
 // Bot/crawler UA patterns. Used by both surfaces.
 const BOT_PATTERNS = [
