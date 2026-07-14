@@ -382,7 +382,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         (function () { var mp = mv.payments || [], nowD = new Date(), cut = nowD.getDate() < 25 ? new Date(nowD.getFullYear(), nowD.getMonth(), 1) : nowD, pick = null;
           mp.forEach(function (p) { var pd = new Date(p.payout_date); if (!isNaN(pd) && pd >= cut && (!pick || pd < new Date(pick.payout_date))) pick = p; });
           if (!pick && mv.next_payout && mv.next_payout.value != null) pick = { payout_date: mv.next_payout.date, value: mv.next_payout.value };
-          if (pick) pays.push({ src: 'Mediavine', est: false, date: new Date(pick.payout_date), amount: Number(pick.value) || 0, min: 0 }); })();
+          if (pick) { var mvAmt = Number(pick.value) || 0, mvDate = new Date(pick.payout_date), mvRolled = false;
+            if (mvAmt > 0 && mvAmt < 100) { mvDate = new Date(mvDate.getFullYear(), mvDate.getMonth() + 1, mvDate.getDate()); mvRolled = true; }
+            pays.push({ src: 'Mediavine', est: mvRolled, date: mvDate, amount: mvAmt, min: 0, rolled: mvRolled }); } })();
         var mp = nextMeta(meta); if (mp && mp.amount > 0) pays.push({ src: 'Meta', est: true, date: mp.date, amount: mp.amount, min: 100 });
         // Ghost subscriptions, by month: next month's payout + a heads-up for the biggest annual-renewal months ahead
         var mk2d = function (k) { var p = String(k).split('-'); return new Date(+p[0], +p[1] - 1, 1); };
@@ -392,6 +394,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           else pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
         pays = pays.filter(function (p) { return !isNaN(p.date); }).sort(function (a, b) { return a.date - b.date; });
         if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var tail = p.monthly ? (' · ' + p.date.toLocaleDateString('en-US', { month: 'long' })) : (' · ' + (p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + tail + '</span></div>'; }).join('') + '<div class="earn-prow earn-ptot"><span>Total</span><span>' + money(pays.reduce(function (a, p) { return a + (p.amount || 0); }, 0)) + '</span></div></div>';
+        if (pays.some(function (p) { return p.rolled; })) ehtml += '<div class="earn-note">Mediavine holds balances under its $100 minimum and rolls them into the next cycle.</div>';
         ec.innerHTML = ehtml;
       }
     } catch (e) {
