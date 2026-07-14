@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Logging invite run…</title>
+<style>
+  body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#faf6ec;color:#1E1B1B;display:flex;align-items:center;justify-content:center;min-height:100vh}
+  .card{max-width:420px;padding:28px 30px;text-align:center;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(74,50,22,.14)}
+  .big{font-size:30px;font-weight:800;margin-bottom:6px}
+  .muted{color:#6b6258;font-size:13px}
+  a{color:#0a58ca}
+</style>
+</head>
+<body>
+<div class="card"><div class="big" id="h">Saving…</div><div class="muted" id="s">Recording your invite run.</div></div>
+<script>
+(function(){
+  var SB='https://scawgrjcjgcmvsimvash.supabase.co';
+  var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0';
+  var p=new URLSearchParams(location.search);
+  var c=parseInt(p.get('c')||'0',10); if(!(c>=0))c=0;
+  var ref=p.get('ref')||'';
+  var page=p.get('page')||'';
+  var back=/^https?:\/\/([a-z0-9-]+\.)?facebook\.com\//i.test(page)?page:'https://www.facebook.com/';
+  function show(h,s){document.getElementById('h').textContent=h;document.getElementById('s').innerHTML=s;}
+  function go(){try{location.replace(back);}catch(e){location.href=back;}}
+  var backlink='<a href="'+back.replace(/"/g,'%22')+'">Back to Facebook</a>';
+  fetch(SB+'/rest/v1/fb_invite_log',{method:'POST',headers:{'content-type':'application/json',apikey:ANON,authorization:'Bearer '+ANON,prefer:'return=minimal'},body:JSON.stringify({invited_count:c,page_url:page||null,post_ref:ref||null,note:'bookmarklet'})})
+    .then(function(r){ if(r.ok){ show('✓ Logged '+c+' invites','Returning to Facebook…'); setTimeout(go,1300);} else { r.text().then(function(t){ show('Could not save the run',(''+t).slice(0,140)+'<br>'+backlink); }); } })
+    .catch(function(e){ show('Could not save the run', String(e)+'<br>'+backlink); });
+})();
+</script>
+</body>
+</html>
