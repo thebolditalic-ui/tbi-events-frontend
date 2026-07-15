@@ -393,6 +393,9 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
           if (nowG.getDate() < 25) pays.push({ src: 'Ghost', est: true, monthly: true, date: new Date(nowG.getFullYear(), nowG.getMonth(), 1), amount: Number(g0.baseline || g0.amount) || 0, count: g0.baseline_count || g0.count, min: 0 });
           else pays.push({ src: 'Ghost', est: true, monthly: true, date: mk2d(g0.month), amount: g0.amount, count: g0.count, min: 0 }); }
         pays = pays.filter(function (p) { return !isNaN(p.date); }).sort(function (a, b) { return a.date - b.date; });
+        // Next payouts is ONE shared monthly window: keep only the earliest pending month so every account
+        // (Ghost/Meta/Mediavine and any added later) flips together. Accounts with no payout that month drop off.
+        if (pays.length) { var payMK = pays[0].date.getFullYear() * 12 + pays[0].date.getMonth(); pays = pays.filter(function (p) { return (p.date.getFullYear() * 12 + p.date.getMonth()) === payMK; }); }
         if (pays.length) ehtml += '<div class="earn-payout"><div class="earn-payout-h">Next payouts</div>' + pays.map(function (p) { var tail = p.monthly ? (' · ' + p.date.toLocaleDateString('en-US', { month: 'long' })) : (' · ' + (p.est ? '~' : '') + p.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })); var warn = (p.min && p.amount < p.min) ? '<span class="earn-min">(Still needs $100 minimum)</span> ' : ''; return '<div class="earn-prow"><span>' + p.src + (p.est ? ' <em>est</em>' : '') + '</span><span>' + warn + money(p.amount) + tail + '</span></div>'; }).join('') + '<div class="earn-prow earn-ptot"><span>Total</span><span>' + money(pays.reduce(function (a, p) { return a + (p.amount || 0); }, 0)) + '</span></div></div>';
         if (pays.some(function (p) { return p.rolled; })) ehtml += '<div class="earn-note">Mediavine holds balances under its $100 minimum and rolls them into the next cycle.</div>';
         ec.innerHTML = ehtml;
