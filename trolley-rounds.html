@@ -362,35 +362,24 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var rows=r.data||[];
     if(!rows.length){ host.innerHTML='<div class="tr-hint">Empty. Saved rounds will show here.</div>'; return; }
     var ORIG_B='Original 10 (baked in)';
-    var labelMap={}, autoB=[];
-    rows.forEach(function(x){ if(x.batch_id!==ORIG_B && /^batch-\d+$/.test(x.batch_id) && autoB.indexOf(x.batch_id)<0) autoB.push(x.batch_id); });
-    autoB.sort().forEach(function(bb,i){ labelMap[bb]='Batch '+(i+1); });
-    function batchLabel(bb){ return bb===ORIG_B ? bb : (labelMap[bb]||bb); }
-    function groupHtml(rowSet){
-      var groups={},order=[];
-      rowSet.forEach(function(x){ if(!groups[x.batch_id]){ groups[x.batch_id]=[]; order.push(x.batch_id); } groups[x.batch_id].push(x); });
-      order=order.filter(function(x){return x===ORIG_B;}).concat(order.filter(function(x){return x!==ORIG_B;}));
+    function listHtml(rowSet){
+      var ordered=rowSet.filter(function(x){return x.batch_id===ORIG_B;}).concat(rowSet.filter(function(x){return x.batch_id!==ORIG_B;}));
       var h='';
-      order.forEach(function(b){
-        var g=groups[b];
-        h+='<div class="tr-batch"><div class="tr-batch-head"><b>'+esc(batchLabel(b))+'</b><span class="tr-hint">'+g.length+' round'+(g.length>1?'s':'')+'</span></div>';
-        g.forEach(function(x){
-          h+='<div class="tr-pl-row'+(x.enabled?'':' off')+'">'
-            +'<span class="tr-pl-no">'+esc(x.pos)+'</span>'
-            +(x.a_svg?'<span class="tr-pl-prev">'+sanit(x.a_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.a_label)+'</span>'
-            +'<span class="tr-pl-vs">vs</span>'
-            +(x.b_svg?'<span class="tr-pl-prev">'+sanit(x.b_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.b_label)+'</span>'
-            +'<span class="tr-pl-status">'+esc(x.status)+'</span>'
-            +'<label class="tr-toggle"><input type="checkbox" data-id="'+x.id+'"'+(x.enabled?' checked':'')+'> On</label>'
-            +'</div>';
-        });
-        h+='</div>';
+      ordered.forEach(function(x,i){
+        h+='<div class="tr-pl-row'+(x.enabled?'':' off')+'">'
+          +'<span class="tr-pl-no">'+(i+1)+'</span>'
+          +(x.a_svg?'<span class="tr-pl-prev">'+sanit(x.a_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.a_label)+'</span>'
+          +'<span class="tr-pl-vs">vs</span>'
+          +(x.b_svg?'<span class="tr-pl-prev">'+sanit(x.b_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.b_label)+'</span>'
+          +'<span class="tr-pl-status">'+esc(x.status)+'</span>'
+          +'<label class="tr-toggle"><input type="checkbox" data-id="'+x.id+'"'+(x.enabled?' checked':'')+'> On</label>'
+          +'</div>';
       });
       return h;
     }
     var activeRows=rows.filter(function(x){return x.enabled;}), inactiveRows=rows.filter(function(x){return !x.enabled;});
-    var out=activeRows.length ? groupHtml(activeRows) : '<div class="tr-hint">No active matchups right now.</div>';
-    if(inactiveRows.length){ out+='<details class="tr-inactive"><summary>Inactive matchups ('+inactiveRows.length+')</summary>'+groupHtml(inactiveRows)+'</details>'; }
+    var out=activeRows.length ? listHtml(activeRows) : '<div class="tr-hint">No active matchups right now.</div>';
+    if(inactiveRows.length){ out+='<details class="tr-inactive"><summary>Inactive matchups ('+inactiveRows.length+')</summary>'+listHtml(inactiveRows)+'</details>'; }
     host.innerHTML=out;
   }
   document.addEventListener('change', async function(e){
