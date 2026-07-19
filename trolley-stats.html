@@ -240,6 +240,16 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 @media(max-width:640px){.tr-round{grid-template-columns:1fr}.tr-no{text-align:left;padding-top:0}.tr-vs{padding-top:0}.tr-pl-row{flex-wrap:wrap}.tr-pl-lbl{flex-basis:40%}}
 .st-summary{display:flex;gap:26px;flex-wrap:wrap;font-size:13px;color:#888}
 .st-summary b{font-size:24px;display:block;color:#28243a;font-weight:900}
+#tr-trend .tt-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+#tr-trend h3{font-family:var(--title-font);font-size:18px;margin:0}
+.tt-delta{font-size:13px;color:#888}
+.tt-delta b{font-size:22px;color:var(--green);font-weight:900}
+.tt-chart{display:flex;align-items:flex-end;gap:6px;height:132px;padding-top:14px}
+.tt-bar{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
+.tt-bar .b{width:72%;max-width:28px;background:var(--gold);border:1px solid #e6c66a;border-radius:4px 4px 0 0;min-height:2px}
+.tt-bar .bn{font-size:10px;color:#28243a;font-weight:700}
+.tt-bar .bd{font-size:9px;color:#aaa;white-space:nowrap}
+.tt-note{font-size:12px;color:#aaa;margin-top:10px}
 .st-row{padding:12px 0;border-bottom:1px solid var(--border,#e5e0d5)}
 .st-row:last-child{border-bottom:none}
 .st-row.off{opacity:.5}
@@ -258,6 +268,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <h2 class="section-title">The Trolley Problem &mdash; Stats</h2>
     <p class="section-sub">Votes and plays for every matchup. Saved = how many players chose to spare that item; the percentage is that matchup's share of the vote.</p>
     <div class="tr-card" id="tr-stats-summary"><div class="tr-hint">Loading&hellip;</div></div>
+    <div class="tr-card" id="tr-trend"><div class="tr-hint">Loading&hellip;</div></div>
     <div class="tr-card">
       <div class="tr-card-head"><h3>Votes by matchup</h3><span class="tr-hint">Sorted by most votes. Dimmed = switched off in the pipeline.</span></div>
       <div id="tr-stats"><div class="tr-hint">Loading&hellip;</div></div>
@@ -311,6 +322,26 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +'</div>';
     });
     host.innerHTML=h||'<div class="tr-hint">No matchups yet.</div>';
+    renderTrend(totalVotes);
+  }
+  function fmtDay(d){ try{ var p=String(d).split('-'); return p[1]+'/'+p[2]; }catch(e){ return String(d); } }
+  async function renderTrend(liveTotal){
+    var host=document.getElementById('tr-trend'); if(!host) return;
+    var r=await sb.from('trolley_vote_totals').select('day,total,captured_at').order('day',{ascending:true});
+    if(r.error){ host.innerHTML='<div class="tr-hint">Vote trend unavailable: '+esc(r.error.message)+'</div>'; return; }
+    var snaps=r.data||[]; var last=snaps.length?snaps[snaps.length-1]:null;
+    var sinceSnap=last?(Number(liveTotal)-Number(last.total)):0; if(sinceSnap<0) sinceSnap=0;
+    var gains=[]; for(var i=1;i<snaps.length;i++){ gains.push({day:snaps[i].day, gain:Number(snaps[i].total)-Number(snaps[i-1].total)}); }
+    gains=gains.slice(-21);
+    var head='<div class="tt-head"><h3>Votes over time</h3><div class="tt-delta">since last snapshot'+(last?(' ('+fmtDay(last.day)+')'):'')+': <b>+'+sinceSnap.toLocaleString()+'</b></div></div>';
+    var body;
+    if(!gains.length){
+      body='<div class="tt-note">Baseline captured today ('+Number(last?last.total:liveTotal).toLocaleString()+' votes). One bar per day starts filling in tomorrow. The <b>+ number</b> above ticks up live as people play, so you can watch it move today.</div>';
+    } else {
+      var mx=Math.max.apply(null,gains.map(function(g){return g.gain;}).concat([1]));
+      body='<div class="tt-chart">'+gains.map(function(g){ var h=Math.max(2,Math.round(g.gain/mx*108)); return '<div class="tt-bar" title="'+esc(g.day)+': +'+g.gain+' votes"><span class="bn">'+g.gain+'</span><span class="b" style="height:'+h+'px"></span><span class="bd">'+fmtDay(g.day)+'</span></div>'; }).join('')+'</div><div class="tt-note">Votes gained each day (daily snapshot at ~1am Pacific).</div>';
+    }
+    host.innerHTML=head+body;
   }
   function initStats(){ loadStats(); }
 
