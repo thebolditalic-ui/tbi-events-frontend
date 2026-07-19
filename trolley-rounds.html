@@ -362,6 +362,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var rows=r.data||[];
     if(!rows.length){ host.innerHTML='<div class="tr-hint">Empty. Saved rounds will show here.</div>'; return; }
     var ORIG_B='Original 10 (baked in)';
+    var labelMap={}, autoB=[];
+    rows.forEach(function(x){ if(x.batch_id!==ORIG_B && /^batch-\d+$/.test(x.batch_id) && autoB.indexOf(x.batch_id)<0) autoB.push(x.batch_id); });
+    autoB.sort().forEach(function(bb,i){ labelMap[bb]='Batch '+(i+1); });
+    function batchLabel(bb){ return bb===ORIG_B ? bb : (labelMap[bb]||bb); }
     function groupHtml(rowSet){
       var groups={},order=[];
       rowSet.forEach(function(x){ if(!groups[x.batch_id]){ groups[x.batch_id]=[]; order.push(x.batch_id); } groups[x.batch_id].push(x); });
@@ -369,7 +373,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var h='';
       order.forEach(function(b){
         var g=groups[b];
-        h+='<div class="tr-batch"><div class="tr-batch-head"><b>'+esc(b)+'</b><span class="tr-hint">'+g.length+' round'+(g.length>1?'s':'')+'</span></div>';
+        h+='<div class="tr-batch"><div class="tr-batch-head"><b>'+esc(batchLabel(b))+'</b><span class="tr-hint">'+g.length+' round'+(g.length>1?'s':'')+'</span></div>';
         g.forEach(function(x){
           h+='<div class="tr-pl-row'+(x.enabled?'':' off')+'">'
             +'<span class="tr-pl-no">'+esc(x.pos)+'</span>'
