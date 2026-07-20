@@ -253,6 +253,11 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .st-row{padding:12px 0;border-bottom:1px solid var(--border,#e5e0d5)}
 .st-row:last-child{border-bottom:none}
 .st-row.off{opacity:.5}
+.st-both{margin-top:9px;padding-top:8px;border-top:1px dashed var(--border,#e5e0d5)}
+.st-both-head{font-size:12px;font-weight:700;color:#c0392b;margin-bottom:4px}
+.st-both-head .b{color:#888;font-weight:600}
+.st-both-bar{height:10px;border-radius:6px;background:#f0e9dd;overflow:hidden}
+.st-both-fill{height:100%;background:#c0392b;border-radius:6px 0 0 6px;min-width:2px}
 .st-inactive{margin-top:14px;border-top:1px dashed var(--border,#e5e0d5)}
 .st-inactive>summary{cursor:pointer;padding:12px 0 4px;font-size:13px;font-weight:700;color:#666}
 .st-top{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:#999;margin-bottom:5px}
@@ -314,12 +319,15 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       +'<div><b>'+rows.length+'</b>matchups</div></div>';
     function stRow(r){
       var t=r.t, bp=r.tot?100-r.ap:0;
+      var isBoth=(t.a_slug==='techbros'&&t.b_slug==='republican')||(t.a_slug==='republican'&&t.b_slug==='techbros');
+      var bothN=isBoth?(votes['bothover']||0):0, bothPct=(isBoth&&(r.tot+bothN))?Math.round(bothN/(r.tot+bothN)*100):0;
       return '<div class="st-row'+(t.enabled?'':' off')+'">'
         +'<div class="st-top"><span class="st-total">'+r.tot.toLocaleString()+' vote'+(r.tot===1?'':'s')+'</span>'
         +'<span>'+esc(t.batch_id)+' &middot; #'+esc(t.pos)+(t.enabled?'':' &middot; <span class="st-off">OFF</span>')+'</span></div>'
         +'<div class="st-bar"><div class="st-fill" style="width:'+r.ap+'%"></div><div class="st-fill r" style="width:'+bp+'%"></div></div>'
         +'<div class="st-ends"><span>'+esc(t.a_label)+' &mdash; '+r.a.toLocaleString()+' <span class="b">('+r.ap+'%)</span></span>'
         +'<span class="r"><span class="b">('+bp+'%)</span> '+r.b.toLocaleString()+' &mdash; '+esc(t.b_label)+'</span></div>'
+        +(isBoth?'<div class="st-both"><div class="st-both-head">Kill them both <span class="b">'+bothN.toLocaleString()+' ('+bothPct+'%)</span></div><div class="st-both-bar"><div class="st-both-fill" style="width:'+bothPct+'%"></div></div></div>':'')
         +'</div>';
     }
     var activeR=rows.filter(function(r){return r.t.enabled;}), inactiveR=rows.filter(function(r){return !r.t.enabled;});
