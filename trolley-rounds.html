@@ -234,6 +234,17 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .tr-pl-prev{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:var(--bg-alt);border-radius:6px;flex:0 0 auto}
 .tr-pl-prev svg{max-width:30px;max-height:30px;width:auto;height:auto}
 .tr-pl-lbl{font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 0}
+.tr-pl-row{cursor:pointer}
+.tr-oc{display:flex;flex-wrap:wrap;gap:14px;padding:12px;margin:-4px 0 8px;border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;background:var(--bg-alt)}
+.tr-oc[hidden]{display:none}
+.tr-oc-col{flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:7px}
+.tr-oc-h{font-weight:800;font-size:13px;color:var(--dark)}
+.tr-oc label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#888;font-weight:600}
+.tr-oc-in{font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--dark);width:100%;box-sizing:border-box}
+textarea.tr-oc-in{resize:vertical;min-height:40px}
+.tr-oc-actions{flex:1 1 100%;display:flex;align-items:center;gap:10px}
+.tr-oc-save{background:var(--dark);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-weight:700;font-size:13px;cursor:pointer}
+.tr-oc-msg{font-size:12px}.tr-oc-msg.ok{color:var(--green)}.tr-oc-msg.err{color:var(--red)}
 .tr-pl-vs{color:#bbb;font-style:italic;font-size:12px;flex:0 0 auto}
 .tr-pl-status{font-size:11px;color:#aaa;text-transform:uppercase;letter-spacing:.04em;flex:0 0 auto}
 .tr-toggle{font-size:12px;color:#666;display:flex;align-items:center;gap:5px;flex:0 0 auto;cursor:pointer}
@@ -357,22 +368,30 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   });
   async function loadPipeline(){
     var host=document.getElementById('tr-pipeline'); if(!host) return;
-    var r=await sb.from('trolley_pipeline').select('id,batch_id,pos,a_label,b_label,a_svg,b_svg,enabled,status').order('batch_id',{ascending:true}).order('pos',{ascending:true});
+    var r=await sb.from('trolley_pipeline').select('id,batch_id,pos,a_label,b_label,a_svg,b_svg,enabled,status,a_slug,b_slug,a_word,a_road,a_death,b_word,b_road,b_death').order('batch_id',{ascending:true}).order('pos',{ascending:true});
     if(r.error){ host.innerHTML='<div class="tr-hint">Could not load pipeline: '+esc(r.error.message)+'</div>'; return; }
     var rows=r.data||[];
     if(!rows.length){ host.innerHTML='<div class="tr-hint">Empty. Saved rounds will show here.</div>'; return; }
     var ORIG_B='Original 10 (baked in)';
+    function ocIn(side,field,val,ta){ return ta
+      ? '<label>Punchline<textarea class="tr-oc-in" data-f="'+side+'_'+field+'" rows="2">'+esc(val||'')+'</textarea></label>'
+      : '<label>'+(field==='word'?'Impact word':'Road line')+'<input class="tr-oc-in" data-f="'+side+'_'+field+'" value="'+esc(val||'')+'"></label>'; }
+    function ocCol(side,slug,label,word,road,death){ return '<div class="tr-oc-col"><div class="tr-oc-h">'+esc(label||slug||'')+'</div>'+ocIn(side,'word',word)+ocIn(side,'road',road)+ocIn(side,'death',death,true)+'</div>'; }
     function listHtml(rowSet){
       var ordered=rowSet.filter(function(x){return x.batch_id===ORIG_B;}).concat(rowSet.filter(function(x){return x.batch_id!==ORIG_B;}));
       var h='';
       ordered.forEach(function(x,i){
-        h+='<div class="tr-pl-row'+(x.enabled?'':' off')+'">'
+        h+='<div class="tr-pl-wrap" data-id="'+x.id+'">'
+          +'<div class="tr-pl-row'+(x.enabled?'':' off')+'" title="Click to edit outcomes">'
           +'<span class="tr-pl-no">'+(i+1)+'</span>'
           +(x.a_svg?'<span class="tr-pl-prev">'+sanit(x.a_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.a_label)+'</span>'
           +'<span class="tr-pl-vs">vs</span>'
           +(x.b_svg?'<span class="tr-pl-prev">'+sanit(x.b_svg)+'</span>':'')+'<span class="tr-pl-lbl">'+esc(x.b_label)+'</span>'
           +'<span class="tr-pl-status">'+esc(x.status)+'</span>'
           +'<label class="tr-toggle"><input type="checkbox" data-id="'+x.id+'"'+(x.enabled?' checked':'')+'> On</label>'
+          +'</div>'
+          +'<div class="tr-oc" hidden>'+ocCol('a',x.a_slug,x.a_label,x.a_word,x.a_road,x.a_death)+ocCol('b',x.b_slug,x.b_label,x.b_word,x.b_road,x.b_death)
+          +'<div class="tr-oc-actions"><button class="tr-oc-save" data-id="'+x.id+'">Save outcomes</button> <span class="tr-oc-msg"></span></div></div>'
           +'</div>';
       });
       return h;
@@ -388,6 +407,25 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     if(row) row.classList.toggle('off',!en);
     var res=await sb.from('trolley_pipeline').update({enabled:en}).eq('id',id);
     if(res.error){ alert('Toggle failed: '+res.error.message); cb.checked=!en; if(row) row.classList.toggle('off',en); }
+  });
+  document.addEventListener('click', function(e){
+    var save=e.target.closest&&e.target.closest('.tr-oc-save');
+    if(save){
+      var id=+save.dataset.id, wrap=save.closest('.tr-pl-wrap'), msg=wrap.querySelector('.tr-oc-msg'), upd={};
+      wrap.querySelectorAll('.tr-oc-in').forEach(function(inp){ upd[inp.dataset.f]=inp.value; });
+      save.disabled=true; msg.textContent='Saving...'; msg.className='tr-oc-msg';
+      sb.from('trolley_pipeline').update(upd).eq('id',id).then(function(res){
+        save.disabled=false;
+        msg.textContent=res.error?('Error: '+res.error.message):'Saved';
+        msg.className='tr-oc-msg '+(res.error?'err':'ok');
+        if(!res.error) setTimeout(function(){ msg.textContent=''; }, 2500);
+      });
+      return;
+    }
+    var row=e.target.closest&&e.target.closest('.tr-pl-row');
+    if(row && !(e.target.closest&&e.target.closest('.tr-toggle'))){
+      var oc=row.parentNode.querySelector('.tr-oc'); if(oc) oc.hidden=!oc.hidden;
+    }
   });
   function initBuilder(){ renderRounds(); loadPipeline(); }
   checkSession();
