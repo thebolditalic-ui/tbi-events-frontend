@@ -1606,10 +1606,15 @@ async function cadenceContext(){
 }
 function cadenceLinkClash(ctx, link, tMs){ if(!link) return false; var win=CADENCE_LINK_DAYS*864e5; for(var i=0;i<ctx.length;i++){ if(ctx[i].link===link && Math.abs(ctx[i].t-tMs)<win) return true; } return false; }
 function cadenceJokeDayFull(ctx, tMs){ var day=new Date(tMs).toDateString(); var n=0; for(var i=0;i<ctx.length;i++){ var m=ctx[i]; if((m.kind==='joke'||m.kind==='question') && new Date(m.t).toDateString()===day) n++; } return n>=CADENCE_JOKE_PER_DAY; }
+// True if the nearest scheduled post before OR after tMs is itself a joke/question (they'd post back-to-back).
+function cadenceEngAdjacent(ctx, tMs){ var bef=null, aft=null; for(var i=0;i<ctx.length;i++){ var m=ctx[i]; if(m.t<tMs){ if(!bef||m.t>bef.t) bef=m; } else if(m.t>tMs){ if(!aft||m.t<aft.t) aft=m; } } var E=function(k){ return k==='joke'||k==='question'; }; return (bef&&E(bef.kind))||(aft&&E(aft.kind)); }
 // Returns a human reason if scheduling this kind/link at tMs would break an ENABLED rule, else ''.
 function cadenceViolation(ctx, kind, link, tMs){
   if(kind==='story_post' && link && cadenceOn('link') && cadenceLinkClash(ctx,link,tMs)) return 'This story link is already scheduled within '+CADENCE_LINK_DAYS+' days of that time.';
-  if((kind==='joke'||kind==='question') && cadenceOn('joke') && cadenceJokeDayFull(ctx,tMs)) return 'That day already has '+CADENCE_JOKE_PER_DAY+' jokes/questions scheduled.';
+  if((kind==='joke'||kind==='question') && cadenceOn('joke')){
+    if(cadenceJokeDayFull(ctx,tMs)) return 'That day already has '+CADENCE_JOKE_PER_DAY+' jokes/questions scheduled.';
+    if(cadenceEngAdjacent(ctx,tMs)) return 'That slot sits right next to another joke/question (they would post back-to-back).';
+  }
   return '';
 }
 // Does any enabled rule apply to this item at all? (skip the extra reads if not)
@@ -1636,7 +1641,7 @@ async function loadStaged(){
   '<div class="cadence-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 12px;padding:9px 12px;background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;font-size:13px">'+
     '<span style="font-weight:600;color:var(--dark)">Spacing rules</span>'+
     '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="cad-link"> No repeat story link within 2 weeks</label>'+
-    '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="cad-joke"> Max 2 jokes/questions per day</label>'+
+    '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="cad-joke"> Jokes/questions: max 2/day, never back-to-back</label>'+
     '<span class="run-status" style="color:#8a8178">Applied to <b>Next available</b> &amp; <b>Auto-fill</b>. A specific slot or time just warns.</span>'+
   '</div>'+
   '<div class="story-card">'+rows.map(function(it){
@@ -1730,6 +1735,7 @@ async function autoFillSlots(){
       // cadence rules (operator toggles): no same story link within 2 weeks; <=2 jokes/questions per day
       if(L&&cadenceOn('link')){ var _cw=CADENCE_LINK_DAYS*864e5, _cc=false; for(var cli=0;cli<timeline.length;cli++){ if(timeline[cli].link===L&&Math.abs(timeline[cli].t-t)<_cw){ _cc=true; break; } } if(_cc) continue; }
       if((k==='joke'||k==='question')&&cadenceOn('joke')){ var _jc=0; for(var jli=0;jli<timeline.length;jli++){ var _jm=timeline[jli]; if((_jm.kind==='joke'||_jm.kind==='question')&&new Date(_jm.t).toDateString()===dayKey) _jc++; } if(_jc>=CADENCE_JOKE_PER_DAY) continue; }
+      if((k==='joke'||k==='question')&&cadenceOn('joke')&&((prev&&(prev.kind==='joke'||prev.kind==='question'))||(next&&(next.kind==='joke'||next.kind==='question')))) continue; // no back-to-back jokes/questions
       var dem=(k==='image_post'&&(igDay[dayKey]||0)>=1);
       // soft preferences: vary kind vs neighbors, avoid same link twice in one day
       var score=0;
