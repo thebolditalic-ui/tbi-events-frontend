@@ -1582,6 +1582,48 @@ var CH_SVG={
 function chIcon(k){ var key=(k==='twitter')?'x':k; return '<span class="ch-ico" title="'+esc(key)+'">'+(CH_SVG[key]||('<b style="font-size:10px">'+esc(String(k).slice(0,2).toUpperCase())+'</b>'))+'</span>'; }
 function chTogglesHtml(sel,list){ sel=sel||[]; list=list||DIRECT_CH; return list.map(function(c){ return '<span class="chan-chip ch-toggle '+(sel.indexOf(c.k)>=0?'on':'')+'" data-ch="'+c.k+'">'+esc(c.l)+'</span>'; }).join(''); }
 
+// ---------- Spacing rules (cadence) ----------
+// Two operator toggles, default ON, stored per-browser. They govern only NEXT-AVAILABLE
+// placement (per-card "Slot: Next available" + "Auto-fill next slots"): a slot that would
+// break an enabled rule is skipped. Scheduling at a SPECIFIC time (a named slot or "At") just
+// warns with a yes/no. "Post now" is never checked. Off means off: a rule that's toggled off is
+// neither enforced nor warned about.
+var CADENCE_LINK_DAYS=14, CADENCE_JOKE_PER_DAY=2;
+function cadenceOn(which){ var v=null; try{ v=localStorage.getItem('tbiCadence_'+which); }catch(e){} return v===null?true:v==='1'; }
+function setCadence(which,on){ try{ localStorage.setItem('tbiCadence_'+which, on?'1':'0'); }catch(e){} }
+// Build a reference timeline of everything already queued/posted, tagged with kind + link,
+// so we can test a candidate time against the rules. One-time read per schedule action.
+async function cadenceContext(){
+  var qr=await sb.from('post_queue').select('scheduled_at,link,image_urls,video_url,source_suggestion_id').in('status',['queued','posted','partial']);
+  var rows=qr.data||[];
+  var ids=rows.map(function(q){return q.source_suggestion_id;}).filter(function(x){return !!x;});
+  var kindBy={};
+  if(ids.length){ var kr=await sb.from('social_suggestions').select('id,kind').in('id',ids); (kr.data||[]).forEach(function(r){ kindBy[r.id]=r.kind; }); }
+  return rows.map(function(q){
+    var kind=kindBy[q.source_suggestion_id]||(q.video_url?'reel':((Array.isArray(q.image_urls)&&q.image_urls.length)?'image_post':(q.link?'story_post':'text')));
+    return { t:new Date(q.scheduled_at).getTime(), kind:kind, link:String(q.link||'').trim() };
+  });
+}
+function cadenceLinkClash(ctx, link, tMs){ if(!link) return false; var win=CADENCE_LINK_DAYS*864e5; for(var i=0;i<ctx.length;i++){ if(ctx[i].link===link && Math.abs(ctx[i].t-tMs)<win) return true; } return false; }
+function cadenceJokeDayFull(ctx, tMs){ var day=new Date(tMs).toDateString(); var n=0; for(var i=0;i<ctx.length;i++){ var m=ctx[i]; if((m.kind==='joke'||m.kind==='question') && new Date(m.t).toDateString()===day) n++; } return n>=CADENCE_JOKE_PER_DAY; }
+// Returns a human reason if scheduling this kind/link at tMs would break an ENABLED rule, else ''.
+function cadenceViolation(ctx, kind, link, tMs){
+  if(kind==='story_post' && link && cadenceOn('link') && cadenceLinkClash(ctx,link,tMs)) return 'This story link is already scheduled within '+CADENCE_LINK_DAYS+' days of that time.';
+  if((kind==='joke'||kind==='question') && cadenceOn('joke') && cadenceJokeDayFull(ctx,tMs)) return 'That day already has '+CADENCE_JOKE_PER_DAY+' jokes/questions scheduled.';
+  return '';
+}
+// Does any enabled rule apply to this item at all? (skip the extra reads if not)
+function cadenceApplies(kind, link){ return (kind==='story_post'&&!!link&&cadenceOn('link'))||((kind==='joke'||kind==='question')&&cadenceOn('joke')); }
+// Next open slot that also respects the enabled rules; {slot:iso}|{slot:null}|{blocked:true}
+async function nextOpenSlotCadence(kind, link){
+  var slots=await upcomingSlots(60);
+  if(!slots.length) return {slot:null};
+  if(!cadenceApplies(kind,link)) return {slot:slots[0]};
+  var ctx=await cadenceContext();
+  for(var i=0;i<slots.length;i++){ var tMs=new Date(slots[i]).getTime(); if(!cadenceViolation(ctx,kind,link,tMs)) return {slot:slots[i]}; }
+  return {slot:null, blocked:true};
+}
+
 // ---------- Staged drafts: compose + schedule ----------
 async function loadStaged(){
   var host=$('#sv-staged'); host.innerHTML='<div class="run-status" style="padding:10px">Loading...</div>';
@@ -1590,7 +1632,13 @@ async function loadStaged(){
   var rows=r.data||[]; STAGED_MAP={}; rows.forEach(function(it){ STAGED_MAP[it.id]=it; });
   if(!rows.length){ host.innerHTML='<div class="empty">Nothing staged. On the Feed tab, click <b>Send to Scheduling</b> on a draft.</div>'; return; }
   var slotOpts=slotOptionsHtml(await upcomingSlots(20));
-  host.innerHTML='<div class="toolbar" style="margin:0 0 12px"><button class="btn btn-gold btn-sm" id="autofill-btn" title="Schedule staged drafts into the next open slots, no repeats back-to-back">Auto-fill next slots</button><span class="run-status" id="af-status"></span></div>'+
+  host.innerHTML='<div class="toolbar" style="margin:0 0 8px"><button class="btn btn-gold btn-sm" id="autofill-btn" title="Schedule staged drafts into the next open slots, no repeats back-to-back">Auto-fill next slots</button><span class="run-status" id="af-status"></span></div>'+
+  '<div class="cadence-bar" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;margin:0 0 12px;padding:9px 12px;background:var(--bg-alt);border:1px solid var(--border);border-radius:8px;font-size:13px">'+
+    '<span style="font-weight:600;color:var(--dark)">Spacing rules</span>'+
+    '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="cad-link"> No repeat story link within 2 weeks</label>'+
+    '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="cad-joke"> Max 2 jokes/questions per day</label>'+
+    '<span class="run-status" style="color:#8a8178">Applied to <b>Next available</b> &amp; <b>Auto-fill</b>. A specific slot or time just warns.</span>'+
+  '</div>'+
   '<div class="story-card">'+rows.map(function(it){
     var isVid=!!it.video_url;
     var isImg=!isVid&&Array.isArray(it.image_urls)&&it.image_urls.length;
@@ -1601,7 +1649,7 @@ async function loadStaged(){
     if(vop){ vbits.push(vop.share_to_feed===false?'Reels tab only':'grid + Reels tab'); if(vop.cover_url) vbits.push('custom cover'); else if(vop.thumb_offset) vbits.push('cover @ '+(vop.thumb_offset/1000).toFixed(1)+'s'); if(Array.isArray(vop.collaborators)&&vop.collaborators.length) vbits.push(vop.collaborators.length+' collaborator'+(vop.collaborators.length>1?'s':'')); if(vop.location_id) vbits.push('location'); }
     var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
       :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG grid</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
-    var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x']);
+    var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x','substack']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
@@ -1632,6 +1680,9 @@ async function loadStaged(){
     await sb.from('social_suggestions').update({status:'pending'}).eq('id',row.dataset.id); row.remove(); }; });
   host.querySelectorAll('.comp .go').forEach(function(b){ b.onclick=function(e){ scheduleStaged(e.target.closest('.sugg')); }; });
   var afb=host.querySelector('#autofill-btn'); if(afb) afb.onclick=autoFillSlots;
+  var cadL=host.querySelector('#cad-link'), cadJ=host.querySelector('#cad-joke');
+  if(cadL){ cadL.checked=cadenceOn('link'); cadL.onchange=function(){ setCadence('link',cadL.checked); }; }
+  if(cadJ){ cadJ.checked=cadenceOn('joke'); cadJ.onchange=function(){ setCadence('joke',cadJ.checked); }; }
 }
 // One-click: place staged drafts into upcoming open slots under the house rules
 // (checked against the REAL timeline, queued posts included):
@@ -1649,7 +1700,7 @@ async function autoFillSlots(){
   if(!staged.length){ say('Nothing staged to fill with.'); return; }
   var slots=await upcomingSlots(Math.min(staged.length*2+4, 80));
   if(!slots.length){ say('No open slots ahead. Add posting times, or spread the queue first.','var(--red)'); return; }
-  var qRes=await sb.from('post_queue').select('id,scheduled_at,link,image_urls,video_url,channels,source_suggestion_id').eq('status','queued');
+  var qRes=await sb.from('post_queue').select('id,scheduled_at,link,image_urls,video_url,channels,source_suggestion_id').in('status',['queued','posted','partial']);
   var queued=qRes.data||[];
   var srcIds=queued.map(function(q){return q.source_suggestion_id;}).filter(function(x){return !!x;});
   var kindBy={};
@@ -1676,6 +1727,9 @@ async function autoFillSlots(){
       // hard rules
       if(L&&((prev&&prev.link===L)||(next&&next.link===L))) continue;          // same link never back-to-back
       if(k!=='story_post'&&((prev&&prev.kind===k)||(next&&next.kind===k))) continue; // non-story kinds never neighbor their own kind
+      // cadence rules (operator toggles): no same story link within 2 weeks; <=2 jokes/questions per day
+      if(L&&cadenceOn('link')){ var _cw=CADENCE_LINK_DAYS*864e5, _cc=false; for(var cli=0;cli<timeline.length;cli++){ if(timeline[cli].link===L&&Math.abs(timeline[cli].t-t)<_cw){ _cc=true; break; } } if(_cc) continue; }
+      if((k==='joke'||k==='question')&&cadenceOn('joke')){ var _jc=0; for(var jli=0;jli<timeline.length;jli++){ var _jm=timeline[jli]; if((_jm.kind==='joke'||_jm.kind==='question')&&new Date(_jm.t).toDateString()===dayKey) _jc++; } if(_jc>=CADENCE_JOKE_PER_DAY) continue; }
       var dem=(k==='image_post'&&(igDay[dayKey]||0)>=1);
       // soft preferences: vary kind vs neighbors, avoid same link twice in one day
       var score=0;
@@ -1688,7 +1742,7 @@ async function autoFillSlots(){
     if(pickIdx<0) continue;
     var it2=pool.splice(pickIdx,1)[0];
     var isVid=!!it2.video_url, isImg=!isVid&&Array.isArray(it2.image_urls)&&it2.image_urls.length;
-    var channels=isVid?['instagram','facebook']:(isImg?(demote?['facebook']:['instagram','facebook']):['facebook','threads','bluesky','x']);
+    var channels=isVid?['instagram','facebook']:(isImg?(demote?['facebook']:['instagram','facebook']):['facebook','threads','bluesky','x','substack']);
     var link=(isImg||isVid)?'':sLink(it2);
     var msg=(isImg||isVid||!link)?String(it2.content||'').trim():fbStripLink(it2.content);
     plan.push({ sugg:it2, when:slots[si], channels:channels, link:link, msg:msg, demoted:demote });
@@ -1719,10 +1773,25 @@ async function scheduleStaged(row){
   var link=(imgs.length||vid)?'':((row.querySelector('.linkfield')||{}).value||'').trim();
   var msg=(imgs.length||vid||!link)?((it.content||'').trim()):fbStripLink(it.content);
   var mode=(row.querySelector('input[name="w'+id+'"]:checked')||{}).value||'slot';
-  var when=null;
+  var kindC=it.kind||'';
+  var when=null, specific=false;
   if(mode==='now'){ when=new Date().toISOString(); }
-  else if(mode==='slot'){ var sel=(row.querySelector('.slotsel')||{}).value||'next'; when=(sel==='next')?(await nextOpenSlot()):sel; if(!when){ res.className='sched-result err'; res.textContent='No posting times set yet (add some under Posting times), or pick a time.'; return; } }
-  else { var el=row.querySelector('.when'); if(!el||!el.value){ res.className='sched-result err'; res.textContent='Pick a date and time.'; return; } var d=new Date(el.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That time is not valid.'; return; } when=d.toISOString(); }
+  else if(mode==='slot'){
+    var sel=(row.querySelector('.slotsel')||{}).value||'next';
+    if(sel==='next'){
+      var nc=await nextOpenSlotCadence(kindC, link);
+      if(nc.blocked){ res.className='sched-result err'; res.textContent='No open slot in the next 60 days keeps this within the spacing rules. Turn off a rule up top, or pick a specific time.'; return; }
+      when=nc.slot;
+      if(!when){ res.className='sched-result err'; res.textContent='No posting times set yet (add some under Posting times), or pick a time.'; return; }
+    } else { when=sel; specific=true; }
+  }
+  else { var el=row.querySelector('.when'); if(!el||!el.value){ res.className='sched-result err'; res.textContent='Pick a date and time.'; return; } var d=new Date(el.value); if(isNaN(d.getTime())){ res.className='sched-result err'; res.textContent='That time is not valid.'; return; } when=d.toISOString(); specific=true; }
+  // A specific slot/time only WARNS on a spacing-rule conflict (never blocks); off means off.
+  if(specific && cadenceApplies(kindC, link)){
+    var vctx=await cadenceContext();
+    var reason=cadenceViolation(vctx, kindC, link, new Date(when).getTime());
+    if(reason && !window.confirm(reason+'\n\nSchedule it anyway?')){ res.className='sched-result'; res.textContent='Cancelled — not scheduled.'; return; }
+  }
   btn.disabled=true; btn.textContent=(mode==='now')?'Posting...':'Scheduling...'; res.className='sched-result'; res.textContent='';
   try{
     if(mode==='now'){
