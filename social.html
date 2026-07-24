@@ -1616,7 +1616,7 @@ function cadenceViolation(ctx, kind, link, tMs){
 function cadenceApplies(kind, link){ return (kind==='story_post'&&!!link&&cadenceOn('link'))||((kind==='joke'||kind==='question')&&cadenceOn('joke')); }
 // Next open slot that also respects the enabled rules; {slot:iso}|{slot:null}|{blocked:true}
 async function nextOpenSlotCadence(kind, link){
-  var slots=await upcomingSlots(60);
+  var slots=await upcomingSlots(800);
   if(!slots.length) return {slot:null};
   if(!cadenceApplies(kind,link)) return {slot:slots[0]};
   var ctx=await cadenceContext();
@@ -1698,7 +1698,7 @@ async function autoFillSlots(){
   if(sgRes.error){ say('Error: '+sgRes.error.message,'var(--red)'); return; }
   var staged=sgRes.data||[];
   if(!staged.length){ say('Nothing staged to fill with.'); return; }
-  var slots=await upcomingSlots(Math.min(staged.length*2+4, 80));
+  var slots=await upcomingSlots(Math.min(staged.length*2+60, 600));
   if(!slots.length){ say('No open slots ahead. Add posting times, or spread the queue first.','var(--red)'); return; }
   var qRes=await sb.from('post_queue').select('id,scheduled_at,link,image_urls,video_url,channels,source_suggestion_id').in('status',['queued','posted','partial']);
   var queued=qRes.data||[];
@@ -1780,7 +1780,7 @@ async function scheduleStaged(row){
     var sel=(row.querySelector('.slotsel')||{}).value||'next';
     if(sel==='next'){
       var nc=await nextOpenSlotCadence(kindC, link);
-      if(nc.blocked){ res.className='sched-result err'; res.textContent='No open slot in the next 60 days keeps this within the spacing rules. Turn off a rule up top, or pick a specific time.'; return; }
+      if(nc.blocked){ res.className='sched-result err'; res.textContent='No open posting slot far enough out keeps this within the spacing rules. Turn off a rule up top, or pick a specific time.'; return; }
       when=nc.slot;
       if(!when){ res.className='sched-result err'; res.textContent='No posting times set yet (add some under Posting times), or pick a time.'; return; }
     } else { when=sel; specific=true; }
@@ -1953,7 +1953,7 @@ async function upcomingSlots(limit){
   var qr=await sb.from('post_queue').select('scheduled_at').eq('status','queued');
   var taken={}; (qr.data||[]).forEach(function(p){ taken[new Date(p.scheduled_at).getTime()]=1; });
   var now=Date.now(); var out=[];
-  for(var day=0; day<60 && out.length<limit; day++){
+  for(var day=0; day<120 && out.length<limit; day++){
     var base=new Date(); base.setDate(base.getDate()+day);
     var dow=base.getDay();
     var todays=slots.filter(function(s){return s.dow===dow;}).sort(function(a,b){return a.minute-b.minute;});
