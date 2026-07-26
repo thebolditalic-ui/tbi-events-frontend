@@ -620,24 +620,29 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <input type="file" id="col-file" accept="image/*" multiple hidden>
             <div class="ig-hint" id="col-count" style="margin-top:8px">No photos yet.</div>
           </div></div>
-          <div class="set-group"><h3>2 &middot; Layout</h3><div class="ig-body">
+          <div class="set-group"><h3>2 &middot; Post text</h3><div class="ig-body">
+
+            <textarea id="col-caption" placeholder="Write the Facebook post text here..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
+            <button class="btn btn-outline btn-sm" id="col-cap-copy" style="margin-top:6px">Copy text</button>
+          </div></div>
+          <div class="set-group"><h3>3 &middot; Layout</h3><div class="ig-body">
             <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="one">1 photo</button><button data-l="two_h">2 across</button><button data-l="two_v">2 stacked</button><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button><button data-l="quad">2&times;2</button></div></div>
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="col-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-hint">Drag a thumbnail onto a box to place it. Drag one box onto another in the preview to swap them.</div>
           </div></div>
-          <div class="set-group"><h3>3 &middot; Framing <span class="val" id="col-selbox">(box 1)</span></h3><div class="ig-body">
+          <div class="set-group"><h3>4 &middot; Framing <span class="val" id="col-selbox">(box 1)</span></h3><div class="ig-body">
             <div class="ig-fld">Zoom <span class="val" id="col-zoomVal">100%</span><input type="range" id="col-zoom" min="100" max="260" value="100"></div>
             <div class="ig-fld">Vertical <span class="val" id="col-posVal">center</span><input type="range" id="col-pos" min="-100" max="100" value="0"></div>
             <div class="ig-fld">Horizontal <span class="val" id="col-posxVal">center</span><input type="range" id="col-posx" min="-100" max="100" value="0"></div>
             <div class="ig-hint">Click a box in the preview to select it, then adjust its framing.</div>
           </div></div>
-          <div class="set-group"><h3>4 &middot; Divider &amp; frame</h3><div class="ig-body">
+          <div class="set-group"><h3>5 &middot; Divider &amp; frame</h3><div class="ig-body">
             <div class="ig-fld">Divider width <span class="val" id="col-gapVal">3px</span><input type="range" id="col-gap" min="0" max="40" value="3"></div>
             <div class="ig-fld">Divider color<input type="color" id="col-gapcolor" value="#ffffff" class="tb-color"></div>
             <div class="ig-toggle">Frame the outside too<label class="switch"><input type="checkbox" id="col-frame"><span class="slider-sw"></span></label></div>
             <div class="ig-hint">Default is 3px white. The outer frame uses the same width and color.</div>
           </div></div>
-                    <div class="set-group"><h3>5 &middot; Title box (optional)</h3><div class="ig-body">
+                    <div class="set-group"><h3>6 &middot; Title box (optional)</h3><div class="ig-body">
             <div class="ig-toggle">Show title box<label class="switch"><input type="checkbox" id="col-title"><span class="slider-sw"></span></label></div>
             <div class="ig-fld" style="margin-top:8px">Row 1 text<input type="text" id="col-t1" value="MONTHLY EVENTS" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-family:inherit;font-size:13px;background:var(--bg-alt)"></div>
             <div style="display:flex;gap:8px"><div class="ig-fld" style="flex:1">Font 1<select id="col-t1font" class="tb-sel"><option value="Impact">Impact (heavy)</option><option value="Arial">Bold sans</option><option value="Playfair Display">Playfair</option><option value="Georgia">Georgia</option><option value="EdsMarket">Eds Market</option></select></div><div class="ig-fld">Text 1<input type="color" id="col-t1col" value="#111111" class="tb-color"></div></div>
@@ -650,16 +655,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             <div class="ig-fld">Vertical position <span class="val" id="col-tyVal">center</span><input type="range" id="col-ty" min="0" max="100" value="50"></div>
             <div class="ig-hint">Two rows, each its own font + color. Split for a two-color band, like the Monthly Events cover.</div>
           </div></div>
-          <div class="set-group"><h3>6 &middot; Red TBI circle</h3><div class="ig-body">
+          <div class="set-group"><h3>7 &middot; Red TBI circle</h3><div class="ig-body">
             <div class="ig-toggle">Show red &ldquo;TBI&rdquo; circle<label class="switch"><input type="checkbox" id="col-tbi" checked><span class="slider-sw"></span></label></div>
             <div class="ig-fld">Corner<div class="ig-seg" id="col-tbipos"><button data-pos="tl">TL</button><button data-pos="tr" class="on">TR</button><button data-pos="bl">BL</button><button data-pos="br">BR</button></div></div>
             <div class="ig-fld">Size <span class="val" id="col-tbiscaleVal">40%</span><input type="range" id="col-tbiscale" min="40" max="220" value="40"></div>
             <div class="ig-hint">Uses the TBI icon you loaded on the Image tab if there is one, otherwise the drawn red circle.</div>
-          </div></div>
-          <div class="set-group"><h3>7 &middot; Post text</h3><div class="ig-body">
-
-            <textarea id="col-caption" placeholder="Write the Facebook post text here..." style="width:100%;min-height:90px;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;background:var(--bg-alt);resize:vertical;line-height:1.4"></textarea>
-            <button class="btn btn-outline btn-sm" id="col-cap-copy" style="margin-top:6px">Copy text</button>
           </div></div>
         </div>
       </div>
