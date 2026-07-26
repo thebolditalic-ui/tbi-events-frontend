@@ -594,7 +594,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
       </div><!-- /ig-view-custom -->
 
       <div class="ig-view" id="ig-view-collage">
-      <p class="sub" style="margin-top:4px">Three or four of your photos in a grid, dragged into place, sent to <b>Facebook</b>. Upload 3&ndash;4, drag each onto a box, frame them, add an optional title box, then Send to Scheduling.</p>
+      <p class="sub" style="margin-top:4px">One to four of your photos, dragged into place, sent to <b>Facebook</b>. Pick an <b>SF series topic</b> (optional), upload 1&ndash;4 photos, drag each onto a box, write the post text, then Send to Scheduling.</p>
       <div class="ig-grid">
         <div class="ig-stage">
           <canvas id="col-card" width="1080" height="1350" style="touch-action:none"></canvas>
@@ -606,13 +606,22 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
           <div class="run-status" id="col-status" style="width:100%;text-align:center;line-height:1.4"></div>
         </div>
         <div class="ig-ctrl">
+          <div class="set-group"><h3>SF series &middot; Topic</h3><div class="ig-body">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <input type="text" id="col-topic-q" placeholder="Search topics or category&hellip;" style="flex:1;min-width:130px;border:1px solid var(--border);border-radius:6px;padding:7px 8px;font-family:inherit;font-size:13px;background:var(--bg-alt)">
+              <span class="ig-hint" id="col-topic-prog" style="white-space:nowrap"></span>
+            </div>
+            <div id="col-topic-sel" style="margin-top:8px;font-size:12px;color:#8a8178">No topic attached.</div>
+            <div id="col-topic-list" style="max-height:270px;overflow:auto;margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt)"><div style="padding:10px;font-size:12px;color:#8a8178">Loading topics&hellip;</div></div>
+            <div class="ig-hint" style="margin-top:8px;line-height:1.5">Click a topic to attach it to this post. <b>Done</b> marks it covered so it drops out of the open list; <b>Undo</b> puts it back.</div>
+          </div></div>
           <div class="set-group"><h3>1 &middot; Photos</h3><div class="ig-body">
-            <div class="ig-drop" id="col-drop"><b>Drop 3&ndash;4 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
+            <div class="ig-drop" id="col-drop"><b>Drop 1&ndash;4 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
             <input type="file" id="col-file" accept="image/*" multiple hidden>
             <div class="ig-hint" id="col-count" style="margin-top:8px">No photos yet.</div>
           </div></div>
           <div class="set-group"><h3>2 &middot; Layout</h3><div class="ig-body">
-            <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button><button data-l="quad">2&times;2</button></div></div>
+            <div class="ig-fld">Arrangement<div class="ig-seg" id="col-layout" style="flex-wrap:wrap"><button data-l="one">1 photo</button><button data-l="two_h">2 across</button><button data-l="two_v">2 stacked</button><button data-l="t1b2" class="on">Top 1 &middot; 2</button><button data-l="t2b1">2 &middot; Bottom 1</button><button data-l="l1r2">Left 1 &middot; 2</button><button data-l="cols3">3 across</button><button data-l="rows3">3 stacked</button><button data-l="quad">2&times;2</button></div></div>
             <div class="ig-fld">Aspect ratio<div class="ig-seg" id="col-aspect"><button data-w="1080" data-h="1350" class="on">4:5</button><button data-w="1080" data-h="1080">1:1</button><button data-w="1080" data-h="566">1.91:1</button><button data-w="1080" data-h="1920">9:16</button></div></div>
             <div class="ig-hint">Drag a thumbnail onto a box to place it. Drag one box onto another in the preview to swap them.</div>
           </div></div>
@@ -1660,7 +1669,8 @@ async function loadStaged(){
     if(vop){ vbits.push(vop.share_to_feed===false?'Reels tab only':'grid + Reels tab'); if(vop.cover_url) vbits.push('custom cover'); else if(vop.thumb_offset) vbits.push('cover @ '+(vop.thumb_offset/1000).toFixed(1)+'s'); if(Array.isArray(vop.collaborators)&&vop.collaborators.length) vbits.push(vop.collaborators.length+' collaborator'+(vop.collaborators.length>1?'s':'')); if(vop.location_id) vbits.push('location'); }
     var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
       :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG grid</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
-    var toggles=(isVid||isImg)?chTogglesHtml(['instagram','facebook'],IMG_CH):chTogglesHtml(['facebook','threads','bluesky','x','substack']);
+    var _cd=(it.options&&Array.isArray(it.options.channels_default))?it.options.channels_default:null;
+    var toggles=(isVid||isImg)?chTogglesHtml(_cd||['instagram','facebook'],IMG_CH):chTogglesHtml(_cd||['facebook','threads','bluesky','x','substack']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
@@ -2741,7 +2751,7 @@ document.querySelectorAll('.ig-viewbtn').forEach(function(b){ b.onclick=function
 
 // Upload rendered JPEG blob(s) to ig-rendered/sched-* (purge-exempt), then stage a
 // social_suggestions row for the unified Schedule tab (Staged drafts).
-async function igSendToScheduling(blobs, caption){
+async function igSendToScheduling(blobs, caption, opts){
   var id=crypto.randomUUID(); var urls=[];
   for(var i=0;i<blobs.length;i++){
     var path='sched-'+id+'-'+i+'.jpg';
@@ -2749,7 +2759,10 @@ async function igSendToScheduling(blobs, caption){
     if(up.error) throw up.error;
     urls.push(sb.storage.from('ig-rendered').getPublicUrl(path).data.publicUrl);
   }
-  var ins=await sb.from('social_suggestions').insert({ kind:'image_post', angle:'Image card', content:caption||'', image_urls:urls, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() });
+  var _o=opts||{};
+  var _row={ kind:'image_post', angle:_o.angle||'Image card', content:caption||'', image_urls:urls, status:'staged', expires_at:new Date(Date.now()+30*864e5).toISOString() };
+  if(_o.options) _row.options=_o.options;
+  var ins=await sb.from('social_suggestions').insert(_row);
   if(ins.error) throw new Error(ins.error.message);
   return urls.length;
 }
@@ -2772,6 +2785,9 @@ function colBoot(){
   function rects(){
     var W=COL.W,H=COL.H,g=COL.gap,m=COL.frame?g:0,x0=m,y0=m,iw=W-2*m,ih=H-2*m,L=COL.layout;
     function R(x,y,w,h){ return {x:x,y:y,w:w,h:h}; }
+    if(L==='one'){ return [R(x0,y0,iw,ih)]; }
+    if(L==='two_h'){ var hw=Math.round((iw-g)/2); return [R(x0,y0,hw,ih),R(x0+hw+g,y0,iw-hw-g,ih)]; }
+    if(L==='two_v'){ var hh=Math.round((ih-g)/2); return [R(x0,y0,iw,hh),R(x0,y0+hh+g,iw,ih-hh-g)]; }
     if(L==='t2b1'){ var th=Math.round((ih-g)*0.5),bw=Math.round((iw-g)/2); return [R(x0,y0,bw,th),R(x0+bw+g,y0,iw-bw-g,th),R(x0,y0+th+g,iw,ih-th-g)]; }
     if(L==='l1r2'){ var lw=Math.round((iw-g)*0.56),rh=Math.round((ih-g)/2); return [R(x0,y0,lw,ih),R(x0+lw+g,y0,iw-lw-g,rh),R(x0+lw+g,y0+rh+g,iw-lw-g,ih-rh-g)]; }
     if(L==='cols3'){ var cw=Math.round((iw-2*g)/3); return [R(x0,y0,cw,ih),R(x0+cw+g,y0,cw,ih),R(x0+2*(cw+g),y0,iw-2*(cw+g),ih)]; }
@@ -2826,7 +2842,10 @@ function colBoot(){
   var drop=$('col-drop'),fi=$('col-file');
   if(drop){ drop.onclick=function(){ fi&&fi.click(); }; drop.addEventListener('dragover',function(e){ e.preventDefault(); drop.classList.add('hot'); }); drop.addEventListener('dragleave',function(){ drop.classList.remove('hot'); }); drop.addEventListener('drop',function(e){ e.preventDefault(); drop.classList.remove('hot'); if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length) addFiles(e.dataTransfer.files); }); }
   if(fi) fi.onchange=function(e){ addFiles(e.target.files); e.target.value=''; };
-  document.querySelectorAll('#col-layout button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-layout button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.layout=b.dataset.l; render(); }; });
+  document.querySelectorAll('#col-layout button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-layout button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.layout=b.dataset.l; ensureBoxes();
+    // fill any box the new arrangement opened up with a photo that isn't placed yet
+    var n=rects().length; for(var i=0;i<n;i++){ if(COL.boxes[i]&&COL.boxes[i].photoIdx!=null) continue; for(var p=0;p<COL.photos.length;p++){ if(!COL.photos[p]||!COL.photos[p].img) continue; var used=false; for(var k=0;k<n;k++){ if(COL.boxes[k]&&COL.boxes[k].photoIdx===p){ used=true; break; } } if(!used){ COL.boxes[i]={photoIdx:p,posX:0,posY:0,zoom:1}; break; } } }
+    render(); thumbs(); syncFraming(); }; });
   document.querySelectorAll('#col-aspect button').forEach(function(b){ b.onclick=function(){ document.querySelectorAll('#col-aspect button').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); COL.W=+b.dataset.w; COL.H=+b.dataset.h; render(); }; });
   var z=$('col-zoom'); if(z) z.oninput=function(e){ var bx=COL.boxes[COL.sel]; if(bx) bx.zoom=e.target.value/100; $('col-zoomVal').textContent=e.target.value+'%'; render(); };
   var pv=$('col-pos'); if(pv) pv.oninput=function(e){ var bx=COL.boxes[COL.sel]; if(bx) bx.posY=e.target.value/100; var v=+e.target.value; $('col-posVal').textContent=v===0?'center':(v<0?'higher':'lower'); render(); };
@@ -2854,7 +2873,54 @@ function colBoot(){
 
   var cpc=$('col-cap-copy'); if(cpc) cpc.onclick=function(){ var ta=$('col-caption'); navigator.clipboard.writeText(ta?ta.value:''); cpc.textContent='Copied '+CK; setTimeout(function(){ cpc.textContent='Copy text'; },1400); };
   var ex=$('col-export'); if(ex) ex.onclick=function(){ if(!allPlaced()) return; var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); oc.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tbi-collage.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
-  var snd=$('col-send'); if(snd) snd.onclick=async function(){ var stt=$('col-status'); if(!allPlaced()){ stt.innerHTML='<span style="color:var(--red)">Place a photo in all three boxes first.</span>'; return; } snd.disabled=true; snd.textContent='Sending...'; stt.textContent='Rendering + uploading...'; try{ var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); var ta=$('col-caption'); await igSendToScheduling([blob], ta?ta.value:''); stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; open the <b>Schedule</b> tab (Staged), pick <b>Facebook</b>, and post or set a time.'; snd.textContent='Sent '+CK; setTimeout(function(){ snd.textContent='Send to Scheduling'; snd.disabled=false; },2600); }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; snd.textContent='Send to Scheduling'; snd.disabled=false; } };
+  /* ---- SF series topic picker (sf_topics) ---- */
+  var TOPICS=[], TOPIC=null, TDONE=false;
+  function tSelHtml(){ var el=$('col-topic-sel'); if(!el) return;
+    el.innerHTML = TOPIC ? ('Attached: <b style="color:var(--dark)">'+esc(TOPIC.title)+'</b> <a href="#" id="col-topic-clr" style="color:var(--blue);margin-left:6px">clear</a>') : 'No topic attached.';
+    var c=$('col-topic-clr'); if(c) c.onclick=function(e){ e.preventDefault(); TOPIC=null; tSelHtml(); tRender(); }; }
+  function tRows(list,q){
+    var byCat={},order=[];
+    list.forEach(function(t){
+      if(q && (t.title||'').toLowerCase().indexOf(q)<0 && (t.category||'').toLowerCase().indexOf(q)<0) return;
+      var c=t.category||'Other'; if(!byCat[c]){ byCat[c]=[]; order.push(c); } byCat[c].push(t); });
+    if(!order.length) return '';
+    return order.map(function(c){
+      return '<div style="padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#a0968a;background:rgba(0,0,0,.03)">'+esc(c)+'</div>'+
+        byCat[c].map(function(t){
+          var on=(TOPIC&&TOPIC.id===t.id);
+          return '<div class="col-trow" data-id="'+t.id+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--border);cursor:pointer;'+(on?'background:rgba(199,154,58,.18)':'')+'">'+
+            '<span style="flex:1;font-size:13px;'+(t.covered?'color:#a0968a':'color:var(--dark)')+'">'+esc(t.title)+'</span>'+
+            '<button class="btn btn-outline btn-sm col-tdone" data-id="'+t.id+'" style="padding:2px 9px;font-size:11px">'+(t.covered?'Undo':'Done')+'</button>'+
+          '</div>'; }).join('');
+    }).join('');
+  }
+  function tRender(){
+    var host=$('col-topic-list'); if(!host) return;
+    var qEl=$('col-topic-q'), q=((qEl&&qEl.value)||'').trim().toLowerCase();
+    var open=TOPICS.filter(function(t){ return !t.covered; }), done=TOPICS.filter(function(t){ return t.covered; });
+    var pr=$('col-topic-prog'); if(pr) pr.textContent=done.length+' of '+TOPICS.length+' covered';
+    var oh=tRows(open,q);
+    host.innerHTML=(oh||'<div style="padding:10px;font-size:12px;color:#8a8178">No open topics match.</div>')+
+      (done.length?('<div id="col-tdh" style="padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;border-top:1px solid var(--border);background:rgba(0,0,0,.05)">'+(TDONE?'▾':'▸')+' Covered ('+done.length+')</div>'+(TDONE?(tRows(done,q)||'<div style="padding:10px;font-size:12px;color:#8a8178">No covered topics match.</div>'):'')):'');
+    var dh=$('col-tdh'); if(dh) dh.onclick=function(){ TDONE=!TDONE; tRender(); };
+    host.querySelectorAll('.col-trow').forEach(function(r){ r.onclick=function(){ var t=TOPICS.filter(function(x){ return x.id===r.dataset.id; })[0]; if(!t) return; TOPIC=(TOPIC&&TOPIC.id===t.id)?null:t; tSelHtml(); tRender(); }; });
+    host.querySelectorAll('.col-tdone').forEach(function(b){ b.onclick=async function(e){ e.stopPropagation();
+      var t=TOPICS.filter(function(x){ return x.id===b.dataset.id; })[0]; if(!t) return;
+      var nv=!t.covered; b.disabled=true;
+      var u=await sb.from('sf_topics').update({covered:nv,covered_at:nv?new Date().toISOString():null}).eq('id',t.id);
+      b.disabled=false; if(u.error){ alert('Could not update: '+u.error.message); return; }
+      t.covered=nv; if(nv&&TOPIC&&TOPIC.id===t.id){ TOPIC=null; tSelHtml(); } tRender(); }; });
+  }
+  async function tLoad(){
+    var r=await sb.from('sf_topics').select('id,title,category,covered').order('sort',{ascending:true});
+    var host=$('col-topic-list');
+    if(r.error){ if(host) host.innerHTML='<div style="padding:10px;font-size:12px;color:var(--red)">'+esc(r.error.message)+'</div>'; return; }
+    TOPICS=r.data||[]; tSelHtml(); tRender();
+  }
+  var tq=$('col-topic-q'); if(tq) tq.oninput=function(){ tRender(); };
+  tLoad();
+
+  var snd=$('col-send'); if(snd) snd.onclick=async function(){ var stt=$('col-status'); if(!allPlaced()){ stt.innerHTML='<span style="color:var(--red)">Place a photo in every box first (or switch the arrangement).</span>'; return; } snd.disabled=true; snd.textContent='Sending...'; stt.textContent='Rendering + uploading...'; try{ var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); var blob=await new Promise(function(res){ oc.toBlob(res,'image/jpeg',0.92); }); var ta=$('col-caption'); var _t=TOPIC; var _opts={ angle:_t?('SF series · '+_t.title):'Collage', options:{ collage:true, channels_default:['facebook'], topic_id:_t?_t.id:null, topic_title:_t?_t.title:null } }; await igSendToScheduling([blob], ta?ta.value:'', _opts); stt.innerHTML='<span style="color:var(--green)">Sent to Scheduling '+CK+'</span> &middot; it lands in <b>Schedule &rsaquo; Staged</b> with <b>Facebook</b> already selected.'+(_t?(' <button class="btn btn-outline btn-sm" id="col-mark" style="margin-left:6px;padding:2px 9px;font-size:11px">Mark &ldquo;'+esc(_t.title)+'&rdquo; covered</button>'):''); var mk=$('col-mark'); if(mk) mk.onclick=async function(){ mk.disabled=true; var u=await sb.from('sf_topics').update({covered:true,covered_at:new Date().toISOString()}).eq('id',_t.id); if(u.error){ mk.disabled=false; alert('Could not update: '+u.error.message); return; } for(var i=0;i<TOPICS.length;i++) if(TOPICS[i].id===_t.id) TOPICS[i].covered=true; if(TOPIC&&TOPIC.id===_t.id){ TOPIC=null; tSelHtml(); } tRender(); mk.textContent='Marked covered '+CK; }; snd.textContent='Sent '+CK; setTimeout(function(){ snd.textContent='Send to Scheduling'; snd.disabled=false; },2600); }catch(e){ stt.innerHTML='<span style="color:var(--red)">'+esc(String(e&&e.message?e.message:e))+'</span>'; snd.textContent='Send to Scheduling'; snd.disabled=false; } };
   render(); thumbs(); syncFraming();
 }
 
