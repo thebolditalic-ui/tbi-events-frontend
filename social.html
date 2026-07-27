@@ -613,7 +613,7 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
             </div>
             <div id="col-topic-sel" style="margin-top:8px;font-size:12px;color:#8a8178">No topic attached.</div>
             <div id="col-topic-list" style="max-height:270px;overflow:auto;margin-top:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt)"><div style="padding:10px;font-size:12px;color:#8a8178">Loading topics&hellip;</div></div>
-            <div class="ig-hint" style="margin-top:8px;line-height:1.5">Click a topic to attach it to this post. <b>Done</b> marks it covered so it drops out of the open list; <b>Undo</b> puts it back.</div>
+            <div class="ig-hint" style="margin-top:8px;line-height:1.5">Click a topic to attach it. A green dot means a written description is stored; it drops into the post text automatically when the box is empty, or use <b>Use description</b> to replace what's there. <b>Done</b> marks it covered; <b>Undo</b> puts it back.</div>
           </div></div>
           <div class="set-group"><h3>1 &middot; Photos</h3><div class="ig-body">
             <div class="ig-drop" id="col-drop"><b>Drop 1&ndash;4 photos</b> or click to choose<br><span style="font-size:10px">then drag each thumbnail onto a box in the preview</span></div>
@@ -2875,8 +2875,13 @@ function colBoot(){
   var ex=$('col-export'); if(ex) ex.onclick=function(){ if(!allPlaced()) return; var oc=document.createElement('canvas'); oc.width=COL.W; oc.height=COL.H; paint(oc.getContext('2d'),COL.W,COL.H,true); oc.toBlob(function(blob){ var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tbi-collage.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); },'image/png'); };
   /* ---- SF series topic picker (sf_topics) ---- */
   var TOPICS=[], TOPIC=null, TDONE=false;
+  function tUseBody(){ var ta=$('col-caption'); if(!ta||!TOPIC||!TOPIC.body) return; ta.value=TOPIC.body; try{ ta.dispatchEvent(new Event('input',{bubbles:true})); }catch(e){} }
   function tSelHtml(){ var el=$('col-topic-sel'); if(!el) return;
-    el.innerHTML = TOPIC ? ('Attached: <b style="color:var(--dark)">'+esc(TOPIC.title)+'</b> <a href="#" id="col-topic-clr" style="color:var(--blue);margin-left:6px">clear</a>') : 'No topic attached.';
+    if(!TOPIC){ el.innerHTML='No topic attached.'; return; }
+    el.innerHTML='Attached: <b style="color:var(--dark)">'+esc(TOPIC.title)+'</b>'+
+      (TOPIC.body?' <button class="btn btn-outline btn-sm" id="col-topic-use" style="margin-left:6px;padding:2px 9px;font-size:11px">Use description</button>':' <span style="color:#a0968a;margin-left:6px">no description yet</span>')+
+      ' <a href="#" id="col-topic-clr" style="color:var(--blue);margin-left:6px">clear</a>';
+    var u=$('col-topic-use'); if(u) u.onclick=function(){ tUseBody(); u.textContent='Inserted '+CK; setTimeout(function(){ u.textContent='Use description'; },1400); };
     var c=$('col-topic-clr'); if(c) c.onclick=function(e){ e.preventDefault(); TOPIC=null; tSelHtml(); tRender(); }; }
   function tRows(list,q){
     var byCat={},order=[];
@@ -2889,7 +2894,7 @@ function colBoot(){
         byCat[c].map(function(t){
           var on=(TOPIC&&TOPIC.id===t.id);
           return '<div class="col-trow" data-id="'+t.id+'" style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--border);cursor:pointer;'+(on?'background:rgba(199,154,58,.18)':'')+'">'+
-            '<span style="flex:1;font-size:13px;'+(t.covered?'color:#a0968a':'color:var(--dark)')+'">'+esc(t.title)+'</span>'+
+            '<span style="flex:1;font-size:13px;'+(t.covered?'color:#a0968a':'color:var(--dark)')+'">'+esc(t.title)+(t.body?' <span title="has a written description" style="color:var(--green);font-size:11px">&#9679;</span>':'')+'</span>'+
             '<button class="btn btn-outline btn-sm col-tdone" data-id="'+t.id+'" style="padding:2px 9px;font-size:11px">'+(t.covered?'Undo':'Done')+'</button>'+
           '</div>'; }).join('');
     }).join('');
@@ -2903,7 +2908,7 @@ function colBoot(){
     host.innerHTML=(oh||'<div style="padding:10px;font-size:12px;color:#8a8178">No open topics match.</div>')+
       (done.length?('<div id="col-tdh" style="padding:8px 10px;font-size:11px;font-weight:700;cursor:pointer;border-top:1px solid var(--border);background:rgba(0,0,0,.05)">'+(TDONE?'▾':'▸')+' Covered ('+done.length+')</div>'+(TDONE?(tRows(done,q)||'<div style="padding:10px;font-size:12px;color:#8a8178">No covered topics match.</div>'):'')):'');
     var dh=$('col-tdh'); if(dh) dh.onclick=function(){ TDONE=!TDONE; tRender(); };
-    host.querySelectorAll('.col-trow').forEach(function(r){ r.onclick=function(){ var t=TOPICS.filter(function(x){ return x.id===r.dataset.id; })[0]; if(!t) return; TOPIC=(TOPIC&&TOPIC.id===t.id)?null:t; tSelHtml(); tRender(); }; });
+    host.querySelectorAll('.col-trow').forEach(function(r){ r.onclick=function(){ var t=TOPICS.filter(function(x){ return x.id===r.dataset.id; })[0]; if(!t) return; TOPIC=(TOPIC&&TOPIC.id===t.id)?null:t; if(TOPIC&&TOPIC.body){ var ta=$('col-caption'); if(ta&&!(ta.value||'').trim()) tUseBody(); } tSelHtml(); tRender(); }; });
     host.querySelectorAll('.col-tdone').forEach(function(b){ b.onclick=async function(e){ e.stopPropagation();
       var t=TOPICS.filter(function(x){ return x.id===b.dataset.id; })[0]; if(!t) return;
       var nv=!t.covered; b.disabled=true;
@@ -2912,7 +2917,7 @@ function colBoot(){
       t.covered=nv; if(nv&&TOPIC&&TOPIC.id===t.id){ TOPIC=null; tSelHtml(); } tRender(); }; });
   }
   async function tLoad(){
-    var r=await sb.from('sf_topics').select('id,title,category,covered').order('sort',{ascending:true});
+    var r=await sb.from('sf_topics').select('id,title,category,covered,body').order('sort',{ascending:true});
     var host=$('col-topic-list');
     if(r.error){ if(host) host.innerHTML='<div style="padding:10px;font-size:12px;color:var(--red)">'+esc(r.error.message)+'</div>'; return; }
     TOPICS=r.data||[]; tSelHtml(); tRender();
