@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
-        body: JSON.stringify({ invited_count: c, page_url: (q.page || null), post_ref: (q.ref || null), note: 'bookmarklet' })
+        body: JSON.stringify({ invited_count: c, page_url: (q.page || null), post_ref: (q.ref || null), post_text: (q.t ? String(q.t).slice(0, 300) : null), note: 'bookmarklet' })
       });
     } catch (e) { /* swallow; still redirect so the user is never stranded */ }
   }
