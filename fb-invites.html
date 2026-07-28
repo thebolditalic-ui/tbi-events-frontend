@@ -257,7 +257,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     // ---------------- facebook invites ----------------
   var $=function(id){return document.getElementById(id);};
   function esc(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-  function fbLabel(ref){ if(!ref) return '—'; if(/facebook\.com/i.test(ref)){ var m=ref.match(/\/posts\/(pfbid[A-Za-z0-9]+|[A-Za-z0-9]+)/)||ref.match(/permalink\/([0-9]+)/)||ref.match(/story_fbid=?([0-9]+)/)||ref.match(/\/(pfbid[A-Za-z0-9]+)/); if(m) return 'Post · '+m[1].slice(0,16)+'…'; return 'Facebook post'; } return ref.length>44?ref.slice(0,44)+'…':ref; }
+  function fbLabel(ref){ if(!ref) return '—'; if(/facebook\.com/i.test(ref)){ var m=ref.match(/\/posts\/(pfbid[A-Za-z0-9]+|[A-Za-z0-9]+)/)||ref.match(/permalink\/([0-9]+)/)||ref.match(/story_fbid=?([0-9]+)/)||ref.match(/\/(pfbid[A-Za-z0-9]+)/); return 'Facebook post'; } return ref.length>44?ref.slice(0,44)+'…':ref; }
   var FB={};
   FB.init=function(){
     try{ var bm=$('fbinv-bm'); if(bm){ bm.setAttribute('href','javascript:'+encodeURIComponent($('fbinv-src').value)); bm.onclick=function(){return false;}; } }catch(e){}
