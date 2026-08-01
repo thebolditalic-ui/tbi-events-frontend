@@ -359,23 +359,39 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     rows.forEach(function(r){
       r._pinned = (r.priority != null) &&
                   (r.priority_set_at ? (now - new Date(r.priority_set_at).getTime()) < staleMs : true);
+      // A post counts as audited while its probe is still inside the same window
+      // priorities use. An old probe describes a list that has since moved on.
+      r._audited = !!r.probed_at && (now - new Date(r.probed_at).getTime()) < staleMs;
     });
-    // pinned first (by priority), then cheapest-with-headroom, then the rest
+    // Audited posts first: the probe is the only measurement of what is actually
+    // still invitable, so it outranks the estimate (Left) every time. Within the
+    // audited group, most fresh Invite buttons wins, then the shallowest dead band.
     rows.sort(function(a,b){
       if (a._pinned !== b._pinned) return a._pinned ? -1 : 1;
       if (a._pinned && b._pinned) return (a.priority||99) - (b.priority||99);
       if (a.mining_enabled !== b.mining_enabled) return a.mining_enabled ? -1 : 1;
+      if (a._audited !== b._audited) return a._audited ? -1 : 1;
+      if (a._audited && b._audited) {
+        if ((b.invites_seen||0) !== (a.invites_seen||0)) return (b.invites_seen||0) - (a.invites_seen||0);
+        return (a.dead_band==null?1e9:a.dead_band) - (b.dead_band==null?1e9:b.dead_band);
+      }
       return (b.headroom||0) - (a.headroom||0);
     });
 
     var anyActivePin = rows.some(function(r){ return r._pinned; });
+    var auditedCount = rows.filter(function(r){ return r._audited; }).length;
 
     var h = '';
     h += '<div style="font:500 12px system-ui;color:#8a8178;margin:2px 0 8px">'
        + (anyActivePin
           ? 'A priority is set, so runs follow it until it expires.'
           : 'No active priority. Runs pick on their own, favouring recent posts with room left.')
-       + ' Priorities expire after ' + MINE_STALE + ' days.</div>';
+       + ' Priorities expire after ' + MINE_STALE + ' days.'
+       + (auditedCount
+          ? ' <span style="color:#1b6b2f">' + auditedCount + ' post' + (auditedCount==1?'':'s')
+            + ' audited in the last ' + MINE_STALE + ' days, listed first, best target at the top.</span>'
+          : ' No post has been audited recently, so this is ordered by room left, which is only an estimate.')
+       + '</div>';
 
     h += '<table style="width:100%;border-collapse:collapse;font:400 13px system-ui">';
     h += '<tr style="text-align:left;color:#8a8178;font-size:12px">'
@@ -389,13 +405,23 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
        + '<th style="padding:4px 6px">Last</th>'
        + '<th style="padding:4px 6px">Mining</th></tr>';
 
+    var dividerDone = false;
     rows.forEach(function(r){
+      if (!dividerDone && auditedCount && !r._audited) {
+        dividerDone = true;
+        h += '<tr><td colspan="9" style="padding:10px 6px 4px;font:500 11px system-ui;'
+          +  'color:#8a8178;letter-spacing:.04em;text-transform:uppercase;'
+          +  'border-top:2px solid #e0d6c6">Not audited recently &#183; figures below are estimates</td></tr>';
+      }
       var name = (r.message || '(photo only)').slice(0,52);
       var link = r.permalink ? '<a href="'+r.permalink+'" target="_blank" rel="noopener">'+esc(name)+'</a>' : esc(name);
       var dim  = r.mining_enabled ? '' : 'opacity:.45;';
       var pin  = r._pinned ? '<span title="Priority '+r.priority+', set '+mineFmtAgo(r.priority_set_at)+'" style="color:#a06800">&#9733;</span> ' : '';
+      var audit = r._audited
+        ? '<div style="font:400 11px system-ui;color:#1b6b2f;margin-top:2px">&#10003; '+mineProbeAge(r)+'</div>'
+        : '';
       h += '<tr style="border-top:1px solid #eee6dc;'+dim+'">'
-        +  '<td style="padding:6px">'+pin+link+'</td>'
+        +  '<td style="padding:6px">'+pin+link+audit+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.invited_total||0)+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.headroom||0)+'</td>'
         +  '<td style="padding:6px;text-align:right;'+mineCostClass(r.rows_per_invite)+'">'+(r.rows_per_invite==null?'&ndash;':r.rows_per_invite)+'</td>'
