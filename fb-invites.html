@@ -232,12 +232,15 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <p class="section-sub">Invite people who reacted to a post to follow The Bold Italic. Drag the button to your bookmarks bar, then on a Facebook post's reactions list, click it. It invites up to 100 at a time (with a pause partway through), only clicks exact "Invite" buttons, skips Invited and Following, and logs each run below. Facebook caps invites near 500/day, so keep it to a few runs a day.</p>
     <details class="dl-install"><summary>Bookmarklet &middot; install the invite button</summary><div class="dl-install-body"><b>Install once:</b> drag this to your bookmarks bar &rarr; <a class="dl-bm" id="fbinv-bm" href="#" onclick="return false">&#128257; TBI Invite (100)</a>
       <div class="dl-hint">Then open a Facebook post, click its reaction count to open the "People who reacted" list (pick a reaction tab if you like), and click <b>TBI Invite</b>. Keep that tab open and in front while it runs.</div></div></details>
-    <div class="dl-bar" style="margin-top:18px"><b>Post mining</b><div style="display:flex;gap:10px;align-items:center">
-      <label style="font:500 12px system-ui;color:#8a8178">autopilot after
-        <input id="fbmine-stale" type="number" min="1" max="30" style="width:46px;padding:2px 4px;margin:0 4px" title="Days after which a priority expires and Claude picks freely">
-      days</label>
-      <button class="btn btn-sm" id="fbmine-refresh">&#8635; Refresh</button></div></div>
-    <div id="fbmine" style="margin-top:6px"></div>
+    <details class="dl-install" id="fbmine-wrap" style="margin-top:18px">
+      <summary>Post mining <span id="fbmine-sum" style="font-weight:400;color:#8a8178"></span></summary>
+      <div class="dl-bar" style="margin-top:10px"><b style="font-weight:400;color:#8a8178;font-size:12px">Audited posts first, best target at the top</b><div style="display:flex;gap:10px;align-items:center">
+        <label style="font:500 12px system-ui;color:#8a8178">autopilot after
+          <input id="fbmine-stale" type="number" min="1" max="30" style="width:46px;padding:2px 4px;margin:0 4px" title="Days after which a priority expires and Claude picks freely">
+        days</label>
+        <button class="btn btn-sm" id="fbmine-refresh">&#8635; Refresh</button></div></div>
+      <div id="fbmine" style="margin-top:6px"></div>
+    </details>
 
     <div class="dl-bar"><b>Run log</b><div style="display:flex;gap:10px;align-items:center"><button class="btn btn-sm" id="fbinv-refresh">&#8635; Refresh</button></div></div>
     <div id="fbinv-log" style="margin-top:6px"></div>
@@ -389,6 +392,15 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
     var anyActivePin = rows.some(function(r){ return r._pinned; });
     var auditedCount = rows.filter(function(r){ return r._audited; }).length;
+
+    // Worth reading with the panel shut, so put the headline numbers in the summary.
+    var sum = $('fbmine-sum');
+    if (sum) {
+      var avail = rows.reduce(function(n,r){ return n + (r._audited ? (r.invites_seen||0) : 0); }, 0);
+      var pinned = rows.filter(function(r){ return r._pinned; })[0];
+      sum.innerHTML = '&middot; ' + (avail ? avail.toLocaleString() + ' invitable across ' + auditedCount + ' audited post' + (auditedCount==1?'':'s') : 'nothing audited yet')
+                    + (pinned ? ' &middot; <span style="color:#a06800">&#9733; ' + esc((pinned.message||'this post').slice(0,28)) + ' is first pick</span>' : '');
+    }
 
     var h = '';
     h += '<div style="font:500 12px system-ui;color:#8a8178;margin:2px 0 8px">'
