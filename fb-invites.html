@@ -255,7 +255,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   var $bt=document.getElementById('login-btn'),$er=document.getElementById('login-error');
   var $out=document.getElementById('logout-btn'),$ue=document.getElementById('user-email');
   var started=false;
-  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; if(!started){ started=true; FB.init(); } }
+  function showAdmin(u){ $ls.style.display='none'; $app.style.display='block'; $ue.textContent=(u&&u.email)||''; if(!started){ started=true; FB.init(); mineLoad(); } }
   async function checkSession(){ var s=await sb.auth.getSession(); if(s.data&&s.data.session) showAdmin(s.data.session.user); }
   $bt.addEventListener('click', async function(){ $er.style.display='none'; var e=$em.value.trim(),p=$pw.value; if(!e||!p){ $er.textContent='Enter email and password'; $er.style.display='block'; return; } $bt.textContent='Signing in...'; $bt.disabled=true; var r=await sb.auth.signInWithPassword({email:e,password:p}); $bt.textContent='Sign In'; $bt.disabled=false; if(r.error){ $er.textContent=r.error.message; $er.style.display='block'; return; } showAdmin(r.data.user); });
   $pw.addEventListener('keydown', function(ev){ if(ev.key==='Enter') $bt.click(); });
@@ -298,18 +298,6 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   };
   
   checkSession();
-})();
-
-  /* ---------- Post mining panel ---------------------------------------
-     Why this exists: the tool kept re-mining the Castro Theatre post. Newly
-     invitable people appear BELOW everyone already invited, so each further
-     run has to page through more rows to reach them. That post reached 1,370
-     rows for 64 invites (21:1) and once 1,510 rows for 18 (84:1), while a
-     6,848-reaction Boudin post sat at 3:1 with 6,768 reactors untouched.
-     "Rows per invite" is the number that exposes this, so it is the column
-     the table sorts your attention by.                                    */
-  var MINE_STALE = 4;
-
   function mineFmtAgo(ts){
     if(!ts) return 'never';
     var d = Math.floor((Date.now() - new Date(ts).getTime())/86400000);
@@ -344,8 +332,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   }
 
   async function mineLoad(){
-    var el = $('fbmine'); if(!el) return;
-    try { await mineRender(el); }
+    var el = null;
+    try { el = $('fbmine'); if(!el) return; await mineRender(el); }
     catch(e){ el.innerHTML = '<div style="color:#b3261e;padding:8px 0">Post mining failed to load: '+(e&&e.message?e.message:e)+'</div>';
              console.error('mineLoad', e); }
   }
@@ -459,9 +447,19 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       await sb.from('fb_invite_settings').update({priority_stale_days:v, updated_at:new Date().toISOString()}).eq('id',1);
       mineLoad();
     };
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mineLoad);
-    else mineLoad();
   })();
+})();
+
+  /* ---------- Post mining panel ---------------------------------------
+     Why this exists: the tool kept re-mining the Castro Theatre post. Newly
+     invitable people appear BELOW everyone already invited, so each further
+     run has to page through more rows to reach them. That post reached 1,370
+     rows for 64 invites (21:1) and once 1,510 rows for 18 (84:1), while a
+     6,848-reaction Boudin post sat at 3:1 with 6,768 reactors untouched.
+     "Rows per invite" is the number that exposes this, so it is the column
+     the table sorts your attention by.                                    */
+  var MINE_STALE = 4;
+
 
 </script>
 </body>
