@@ -345,13 +345,24 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 
   async function mineLoad(){
     var el = $('fbmine'); if(!el) return;
+    try { await mineRender(el); }
+    catch(e){ el.innerHTML = '<div style="color:#b3261e;padding:8px 0">Post mining failed to load: '+(e&&e.message?e.message:e)+'</div>';
+             console.error('mineLoad', e); }
+  }
+  async function mineRender(el){
     el.innerHTML = '<div style="color:#8a8178;padding:12px 0">Loading&#8230;</div>';
 
-    var st = await sb.from('fb_invite_settings').select('priority_stale_days').eq('id',1).maybeSingle();
-    if (st.data && st.data.priority_stale_days) MINE_STALE = st.data.priority_stale_days;
+    // Settings are a nicety; never let them stop the table rendering.
+    try {
+      var st = await sb.from('fb_invite_settings').select('priority_stale_days').eq('id',1).limit(1);
+      if (!st.error && st.data && st.data[0] && st.data[0].priority_stale_days)
+        MINE_STALE = st.data[0].priority_stale_days;
+    } catch(e){}
     var si = $('fbmine-stale'); if (si) si.value = MINE_STALE;
 
-    var q = await sb.from('fb_invite_post_stats').select('*');
+    var q;
+    try { q = await sb.from('fb_invite_post_stats').select('*'); }
+    catch(e){ el.innerHTML = '<div style="color:#b3261e">Could not load: '+e.message+'</div>'; return; }
     if (q.error){ el.innerHTML = '<div style="color:#b3261e">Could not load: '+q.error.message+'</div>'; return; }
     var rows = q.data || [];
     if (!rows.length){ el.innerHTML = '<div style="color:#8a8178;padding:12px 0">No posts mined yet.</div>'; return; }
