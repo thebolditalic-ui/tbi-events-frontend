@@ -385,7 +385,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     h += '<div style="font:500 12px system-ui;color:#8a8178;margin:2px 0 8px">'
        + (anyActivePin
           ? 'A priority is set, so runs follow it until it expires.'
-          : 'No active priority. Runs pick on their own, favouring recent posts with room left.')
+          : 'No active priority. Runs pick on their own, favoring recent posts with room left.')
        + ' Priorities expire after ' + MINE_STALE + ' days.'
        + (auditedCount
           ? ' <span style="color:#1b6b2f">' + auditedCount + ' post' + (auditedCount==1?'':'s')
@@ -430,7 +430,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +  '<td style="padding:6px;text-align:right">'+(r.runs||0)+'</td>'
         +  '<td style="padding:6px;color:#8a8178">'+mineFmtAgo(r.last_run_at)+'</td>'
         +  '<td style="padding:6px;white-space:nowrap">'
-        +    '<button class="btn btn-sm" data-mine-pin="'+r.post_id+'" title="Mine this next">'+(r._pinned?'Unpin':'Prioritise')+'</button> '
+        +    '<button class="btn btn-sm" data-mine-pin="'+r.post_id+'" title="Mine this next">'+(r._pinned?'Unpin':'Prioritize')+'</button> '
         +    '<button class="btn btn-sm" data-mine-tog="'+r.post_id+'" title="Exclude from automatic mining">'+(r.mining_enabled?'Turn off':'Turn on')+'</button>'
         +  '</td></tr>';
     });
