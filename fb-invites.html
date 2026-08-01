@@ -232,6 +232,13 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     <p class="section-sub">Invite people who reacted to a post to follow The Bold Italic. Drag the button to your bookmarks bar, then on a Facebook post's reactions list, click it. It invites up to 100 at a time (with a pause partway through), only clicks exact "Invite" buttons, skips Invited and Following, and logs each run below. Facebook caps invites near 500/day, so keep it to a few runs a day.</p>
     <details class="dl-install"><summary>Bookmarklet &middot; install the invite button</summary><div class="dl-install-body"><b>Install once:</b> drag this to your bookmarks bar &rarr; <a class="dl-bm" id="fbinv-bm" href="#" onclick="return false">&#128257; TBI Invite (100)</a>
       <div class="dl-hint">Then open a Facebook post, click its reaction count to open the "People who reacted" list (pick a reaction tab if you like), and click <b>TBI Invite</b>. Keep that tab open and in front while it runs.</div></div></details>
+    <div class="dl-bar" style="margin-top:18px"><b>Post mining</b><div style="display:flex;gap:10px;align-items:center">
+      <label style="font:500 12px system-ui;color:#8a8178">autopilot after
+        <input id="fbmine-stale" type="number" min="1" max="30" style="width:46px;padding:2px 4px;margin:0 4px" title="Days after which a priority expires and Claude picks freely">
+      days</label>
+      <button class="btn btn-sm" id="fbmine-refresh">&#8635; Refresh</button></div></div>
+    <div id="fbmine" style="margin-top:6px"></div>
+
     <div class="dl-bar"><b>Run log</b><div style="display:flex;gap:10px;align-items:center"><button class="btn btn-sm" id="fbinv-refresh">&#8635; Refresh</button></div></div>
     <div id="fbinv-log" style="margin-top:6px"></div>
     <textarea id="fbinv-src" style="display:none">(function(){if(window.__tbiInv){alert('TBI Invite is already running. Reload the page to reset.');return;}var __cs=[85,95,100],__last=0;try{__last=parseInt(localStorage.getItem('tbiInvCap'),10)||0;}catch(e){}var __o=__cs.filter(function(v){return v!==__last;}),CAP=__o[Math.floor(Math.random()*__o.length)];try{localStorage.setItem('tbiInvCap',CAP);}catch(e){}var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjYXdncmpjamdjbXZzaW12YXNoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3NzAxMDIsImV4cCI6MjA4ODM0NjEwMn0.lmks8ntJPZ0giQEpuH3tSSBllzmOj20oUrb96kBIdh0',SB='https://scawgrjcjgcmvsimvash.supabase.co',clicked=0,stop=false,empty=0;function q(){var a=[].slice.call(document.querySelectorAll('div[aria-label=Invite],[role=button][aria-label=Invite]'));if(!a.length){a=[].slice.call(document.querySelectorAll('[role=button]')).filter(function(b){return(b.textContent||'').trim()==='Invite';});}return a;}var f=q().length;if(!confirm('TBI Invite. '+f+' Invite buttons visible now. It clicks up to '+CAP+' one at a time (1.5-4s gaps, a longer pause at 50), scrolls for more, skips Invited/Following, then logs the run. Keep this tab open and in front. Start?'))return;window.__tbiInv=true;var pref='',ptext='';try{var _u=location.href.split('?')[0];var _isPost=/\/posts\/|\/permalink\/|story_fbid/.test(_u);var _dlg=document.querySelector('[role=dialog]');var _scope=_dlg||document;var _a=_scope.querySelector('a[href*="/posts/"],a[href*="/permalink/"],a[href*="story_fbid"]');if(_isPost)pref=_u;else if(_a)pref=(_a.href||'').split('?')[0];if(pref){var _art=_a?_a.closest('[role=article]'):null;var _m=(_art||_scope).querySelector('[data-ad-rendering-role=story_message],[data-ad-comet-preview=message]');if(_m){var _t=(_m.innerText||'').replace(/\s+/g,' ').trim();if(/\S{6,}/.test(_t))ptext=_t.slice(0,220);}if(!ptext&amp;&amp;_isPost){var _og=document.querySelector("meta[property='og:description']");if(_og){var _c=(_og.content||'').replace(/\s+/g,' ').trim();if(_c)ptext=_c.slice(0,220);}}}}catch(e){}var box=document.createElement('div');box.style.cssText='position:fixed;z-index:9999999;bottom:16px;right:16px;background:#111;color:#fff;font:600 13px system-ui;padding:10px 14px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px';var txt=document.createElement('span');txt.textContent='TBI Invite: starting';box.appendChild(txt);var sbtn=document.createElement('button');sbtn.textContent='Stop';sbtn.style.cssText='background:#e11;color:#fff;border:0;border-radius:6px;padding:3px 9px;cursor:pointer;font:600 12px system-ui';sbtn.onclick=function(){stop=true;};box.appendChild(sbtn);document.body.appendChild(box);function scr(){var d=document.querySelector('[role=dialog]')||document.body,best=null,bh=0;[].slice.call(d.querySelectorAll('*')).forEach(function(e){var s=getComputedStyle(e);if(s.overflowY==='auto'||s.overflowY==='scroll'){if(e.scrollHeight-e.clientHeight&gt;40){if(e.clientHeight&gt;bh){best=e;bh=e.clientHeight;}}}});return best;}function rnd(a,b){return a+Math.random()*(b-a);}function done(m){window.__tbiInv=false;var u='https://admin.thebolditalic.com/api/fb-invite-log?c='+clicked+'&amp;ref='+encodeURIComponent(pref||'')+'&amp;page='+encodeURIComponent(location.href)+'&amp;t='+encodeURIComponent(ptext||'');txt.textContent=m+' Saving to log...';try{sbtn.style.display='none';}catch(e){}setTimeout(function(){location.href=u;},900);}function step(){if(stop){done('Stopped - invited '+clicked+' (logged).');return;}if(clicked&gt;=CAP){done('Done - invited '+clicked+' (logged).');return;}var b=q();if(!b.length){empty++;if(empty&gt;6){done('Done - invited '+clicked+', none left (logged).');return;}var s=scr();if(s){s.scrollTop=s.scrollHeight;}setTimeout(step,rnd(1600,3000));return;}empty=0;try{b[0].click();}catch(e){}clicked++;txt.textContent='TBI Invite: '+clicked+' invited';var d=rnd(1600,4200);if(clicked===50)d=rnd(12000,15000);setTimeout(step,d);}step();})();</textarea>
@@ -292,6 +299,136 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   
   checkSession();
 })();
+
+  /* ---------- Post mining panel ---------------------------------------
+     Why this exists: the tool kept re-mining the Castro Theatre post. Newly
+     invitable people appear BELOW everyone already invited, so each further
+     run has to page through more rows to reach them. That post reached 1,370
+     rows for 64 invites (21:1) and once 1,510 rows for 18 (84:1), while a
+     6,848-reaction Boudin post sat at 3:1 with 6,768 reactors untouched.
+     "Rows per invite" is the number that exposes this, so it is the column
+     the table sorts your attention by.                                    */
+  var MINE_STALE = 4;
+
+  function mineFmtAgo(ts){
+    if(!ts) return 'never';
+    var d = Math.floor((Date.now() - new Date(ts).getTime())/86400000);
+    if (d <= 0) return 'today';
+    return d + 'd ago';
+  }
+
+  function mineCostClass(r){
+    if (r == null) return '';
+    if (r >= 12) return 'color:#b3261e;font-weight:700';   // expensive, likely mined out
+    if (r >= 6)  return 'color:#a06800;font-weight:600';   // getting costly
+    return 'color:#1b6b2f;font-weight:600';                 // cheap
+  }
+
+  async function mineLoad(){
+    var el = $('fbmine'); if(!el) return;
+    el.innerHTML = '<div style="color:#8a8178;padding:12px 0">Loading&#8230;</div>';
+
+    var st = await sb.from('fb_invite_settings').select('priority_stale_days').eq('id',1).maybeSingle();
+    if (st.data && st.data.priority_stale_days) MINE_STALE = st.data.priority_stale_days;
+    var si = $('fbmine-stale'); if (si) si.value = MINE_STALE;
+
+    var q = await sb.from('fb_invite_post_stats').select('*');
+    if (q.error){ el.innerHTML = '<div style="color:#b3261e">Could not load: '+q.error.message+'</div>'; return; }
+    var rows = q.data || [];
+    if (!rows.length){ el.innerHTML = '<div style="color:#8a8178;padding:12px 0">No posts mined yet.</div>'; return; }
+
+    var now = Date.now(), staleMs = MINE_STALE*86400000;
+    rows.forEach(function(r){
+      r._pinned = (r.priority != null) &&
+                  (r.priority_set_at ? (now - new Date(r.priority_set_at).getTime()) < staleMs : true);
+    });
+    // pinned first (by priority), then cheapest-with-headroom, then the rest
+    rows.sort(function(a,b){
+      if (a._pinned !== b._pinned) return a._pinned ? -1 : 1;
+      if (a._pinned && b._pinned) return (a.priority||99) - (b.priority||99);
+      if (a.mining_enabled !== b.mining_enabled) return a.mining_enabled ? -1 : 1;
+      return (b.headroom||0) - (a.headroom||0);
+    });
+
+    var anyActivePin = rows.some(function(r){ return r._pinned; });
+
+    var h = '';
+    h += '<div style="font:500 12px system-ui;color:#8a8178;margin:2px 0 8px">'
+       + (anyActivePin
+          ? 'A priority is set, so runs follow it until it expires.'
+          : 'No active priority. Runs pick on their own, favouring recent posts with room left.')
+       + ' Priorities expire after ' + MINE_STALE + ' days.</div>';
+
+    h += '<table style="width:100%;border-collapse:collapse;font:400 13px system-ui">';
+    h += '<tr style="text-align:left;color:#8a8178;font-size:12px">'
+       + '<th style="padding:4px 6px">Post</th>'
+       + '<th style="padding:4px 6px;text-align:right">Invited</th>'
+       + '<th style="padding:4px 6px;text-align:right">Left</th>'
+       + '<th style="padding:4px 6px;text-align:right" title="Rows the tool had to scroll per invite. High means the post is mined out.">Rows/inv</th>'
+       + '<th style="padding:4px 6px;text-align:right">Runs</th>'
+       + '<th style="padding:4px 6px">Last</th>'
+       + '<th style="padding:4px 6px">Mining</th></tr>';
+
+    rows.forEach(function(r){
+      var name = (r.message || '(photo only)').slice(0,52);
+      var link = r.permalink ? '<a href="'+r.permalink+'" target="_blank" rel="noopener">'+esc(name)+'</a>' : esc(name);
+      var dim  = r.mining_enabled ? '' : 'opacity:.45;';
+      var pin  = r._pinned ? '<span title="Priority '+r.priority+', set '+mineFmtAgo(r.priority_set_at)+'" style="color:#a06800">&#9733;</span> ' : '';
+      h += '<tr style="border-top:1px solid #eee6dc;'+dim+'">'
+        +  '<td style="padding:6px">'+pin+link+'</td>'
+        +  '<td style="padding:6px;text-align:right">'+(r.invited_total||0)+'</td>'
+        +  '<td style="padding:6px;text-align:right">'+(r.headroom||0)+'</td>'
+        +  '<td style="padding:6px;text-align:right;'+mineCostClass(r.rows_per_invite)+'">'+(r.rows_per_invite==null?'&ndash;':r.rows_per_invite)+'</td>'
+        +  '<td style="padding:6px;text-align:right">'+(r.runs||0)+'</td>'
+        +  '<td style="padding:6px;color:#8a8178">'+mineFmtAgo(r.last_run_at)+'</td>'
+        +  '<td style="padding:6px;white-space:nowrap">'
+        +    '<button class="btn btn-sm" data-mine-pin="'+r.post_id+'" title="Mine this next">'+(r._pinned?'Unpin':'Prioritise')+'</button> '
+        +    '<button class="btn btn-sm" data-mine-tog="'+r.post_id+'" title="Exclude from automatic mining">'+(r.mining_enabled?'Turn off':'Turn on')+'</button>'
+        +  '</td></tr>';
+    });
+    h += '</table>';
+    el.innerHTML = h;
+
+    el.querySelectorAll('[data-mine-pin]').forEach(function(b){
+      b.onclick = async function(){
+        var id = b.getAttribute('data-mine-pin');
+        var row = rows.filter(function(x){return x.post_id===id;})[0];
+        b.disabled = true;
+        if (row && row._pinned){
+          await sb.from('fb_invite_posts').update({priority:null, priority_set_at:null}).eq('post_id',id);
+        } else {
+          var top = Math.min.apply(null, rows.filter(function(x){return x._pinned;})
+                        .map(function(x){return x.priority||99;}).concat([99]));
+          await sb.from('fb_invite_posts')
+                  .update({priority: Math.max(1, top-1), priority_set_at: new Date().toISOString()})
+                  .eq('post_id',id);
+        }
+        mineLoad();
+      };
+    });
+    el.querySelectorAll('[data-mine-tog]').forEach(function(b){
+      b.onclick = async function(){
+        var id = b.getAttribute('data-mine-tog');
+        var row = rows.filter(function(x){return x.post_id===id;})[0];
+        b.disabled = true;
+        await sb.from('fb_invite_posts').update({mining_enabled: !(row && row.mining_enabled)}).eq('post_id',id);
+        mineLoad();
+      };
+    });
+  }
+
+  (function(){
+    var r = $('fbmine-refresh'); if (r) r.onclick = mineLoad;
+    var s2 = $('fbmine-stale');
+    if (s2) s2.onchange = async function(){
+      var v = parseInt(s2.value,10); if(!(v>0)) return;
+      await sb.from('fb_invite_settings').update({priority_stale_days:v, updated_at:new Date().toISOString()}).eq('id',1);
+      mineLoad();
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mineLoad);
+    else mineLoad();
+  })();
+
 </script>
 </body>
 </html>
