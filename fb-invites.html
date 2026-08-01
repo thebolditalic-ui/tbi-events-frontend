@@ -324,6 +324,25 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     return 'color:#1b6b2f;font-weight:600';                 // cheap
   }
 
+  function mineBand(r){
+    if (!r.probed_at) return '&ndash;';
+    if (r.dead_band == null) return 'none left';
+    return r.dead_band;
+  }
+  function mineBandClass(r){
+    if (!r.probed_at) return '';
+    if (r.dead_band == null) return 'color:#b3261e;font-weight:700';
+    if (r.dead_band >= 800) return 'color:#b3261e;font-weight:700';
+    if (r.dead_band >= 300) return 'color:#a06800;font-weight:600';
+    return 'color:#1b6b2f;font-weight:600';
+  }
+  function mineProbeAge(r){
+    if (!r.probed_at) return 'never probed';
+    var h = Math.floor((Date.now()-new Date(r.probed_at).getTime())/3600000);
+    var age = h < 1 ? 'just now' : (h < 24 ? h+'h ago' : Math.floor(h/24)+'d ago');
+    return 'probed '+age+', scanned '+(r.rows_scanned||0)+' rows'+(r.hit_end?', reached the end':'');
+  }
+
   async function mineLoad(){
     var el = $('fbmine'); if(!el) return;
     el.innerHTML = '<div style="color:#8a8178;padding:12px 0">Loading&#8230;</div>';
@@ -365,6 +384,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
        + '<th style="padding:4px 6px;text-align:right">Invited</th>'
        + '<th style="padding:4px 6px;text-align:right">Left</th>'
        + '<th style="padding:4px 6px;text-align:right" title="Rows the tool had to scroll per invite. High means the post is mined out.">Rows/inv</th>'
+       + '<th style="padding:4px 6px;text-align:right" title="Probe: rows of already-invited people before the first fresh Invite button. High means expensive to reach anyone new.">Dead band</th>'
+       + '<th style="padding:4px 6px;text-align:right" title="Probe: fresh Invite buttons counted below the dead band.">Fresh</th>'
        + '<th style="padding:4px 6px;text-align:right">Runs</th>'
        + '<th style="padding:4px 6px">Last</th>'
        + '<th style="padding:4px 6px">Mining</th></tr>';
@@ -379,6 +400,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +  '<td style="padding:6px;text-align:right">'+(r.invited_total||0)+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.headroom||0)+'</td>'
         +  '<td style="padding:6px;text-align:right;'+mineCostClass(r.rows_per_invite)+'">'+(r.rows_per_invite==null?'&ndash;':r.rows_per_invite)+'</td>'
+        +  '<td style="padding:6px;text-align:right;'+mineBandClass(r)+'" title="'+mineProbeAge(r)+'">'+mineBand(r)+'</td>'
+        +  '<td style="padding:6px;text-align:right" title="'+mineProbeAge(r)+'">'+(r.probed_at? (r.invites_seen||0) : '&ndash;')+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.runs||0)+'</td>'
         +  '<td style="padding:6px;color:#8a8178">'+mineFmtAgo(r.last_run_at)+'</td>'
         +  '<td style="padding:6px;white-space:nowrap">'
