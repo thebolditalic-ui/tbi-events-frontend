@@ -312,17 +312,26 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     return 'color:#1b6b2f;font-weight:600';                 // cheap
   }
 
-  function mineBand(r){
-    if (!r.probed_at) return '&ndash;';
-    if (r.dead_band == null) return 'none left';
-    return r.dead_band;
+  // A reactor list is fresh at the top, a long already-invited middle, then a big
+  // pocket of fresh below. One number cannot say that, so describe the route.
+  function mineRoute(r){
+    if (!r.probed_at) return {txt:'&#8211;', cls:'color:#b8b0a6'};
+    var parts = [], total = r.invites_seen || 0;
+    if (!total) return {txt:'none found in '+(r.rows_scanned||0)+' rows', cls:'color:#b3261e'};
+    if (r.top_fresh)  parts.push(r.top_fresh + ' up top');
+    if (r.gap_start != null && r.gap_end != null && (r.gap_end - r.gap_start) >= 200)
+      parts.push('gap ' + r.gap_start + '&#8211;' + r.gap_end);
+    if (r.bulk_row != null && r.bulk_fresh)
+      parts.push(r.bulk_fresh + ' from row ' + r.bulk_row);
+    if (!parts.length) parts.push(total + ' spread through ' + (r.rows_scanned||0) + ' rows');
+    return {txt: parts.join(' &#183; '), cls:'color:#3a352f'};
   }
-  function mineBandClass(r){
-    if (!r.probed_at) return '';
-    if (r.dead_band == null) return 'color:#b3261e;font-weight:700';
-    if (r.dead_band >= 800) return 'color:#b3261e;font-weight:700';
-    if (r.dead_band >= 300) return 'color:#a06800;font-weight:600';
-    return 'color:#1b6b2f;font-weight:600';
+  function mineAvailClass(r){
+    if (!r.probed_at) return 'color:#b8b0a6';
+    var n = r.invites_seen || 0;
+    if (n >= 300) return 'color:#1b6b2f;font-weight:600';
+    if (n >= 50)  return 'color:#a06800;font-weight:600';
+    return 'color:#b3261e;font-weight:600';
   }
   function mineProbeAge(r){
     if (!r.probed_at) return 'never probed';
@@ -373,7 +382,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       if (a._audited !== b._audited) return a._audited ? -1 : 1;
       if (a._audited && b._audited) {
         if ((b.invites_seen||0) !== (a.invites_seen||0)) return (b.invites_seen||0) - (a.invites_seen||0);
-        return (a.dead_band==null?1e9:a.dead_band) - (b.dead_band==null?1e9:b.dead_band);
+        return (a.bulk_row==null?1e9:a.bulk_row) - (b.bulk_row==null?1e9:b.bulk_row);
       }
       return (b.headroom||0) - (a.headroom||0);
     });
@@ -399,8 +408,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
        + '<th style="padding:4px 6px;text-align:right">Invited</th>'
        + '<th style="padding:4px 6px;text-align:right">Left</th>'
        + '<th style="padding:4px 6px;text-align:right" title="Rows the tool had to scroll per invite. High means the post is mined out.">Rows/inv</th>'
-       + '<th style="padding:4px 6px;text-align:right" title="Probe: rows of already-invited people before the first fresh Invite button. High means expensive to reach anyone new.">Dead band</th>'
-       + '<th style="padding:4px 6px;text-align:right" title="Probe: fresh Invite buttons counted below the dead band.">Fresh</th>'
+       + '<th style="padding:4px 6px;text-align:right" title="How many people the audit counted as still invitable on this post.">Available</th>'
+       + '<th style="padding:4px 6px" title="Where those people sit in the reactor list, so a run can skip the empty stretch instead of scrolling it.">Where they are</th>'
        + '<th style="padding:4px 6px;text-align:right">Runs</th>'
        + '<th style="padding:4px 6px">Last</th>'
        + '<th style="padding:4px 6px">Mining</th></tr>';
@@ -425,8 +434,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +  '<td style="padding:6px;text-align:right">'+(r.invited_total||0)+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.headroom||0)+'</td>'
         +  '<td style="padding:6px;text-align:right;'+mineCostClass(r.rows_per_invite)+'">'+(r.rows_per_invite==null?'&ndash;':r.rows_per_invite)+'</td>'
-        +  '<td style="padding:6px;text-align:right;'+mineBandClass(r)+'" title="'+mineProbeAge(r)+'">'+mineBand(r)+'</td>'
-        +  '<td style="padding:6px;text-align:right" title="'+mineProbeAge(r)+'">'+(r.probed_at? (r.invites_seen||0) : '&ndash;')+'</td>'
+        +  '<td style="padding:6px;text-align:right;'+mineAvailClass(r)+'" title="'+mineProbeAge(r)+'">'
+        +      (r.probed_at ? (r.invites_seen||0) : '&#8211;') + '</td>'
+        +  '<td style="padding:6px;font-size:12px;'+mineRoute(r).cls+'">'+mineRoute(r).txt+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.runs||0)+'</td>'
         +  '<td style="padding:6px;color:#8a8178">'+mineFmtAgo(r.last_run_at)+'</td>'
         +  '<td style="padding:6px;white-space:nowrap">'
