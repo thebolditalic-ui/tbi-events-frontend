@@ -533,15 +533,19 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   async function minePicker(){
     var box=$('fbmine-picker'), res=$('fbmine-results'), msg=$('fbmine-addmsg');
     box.style.display='block'; msg.innerHTML='';
-    if (!MINE_FEED){
-      res.innerHTML='<div style="color:#8a8178;padding:10px 2px">Loading your posts&#8230;</div>';
-      var fn = await sb.functions.invoke('fb-resolve', { body:{ action:'list' } });
-      var d = fn.data || {};
-      if (fn.error && !d.error) { try{ d = JSON.parse(await fn.error.context.clone().text()); }catch(e){} }
-      if (d.error || !d.posts){ res.innerHTML='<div style="color:#b3261e">'+esc(d.error||'Could not load posts.')+'</div>'; return; }
-      MINE_FEED = d.posts;
-    }
+    if (!MINE_FEED){ await mineFetchFeed(false); if (!MINE_FEED) return; }
     minePickerDraw();
+  }
+  var MINE_MORE = false;
+  async function mineFetchFeed(all){
+    var res=$('fbmine-results');
+    res.innerHTML='<div style="color:#8a8178;padding:10px 2px">Reading your Page&#8217;s posts from Facebook'
+                + (all ? ', all the way back to 2022. About twenty seconds.' : '&#8230;') + '</div>';
+    var fn = await sb.functions.invoke('fb-resolve', { body:{ action:'list', all: !!all } });
+    var d = fn.data || {};
+    if (fn.error && !d.error) { try{ d = JSON.parse(await fn.error.context.clone().text()); }catch(e){} }
+    if (d.error || !d.posts){ res.innerHTML='<div style="color:#b3261e">'+esc(d.error||'Could not load posts.')+'</div>'; return; }
+    MINE_FEED = d.posts; MINE_MORE = !!d.more;
   }
   function minePickerDraw(){
     var res=$('fbmine-results');
@@ -566,7 +570,17 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
               : '<button class="btn btn-sm" data-mine-pick="'+p.post_id+'">Add</button>')
         +  '</td></tr>';
     });
-    res.innerHTML = h+'</table>';
+    h += '</table>';
+    var oldest = MINE_FEED.length ? MINE_FEED.reduce(function(a,b){
+      return (a.created_time||'') < (b.created_time||'') ? a : b; }).created_time.slice(0,10) : '';
+    h += '<div style="font:400 12px system-ui;color:#8a8178;padding:8px 2px 0;border-top:1px solid #f0e9dd;margin-top:6px">'
+       + MINE_FEED.length + ' posts loaded, back to ' + esc(oldest)
+       + (rows.length===120 ? ' &#183; showing the top 120 matches' : '')
+       + (MINE_MORE ? ' &#183; <a href="#" id="fbmine-more">load everything back to 2022</a>' : '')
+       + '</div>';
+    res.innerHTML = h;
+    var more=$('fbmine-more');
+    if (more) more.onclick = async function(e){ e.preventDefault(); await mineFetchFeed(true); minePickerDraw(); };
     res.querySelectorAll('[data-mine-pick]').forEach(function(b){
       b.onclick = async function(){
         var id=b.getAttribute('data-mine-pick');
