@@ -1,9 +1,11 @@
-/* TBI live-reader presence (v3). Loaded by a one-line Ghost footer injection:
+/* TBI live-reader presence (v4). Loaded by a one-line Ghost footer injection:
    <script src="https://events.thebolditalic.com/tbi-presence.js" defer></script>
    Counts HUMANS on story pages (and the missing-content/404 page):
    - drops known bots (webdriver flag + UA signatures)
    - counts nobody until a human signal: scroll/touch/mouse/key, or 12s actually visible
    - sends document.referrer so broken-page arrivals can be traced to the linking site
+   Sends the user-agent too: a JS-executing crawler was walking the archive at about a
+   page a second, and with no UA stored there was no way to say who.
    Heartbeats go straight to Supabase with the PUBLIC anon key (insert-only for anon);
    one beat per minute while visible, 30-minute cap per page view. Feeds /analytics. */
 (function () {
@@ -43,7 +45,8 @@
       fetch(SB + '/rest/v1/reader_presence', {
         method: 'POST',
         headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ session_id: sid(), path: path, title: title, banner_id: bannerId, referrer: ref }),
+        body: JSON.stringify({ session_id: sid(), path: path, title: title, banner_id: bannerId, referrer: ref,
+                               ua: (navigator.userAgent || '').slice(0, 200) }),
         keepalive: true
       }).catch(function () {});
     } catch (e) {}
