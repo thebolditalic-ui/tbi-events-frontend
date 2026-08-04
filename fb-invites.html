@@ -240,11 +240,22 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         days</label>
         <button class="btn btn-sm" id="fbmine-refresh">&#8635; Refresh</button></div></div>
       <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="fbmine-url" type="text" placeholder="Paste a Facebook post link to add it as a candidate"
-               style="flex:1;min-width:280px;padding:6px 8px;border:1px solid #ddd3c4;border-radius:6px;font:400 13px system-ui">
-        <button class="btn btn-sm" id="fbmine-add">+ Add post</button>
+        <button class="btn btn-sm" id="fbmine-browse">&#128269; Browse my posts</button>
+        <input id="fbmine-url" type="text" placeholder="&#8230; or paste a post link (numeric only, not pfbid)"
+               style="flex:1;min-width:240px;padding:6px 8px;border:1px solid #ddd3c4;border-radius:6px;font:400 13px system-ui">
+        <button class="btn btn-sm" id="fbmine-add">+ Add</button>
       </div>
       <div id="fbmine-addmsg" style="font:400 12px system-ui;margin-top:6px"></div>
+      <div id="fbmine-picker" style="display:none;margin-top:8px;border:1px solid #eee6dc;border-radius:8px;padding:10px;background:#fffdf8">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="fbmine-q" type="text" placeholder="Filter by words in the post"
+                 style="flex:1;min-width:220px;padding:6px 8px;border:1px solid #ddd3c4;border-radius:6px;font:400 13px system-ui">
+          <label style="font:500 12px system-ui;color:#8a8178">min reactions
+            <input id="fbmine-min" type="number" value="400" min="0" step="50" style="width:64px;padding:2px 4px;margin-left:4px"></label>
+          <button class="btn btn-sm" id="fbmine-close">Close</button>
+        </div>
+        <div id="fbmine-results" style="margin-top:8px;max-height:340px;overflow:auto"></div>
+      </div>
       <div id="fbmine" style="margin-top:6px"></div>
     </details>
 
@@ -397,6 +408,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       return (b.headroom||0) - (a.headroom||0);
     });
 
+    window.__mineHave = rows.map(function(r){ return r.post_id; });
     var anyActivePin = rows.some(function(r){ return r._pinned; });
     var auditedCount = rows.filter(function(r){ return r._audited; }).length;
 
@@ -512,6 +524,64 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     });
   }
 
+
+  // Facebook hands out pfbid links almost everywhere now, including from a post's
+  // timestamp. Graph cannot resolve them, an unauthenticated fetch of one returns
+  // 400, and they expire after ~2 weeks. So there is no link worth asking for:
+  // list the Page's own posts and let Saul pick.
+  var MINE_FEED = null;
+  async function minePicker(){
+    var box=$('fbmine-picker'), res=$('fbmine-results'), msg=$('fbmine-addmsg');
+    box.style.display='block'; msg.innerHTML='';
+    if (!MINE_FEED){
+      res.innerHTML='<div style="color:#8a8178;padding:10px 2px">Loading your posts&#8230;</div>';
+      var fn = await sb.functions.invoke('fb-resolve', { body:{ action:'list' } });
+      var d = fn.data || {};
+      if (fn.error && !d.error) { try{ d = JSON.parse(await fn.error.context.clone().text()); }catch(e){} }
+      if (d.error || !d.posts){ res.innerHTML='<div style="color:#b3261e">'+esc(d.error||'Could not load posts.')+'</div>'; return; }
+      MINE_FEED = d.posts;
+    }
+    minePickerDraw();
+  }
+  function minePickerDraw(){
+    var res=$('fbmine-results');
+    var q=($('fbmine-q').value||'').trim().toLowerCase();
+    var min=parseInt($('fbmine-min').value,10); if(isNaN(min)) min=0;
+    var have={}; (window.__mineHave||[]).forEach(function(id){ have[id]=1; });
+    var rows = MINE_FEED
+      .filter(function(p){ return (p.reactions||0) >= min; })
+      .filter(function(p){ return !q || (p.message||'').toLowerCase().indexOf(q) >= 0; })
+      .sort(function(a,b){ return (b.reactions||0)-(a.reactions||0); })
+      .slice(0,120);
+    if (!rows.length){ res.innerHTML='<div style="color:#8a8178;padding:8px 2px">Nothing matches.</div>'; return; }
+    var h='<table style="width:100%;border-collapse:collapse;font:400 13px system-ui">';
+    rows.forEach(function(p){
+      h += '<tr style="border-top:1px solid #f0e9dd">'
+        +  '<td style="padding:5px 6px;text-align:right;white-space:nowrap;font-weight:600">'+(p.reactions||0).toLocaleString()+'</td>'
+        +  '<td style="padding:5px 6px;white-space:nowrap;color:#8a8178;font-size:12px">'+esc((p.created_time||'').slice(0,10))+'</td>'
+        +  '<td style="padding:5px 6px">'+esc((p.message||'').slice(0,62))+'</td>'
+        +  '<td style="padding:5px 6px;text-align:right">'
+        +    (have[p.post_id]
+              ? '<span style="color:#8a8178;font-size:12px">on the list</span>'
+              : '<button class="btn btn-sm" data-mine-pick="'+p.post_id+'">Add</button>')
+        +  '</td></tr>';
+    });
+    res.innerHTML = h+'</table>';
+    res.querySelectorAll('[data-mine-pick]').forEach(function(b){
+      b.onclick = async function(){
+        var id=b.getAttribute('data-mine-pick');
+        var p=MINE_FEED.filter(function(x){return x.post_id===id;})[0];
+        b.disabled=true; b.textContent='Adding\u2026';
+        var ins = await sb.from('fb_invite_posts').insert({
+          post_id:p.post_id, message:p.message, permalink:p.permalink,
+          reactions:p.reactions, source:'manual', added_at:new Date().toISOString(), mining_enabled:true });
+        if (ins.error){ b.textContent='Failed'; $('fbmine-addmsg').innerHTML='<span style="color:#b3261e">'+esc(ins.error.message)+'</span>'; return; }
+        b.outerHTML='<span style="color:#1b6b2f;font-size:12px">added</span>';
+        await mineLoad();
+      };
+    });
+  }
+
   async function mineAdd(){
     var inp = $('fbmine-url'), msg = $('fbmine-addmsg'), btn = $('fbmine-add');
     if (!inp || !inp.value.trim()) return;
@@ -553,6 +623,10 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   (function(){
     var r = $('fbmine-refresh'); if (r) r.onclick = mineLoad;
     var ab = $('fbmine-add'); if (ab) ab.onclick = mineAdd;
+    var br = $('fbmine-browse'); if (br) br.onclick = minePicker;
+    var cl = $('fbmine-close'); if (cl) cl.onclick = function(){ $('fbmine-picker').style.display='none'; };
+    var qq = $('fbmine-q'); if (qq) qq.oninput = function(){ if (MINE_FEED) minePickerDraw(); };
+    var mn = $('fbmine-min'); if (mn) mn.oninput = function(){ if (MINE_FEED) minePickerDraw(); };
     var ui = $('fbmine-url'); if (ui) ui.onkeydown = function(e){ if(e.key==='Enter'){ e.preventDefault(); mineAdd(); } };
     var s2 = $('fbmine-stale');
     if (s2) s2.onchange = async function(){
