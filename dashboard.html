@@ -427,24 +427,12 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   // ---- live readers ----
   async function loadLive() {
-    // A page load is not a reader. The tracker beats once a minute while the page
-    // is visible, so anyone still here after 60s has beaten at least twice; a
-    // crawler that loads and leaves never does. Counting every session had the
-    // dashboard at 95 while Ghost said 12, because a JS-executing crawler walking
-    // the archive gets a fresh localStorage (so a new session_id) on every page.
-    // Look back 10 minutes to find who has stayed, then count only those inside
-    // the live 150s window.
     var since = new Date(Date.now() - 150000).toISOString();
-    var lookback = new Date(Date.now() - 600000).toISOString();
-    var r = await sb.from('reader_presence').select('session_id,path,title,at').gte('at', lookback).limit(5000);
+    var r = await sb.from('reader_presence').select('session_id,path,title').gte('at', since).limit(2000);
     var body = $('live-body');
     if (r.error) { body.innerHTML = '<tr><td colspan="2" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
-    var beats = {};
-    (r.data || []).forEach(function (x) { beats[x.session_id] = (beats[x.session_id] || 0) + 1; });
-    var settled = function (id) { return beats[id] > 1; };
     var byPage = {}, sess = {};
-    (r.data || []).filter(function (x) { return x.at >= since && settled(x.session_id); })
-      .forEach(function (x) { sess[x.session_id] = 1; var k = x.path || '?'; (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1; });
+    (r.data || []).forEach(function (x) { sess[x.session_id] = 1; var k = x.path || '?'; (byPage[k] = byPage[k] || { title: x.title || k, s: {} }).s[x.session_id] = 1; });
     var rows = Object.keys(byPage).map(function (k) { return { path: k, title: byPage[k].title, n: Object.keys(byPage[k].s).length }; }).sort(function (a, b) { return b.n - a.n; });
     var total = Object.keys(sess).length;
     $('st-readers').innerHTML = total + ' <small>reader' + (total === 1 ? '' : 's') + '</small>';
