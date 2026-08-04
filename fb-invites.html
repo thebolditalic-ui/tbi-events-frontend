@@ -239,6 +239,12 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
           <input id="fbmine-stale" type="number" min="1" max="30" style="width:46px;padding:2px 4px;margin:0 4px" title="Days after which a priority expires and Claude picks freely">
         days</label>
         <button class="btn btn-sm" id="fbmine-refresh">&#8635; Refresh</button></div></div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="fbmine-url" type="text" placeholder="Paste a Facebook post link to add it as a candidate"
+               style="flex:1;min-width:280px;padding:6px 8px;border:1px solid #ddd3c4;border-radius:6px;font:400 13px system-ui">
+        <button class="btn btn-sm" id="fbmine-add">+ Add post</button>
+      </div>
+      <div id="fbmine-addmsg" style="font:400 12px system-ui;margin-top:6px"></div>
       <div id="fbmine" style="margin-top:6px"></div>
     </details>
 
@@ -387,6 +393,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         if ((b.invites_seen||0) !== (a.invites_seen||0)) return (b.invites_seen||0) - (a.invites_seen||0);
         return (a.bulk_row==null?1e9:a.bulk_row) - (b.bulk_row==null?1e9:b.bulk_row);
       }
+      if ((a.source==='manual') !== (b.source==='manual')) return a.source==='manual' ? -1 : 1;
       return (b.headroom||0) - (a.headroom||0);
     });
 
@@ -438,11 +445,14 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var link = r.permalink ? '<a href="'+r.permalink+'" target="_blank" rel="noopener">'+esc(name)+'</a>' : esc(name);
       var dim  = r.mining_enabled ? '' : 'opacity:.45;';
       var pin  = r._pinned ? '<span title="Priority '+r.priority+', set '+mineFmtAgo(r.priority_set_at)+'" style="color:#a06800">&#9733;</span> ' : '';
+      var tag = r.source==='manual'
+        ? ' <span title="Added by hand, exempt from the 1,000-reaction rule" style="font:600 10px system-ui;color:#a06800;border:1px solid #e3d3ae;border-radius:3px;padding:1px 4px;vertical-align:1px">ADDED</span>'
+        : '';
       var audit = r._audited
         ? '<div style="font:400 11px system-ui;color:#1b6b2f;margin-top:2px">&#10003; '+mineProbeAge(r)+'</div>'
         : '';
       h += '<tr style="border-top:1px solid #eee6dc;'+dim+'">'
-        +  '<td style="padding:6px">'+pin+link+audit+'</td>'
+        +  '<td style="padding:6px">'+pin+link+tag+audit+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.invited_total||0)+'</td>'
         +  '<td style="padding:6px;text-align:right">'+(r.headroom||0)+'</td>'
         +  '<td style="padding:6px;text-align:right;'+mineCostClass(r.rows_per_invite)+'">'+(r.rows_per_invite==null?'&ndash;':r.rows_per_invite)+'</td>'
@@ -454,6 +464,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         +  '<td style="padding:6px;white-space:nowrap">'
         +    '<button class="btn btn-sm" data-mine-pin="'+r.post_id+'" title="Mine this next">'+(r._pinned?'Unpin':'Prioritize')+'</button> '
         +    '<button class="btn btn-sm" data-mine-tog="'+r.post_id+'" title="Exclude from automatic mining">'+(r.mining_enabled?'Turn off':'Turn on')+'</button>'
+        +    (r.source==='manual'
+              ? ' <button class="btn btn-sm" data-mine-del="'+r.post_id+'" title="Remove this hand-added post from the list">Remove</button>'
+              : '')
         +  '</td></tr>';
     });
     h += '</table>';
@@ -485,10 +498,55 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
         mineLoad();
       };
     });
+    // Remove exists only for hand-added rows. The .eq('source','manual') guard is
+    // deliberate: an auto-discovered post must never be deletable from here, since
+    // the picker would just rediscover it and the run history would look orphaned.
+    el.querySelectorAll('[data-mine-del]').forEach(function(b){
+      b.onclick = async function(){
+        var id = b.getAttribute('data-mine-del');
+        if (!confirm('Remove this post from the mining list?\n\nIts run history stays in the log.')) return;
+        b.disabled = true;
+        await sb.from('fb_invite_posts').delete().eq('post_id', id).eq('source','manual');
+        mineLoad();
+      };
+    });
+  }
+
+  async function mineAdd(){
+    var inp = $('fbmine-url'), msg = $('fbmine-addmsg'), btn = $('fbmine-add');
+    if (!inp || !inp.value.trim()) return;
+    var say = function(t,ok){ msg.innerHTML = '<span style="color:'+(ok?'#1b6b2f':'#b3261e')+'">'+esc(t)+'</span>'; };
+    btn.disabled = true; say('Looking it up\u2026', true);
+    try {
+      // The picker only finds posts with 1000+ reactions. This bypasses that for
+      // one post at a time without lowering the bar for automatic discovery.
+      var fn = await sb.functions.invoke('fb-resolve', { body: { url: inp.value.trim() } });
+      var d = fn.data || {};
+      if (fn.error || d.error) { say(d.error || 'Lookup failed.', false); btn.disabled=false; return; }
+
+      var ex = await sb.from('fb_invite_posts').select('post_id,source').eq('post_id', d.post_id).limit(1);
+      if (!ex.error && ex.data && ex.data.length) {
+        say('Already on the list' + (ex.data[0].source==='auto' ? ' (found automatically).' : '.'), true);
+        inp.value=''; btn.disabled=false; await mineLoad(); return;
+      }
+
+      var ins = await sb.from('fb_invite_posts').insert({
+        post_id: d.post_id, message: d.message, permalink: d.permalink,
+        reactions: d.reactions, source: 'manual', added_at: new Date().toISOString(),
+        mining_enabled: true
+      });
+      if (ins.error) { say(ins.error.message, false); btn.disabled=false; return; }
+      say('Added \u00b7 ' + d.reactions.toLocaleString() + ' reactions \u00b7 it will be audited on the next probe.', true);
+      inp.value = '';
+      await mineLoad();
+    } catch(e){ say(String(e && e.message || e), false); }
+    btn.disabled = false;
   }
 
   (function(){
     var r = $('fbmine-refresh'); if (r) r.onclick = mineLoad;
+    var ab = $('fbmine-add'); if (ab) ab.onclick = mineAdd;
+    var ui = $('fbmine-url'); if (ui) ui.onkeydown = function(e){ if(e.key==='Enter'){ e.preventDefault(); mineAdd(); } };
     var s2 = $('fbmine-stale');
     if (s2) s2.onchange = async function(){
       var v = parseInt(s2.value,10); if(!(v>0)) return;
