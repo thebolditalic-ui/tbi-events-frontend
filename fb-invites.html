@@ -522,7 +522,14 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       // one post at a time without lowering the bar for automatic discovery.
       var fn = await sb.functions.invoke('fb-resolve', { body: { url: inp.value.trim() } });
       var d = fn.data || {};
-      if (fn.error || d.error) { say(d.error || 'Lookup failed.', false); btn.disabled=false; return; }
+      // functions.invoke nulls `data` on any non-2xx, so a helpful message returned
+      // with a 400 never reaches the caller. The function answers 200 now, but read
+      // the raw body as a fallback rather than showing a bare "Lookup failed".
+      if (fn.error && !d.error) {
+        try { d = JSON.parse(await fn.error.context.clone().text()); } catch(e){}
+      }
+      if (d.error) { say(d.error, false); btn.disabled=false; return; }
+      if (fn.error || !d.post_id) { say('Lookup failed: '+(fn.error && fn.error.message || 'no post returned'), false); btn.disabled=false; return; }
 
       var ex = await sb.from('fb_invite_posts').select('post_id,source').eq('post_id', d.post_id).limit(1);
       if (!ex.error && ex.data && ex.data.length) {
