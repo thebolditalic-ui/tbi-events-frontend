@@ -1,4 +1,4 @@
-/* TBI live-reader presence (v4). Loaded by a one-line Ghost footer injection:
+/* TBI live-reader presence (v5). Loaded by a one-line Ghost footer injection:
    <script src="https://events.thebolditalic.com/tbi-presence.js" defer></script>
    Counts HUMANS on story pages (and the missing-content/404 page):
    - drops known bots (webdriver flag + UA signatures)
@@ -42,9 +42,13 @@
     if (Date.now() - t0 > MAX_MS) return;
     if (document.visibilityState === 'hidden') { setTimeout(beat, BEAT_MS); return; }
     try {
-      fetch(SB + '/rest/v1/reader_presence', {
+      // Goes through the `presence` edge function rather than straight to PostgREST,
+      // because a browser cannot see its own IP and PostgREST does not record the
+      // caller's. The function reads x-forwarded-for and stores it. Without that
+      // there is no way to identify a crawler that spoofs its user-agent.
+      fetch(SB.replace('.supabase.co', '.functions.supabase.co') + '/presence', {
         method: 'POST',
-        headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sid(), path: path, title: title, banner_id: bannerId, referrer: ref,
                                ua: (navigator.userAgent || '').slice(0, 200) }),
         keepalive: true
