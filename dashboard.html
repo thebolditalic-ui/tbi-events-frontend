@@ -640,11 +640,13 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   var SRC_ROWS = [];
   async function loadSources() {
     var body = $('src-body');
-    var r = await sb.from('presence_sources').select('*').order('hits', { ascending: false }).limit(600);
+    var r = await sb.from('presence_sources').select('*').order('pages', { ascending: false }).limit(600);
     if (r.error) { body.innerHTML = '<tr><td colspan="6" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
     SRC_ROWS = r.data || [];
-    var noIp = SRC_ROWS.filter(function (x) { return x.ip === '(no ip recorded)'; })[0];
-    $('src-note').textContent = noIp ? 'Rows from before IP capture began show as no ip recorded.' : '';
+    var pre = SRC_ROWS.filter(function (x) { return x.ip === '(before IP logging)'; }).length;
+    $('src-note').textContent = pre
+      ? 'IP capture began 4 Aug. Earlier traffic is grouped by user-agent instead and ages out in 30 days.'
+      : '';
     drawSources();
   }
   function srcVerdict(x) {
@@ -670,7 +672,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       var mins = Math.round((Date.now() - new Date(x.last_seen).getTime()) / 60000);
       var when = mins < 60 ? mins + 'm ago' : (mins < 1440 ? Math.round(mins / 60) + 'h ago' : Math.round(mins / 1440) + 'd ago');
       return '<tr>'
-        + '<td style="font:400 12px ui-monospace,Menlo,monospace">' + esc(x.ip) + '</td>'
+        + '<td style="font:400 12px ui-monospace,Menlo,monospace">' + esc(x.ip) + (x.sessions ? '<div style="color:#b8b0a6;font-size:11px">' + x.sessions + ' session' + (x.sessions==1?'':'s') + '</div>' : '') + '</td>'
         + '<td class="r">' + (x.pages || 0).toLocaleString() + '</td>'
         + '<td class="r">' + (x.hits || 0).toLocaleString() + '</td>'
         + '<td class="r">' + (x.active_days || 0) + '</td>'
