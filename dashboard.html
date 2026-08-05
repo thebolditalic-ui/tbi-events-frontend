@@ -276,6 +276,23 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         <div class="sub">Visitors who hit a dead or missing story, the address they asked for, and the link that sent them.</div>
         <table><thead><tr><th>Broken address</th><th>Referred by</th><th class="r">Hits</th></tr></thead><tbody id="missing-body"><tr><td colspan="3" class="emptymsg">Loading…</td></tr></tbody></table>
       </div>
+
+      <div class="card wide">
+        <h3>Traffic sources <span style="color:#8a8178;font-size:12px">last 30 days, by IP</span></h3>
+        <div class="sub">Every address that hit a story, busiest first. A person reads a handful of pages over a few
+          sessions. Something reading hundreds of pages from one address in a day is a crawler.
+          <span id="src-note" style="color:#8a8178"></span></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+          <input id="src-q" type="text" placeholder="Filter by IP, user-agent or page"
+                 style="flex:1;min-width:220px;padding:6px 8px;border:1px solid #ddd3c4;border-radius:6px;font:400 13px system-ui">
+          <label style="font:500 12px system-ui;color:#8a8178">min pages
+            <input id="src-min" type="number" value="20" min="1" step="10" style="width:64px;padding:2px 4px;margin-left:4px"></label>
+          <button class="btn btn-sm" id="src-refresh">↻ Refresh</button>
+          <button class="btn btn-sm" id="src-csv">Export CSV</button>
+        </div>
+        <table><thead><tr><th>Address</th><th class="r">Pages</th><th class="r">Hits</th><th class="r">Days</th><th>Last seen</th><th>Looks like</th></tr></thead>
+          <tbody id="src-body"><tr><td colspan="6" class="emptymsg">Loading…</td></tr></tbody></table>
+      </div>
     </div>
   </div>
 </div>
@@ -326,7 +343,11 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
 
   function loadAll() {
     $('stamp').textContent = 'Updated ' + new Date().toLocaleTimeString();
-    loadLive(); loadQueue(); loadFeatured(); loadVisitors(); loadBanners(); loadMissing(); loadSocialSnap();
+    loadLive(); loadQueue(); loadFeatured(); loadVisitors(); loadBanners(); loadMissing(); loadSocialSnap(); loadSources();
+    var sq = $('src-q'); if (sq) sq.oninput = drawSources;
+    var sm = $('src-min'); if (sm) sm.oninput = drawSources;
+    var sr = $('src-refresh'); if (sr) sr.onclick = loadSources;
+    var sc = $('src-csv'); if (sc) sc.onclick = sourcesCsv;
   }
 
   // ---- social this week (reads the cached analytics snapshot; no live API calls) ----
@@ -609,6 +630,69 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
         return '<tr><td style="width:74px"><img class="thumb" src="' + esc(b.creative_url || '') + '" alt=""></td><td>' + esc(b.name || 'banner') + '<br><span style="color:#8a8178;font-size:11.5px">' + esc(ends) + '</span></td></tr>';
       }).join('') + '</tbody></table>';
     } catch (e) { host.textContent = 'Could not load banners: ' + (e.message || e); $('st-banners').textContent = '—'; }
+  }
+
+
+  // ---- traffic sources ----
+  // Grouped server-side by presence_sources so this pulls a few hundred rows rather
+  // than a month of raw beacons. IPs stay admin-only: the view is security_invoker,
+  // so reader_presence's RLS still applies.
+  var SRC_ROWS = [];
+  async function loadSources() {
+    var body = $('src-body');
+    var r = await sb.from('presence_sources').select('*').order('hits', { ascending: false }).limit(600);
+    if (r.error) { body.innerHTML = '<tr><td colspan="6" class="emptymsg">' + esc(r.error.message) + '</td></tr>'; return; }
+    SRC_ROWS = r.data || [];
+    var noIp = SRC_ROWS.filter(function (x) { return x.ip === '(no ip recorded)'; })[0];
+    $('src-note').textContent = noIp ? 'Rows from before IP capture began show as no ip recorded.' : '';
+    drawSources();
+  }
+  function srcVerdict(x) {
+    // Descriptive, not accusatory. The numbers are the evidence.
+    if (x.pages >= 500) return ['crawler', '#b3261e'];
+    if (x.pages >= 100 && x.active_days <= 2) return ['crawling hard', '#b3261e'];
+    if (x.pages >= 40) return ['heavy, worth a look', '#a06800'];
+    if (x.sessions >= 8 && x.pages <= 10) return ['regular reader', '#1b6b2f'];
+    return ['ordinary', '#8a8178'];
+  }
+  function drawSources() {
+    var body = $('src-body');
+    var q = ($('src-q').value || '').trim().toLowerCase();
+    var min = parseInt($('src-min').value, 10); if (isNaN(min)) min = 0;
+    var rows = SRC_ROWS.filter(function (x) {
+      if ((x.pages || 0) < min) return false;
+      if (!q) return true;
+      return (x.ip + ' ' + (x.ua || '') + ' ' + (x.recent_paths || []).join(' ')).toLowerCase().indexOf(q) >= 0;
+    }).slice(0, 200);
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="6" class="emptymsg">Nothing matches.</td></tr>'; return; }
+    body.innerHTML = rows.map(function (x) {
+      var v = srcVerdict(x);
+      var mins = Math.round((Date.now() - new Date(x.last_seen).getTime()) / 60000);
+      var when = mins < 60 ? mins + 'm ago' : (mins < 1440 ? Math.round(mins / 60) + 'h ago' : Math.round(mins / 1440) + 'd ago');
+      return '<tr>'
+        + '<td style="font:400 12px ui-monospace,Menlo,monospace">' + esc(x.ip) + '</td>'
+        + '<td class="r">' + (x.pages || 0).toLocaleString() + '</td>'
+        + '<td class="r">' + (x.hits || 0).toLocaleString() + '</td>'
+        + '<td class="r">' + (x.active_days || 0) + '</td>'
+        + '<td>' + esc(when) + '</td>'
+        + '<td><span style="color:' + v[1] + ';font-weight:600">' + v[0] + '</span>'
+        +   '<div style="color:#8a8178;font-size:11px;margin-top:2px">' + esc((x.ua || 'no user-agent').slice(0, 70)) + '</div>'
+        +   '<div style="color:#b8b0a6;font-size:11px">' + esc((x.recent_paths || []).slice(0, 2).join('  ')).slice(0, 90) + '</div></td>'
+        + '</tr>';
+    }).join('');
+  }
+  function sourcesCsv() {
+    // The purge takes rows at 30 days. Export anything worth keeping past that.
+    var head = 'ip,ua,hits,pages,active_days,sessions,first_seen,last_seen,recent_paths\n';
+    var rows = SRC_ROWS.map(function (x) {
+      return [x.ip, x.ua || '', x.hits, x.pages, x.active_days, x.sessions, x.first_seen, x.last_seen,
+              (x.recent_paths || []).join(' | ')]
+        .map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([head + rows], { type: 'text/csv' }));
+    a.download = 'tbi-traffic-sources-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
   }
 
   // ---- missing-page arrivals ----
