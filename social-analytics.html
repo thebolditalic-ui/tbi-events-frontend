@@ -595,7 +595,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       var ago = d.last_ok_at ? Math.floor((Date.now()-new Date(d.last_ok_at).getTime())/864e5) : null;
       return names[d.channel]+' is not delivering'
            + (ago===null ? '' : ' (last post landed '+(ago===0?'today':(ago===1?'yesterday':ago+' days ago'))+')');
-    }).join(' · ') + '. ' + (bad[0].last_error||'');
+    }).join(' · ') + '.';
+    // the raw error is for whoever debugs it, not for the page
+    el.title = bad.map(function(d){ return names[d.channel]+': '+(d.last_error||'no error recorded'); }).join('\n');
     SA.renderTable();
   };
 
