@@ -721,7 +721,6 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
   }
 
   checkSession();
-})();
 
 /* ---- delivery alarm ----------------------------------------------------------
    Silent by default. It only draws when scheduled posts are actually failing.
@@ -731,8 +730,10 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
    is the record of what really happened. --------------------------------------*/
 async function loadDelivery(){
   var host=document.getElementById('deliv-alert'); if(!host) return;
-  var r; try{ r=await sb.from('channel_delivery_health').select('*'); }catch(e){ return; }
-  if(!r||r.error||!r.data){ return; }
+  var r;
+  try{ r=await sb.from('channel_delivery_health').select('*'); }
+  catch(e){ console.error('[delivery] read threw:', e); return; }
+  if(!r||r.error||!r.data){ console.error('[delivery] read failed:', r&&r.error); return; }
   var NAME={facebook:'Facebook',instagram:'Instagram',threads:'Threads',bluesky:'Bluesky',x:'X',substack:'Substack',twitter:'X'};
   var dead=[], flaky=[];
   r.data.forEach(function(d){
@@ -763,6 +764,9 @@ async function loadDelivery(){
     + '<div style="font-size:11.5px;color:#7a7268;margin-top:8px">Counted from what the scheduler actually recorded, not from whether the account is connected. <a href="/settings">Channel settings →</a></div>'
     + '</div>';
 }
+
+})();
+
 
 </script>
 </body>
