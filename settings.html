@@ -66,6 +66,11 @@ p.sub{color:#8a8178;font-size:13px;margin:0 0 18px;line-height:1.5;max-width:70c
 .chan-row:last-child{border-bottom:none}
 .chan-name{font-weight:600;min-width:88px}
 .chan-life{flex:1;font-size:11.5px;color:#8a8178}
+.chan-deliv{font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;white-space:nowrap}
+.chan-deliv.d-ok{background:rgba(39,174,96,.12);color:var(--green)}
+.chan-deliv.d-warn{background:rgba(243,156,18,.15);color:#b9770e}
+.chan-deliv.d-bad{background:rgba(231,76,60,.12);color:var(--red)}
+.chan-deliv.d-idle{background:#f2ede4;color:#8a8178}
 /* collapsible sections */
 details.set-coll{background:#fff;border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
 details.set-coll>summary{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8a8178;padding:13px 16px;cursor:pointer;list-style:none;background:var(--bg-alt)}
@@ -144,7 +149,7 @@ details.set-coll[open]>summary:after{content:'▾'}
     <div class="set-group">
       <h3>Channel connections</h3>
       <div class="set-body" style="display:block" id="chan-conns"><div class="hint">Checking…</div></div>
-      <div class="set-body" style="display:block;padding-top:0"><div class="hint">Green means that channel's secret is set and the account is reachable. The "renews" column is when you'd need to paste a fresh token; most never expire.</div><div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="chan-recheck">Re-check</button></div></div>
+      <div class="set-body" style="display:block;padding-top:0"><div class="hint"><b>Connected</b> only means the secret is set and the account answers. It does <b>not</b> mean posts are landing. The middle pill is <b>delivery</b>: whether scheduled posts to that channel actually went out in the last 7 days. Substack read "connected" for sixteen days in Aug 2026 while every post silently failed, which is what this column is here to stop.</div><div style="margin-top:8px"><button class="btn btn-outline btn-sm" id="chan-recheck">Re-check</button></div></div>
     </div>
 
     <!-- Connections (Anthropic / Ghost) -->
@@ -276,7 +281,7 @@ async function gate(){ const {data}=await sb.auth.getSession(); if(data.session)
 function showApp(session){
   loginScreen.style.display='none'; app.style.display='block';
   $('#user-email').textContent=session.user.email||'';
-  loadSettings(); checkConnections(); checkChannels(); loadSpend();
+  loadSettings(); checkConnections(); checkChannels(); checkDelivery(); loadSpend();
 }
 $('#login-btn').onclick=async()=>{
   $('#login-error').textContent='';
@@ -332,7 +337,7 @@ async function checkChannels(force){
     ['x','X','Long-lived (via Buffer)'],
     ['substack','Substack','~Months — re-paste if you fully sign out']
   ];
-  host.innerHTML=defs.map(function(d){return '<div class="chan-row"><span class="chan-name">'+d[1]+'</span><span class="chan-life">'+d[2]+'</span><span class="statuspill no" id="cc-'+d[0]+'">checking…</span></div>';}).join('');
+  host.innerHTML=defs.map(function(d){return '<div class="chan-row"><span class="chan-name">'+d[1]+'</span><span class="chan-life">'+d[2]+'</span><span class="chan-deliv d-idle" id="cd-'+d[0]+'">…</span><span class="statuspill no" id="cc-'+d[0]+'">checking…</span></div>';}).join('');
   function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
   async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
   ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
@@ -351,7 +356,32 @@ async function checkChannels(force){
     }catch(e){ setc('x', false); }
   }
 }
-$('#chan-recheck').onclick=function(){ checkChannels(true); };
+$('#chan-recheck').onclick=function(){ checkChannels(true); checkDelivery(); };
+
+/* ---- delivery health: did scheduled posts actually land? ----
+   Separate from the connect check above on purpose. A valid credential and a delivered
+   post are different facts, and conflating them is what hid the Substack outage. Source
+   is the channel_delivery_health view over post_queue.results. */
+async function checkDelivery(){
+  var r;
+  try{ r=await sb.from('channel_delivery_health').select('*'); }catch(e){ return; }
+  if(!r||r.error||!r.data) return;
+  var by={}; r.data.forEach(function(x){ by[x.channel]=x; });
+  ['facebook','instagram','threads','bluesky','x','substack'].forEach(function(k){
+    var el=document.getElementById('cd-'+k); if(!el) return;
+    var d=by[k];
+    if(!d||(!d.ok_7d && !d.fail_7d)){ el.className='chan-deliv d-idle'; el.textContent='no posts 7d'; el.title='Nothing was scheduled to this channel in the last 7 days.'; return; }
+    var ok=d.ok_7d||0, bad=d.fail_7d||0;
+    var days = d.last_ok_at ? Math.floor((Date.now()-new Date(d.last_ok_at).getTime())/864e5) : null;
+    if(bad===0){ el.className='chan-deliv d-ok'; el.textContent=ok+' delivered'; el.title='Last success '+(d.last_ok_at||'').slice(0,10); return; }
+    var cls = ok===0 ? 'd-bad' : 'd-warn';
+    el.className='chan-deliv '+cls;
+    el.textContent = ok===0 ? ('NOT DELIVERING · '+bad+' failed') : (bad+' of '+(ok+bad)+' failed');
+    el.title = 'Last error: '+(d.last_error||'unknown')
+             + (d.last_ok_at ? ('\nLast success: '+String(d.last_ok_at).slice(0,16).replace('T',' ')+(days!==null?(' ('+days+' days ago)'):'')) : '\nNo success on record.');
+  });
+}
+
 
 /* ---- spend ---- */
 async function loadSpend(){
