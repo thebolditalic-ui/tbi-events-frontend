@@ -89,6 +89,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
 .sa-pill.live{background:rgba(39,174,96,.13);color:#1e8c4f;}
 .sa-pill.warn{background:rgba(255,184,0,.18);color:#8a6d1f;}
 .sa-pill.na{background:#f0ebe1;color:#a0968a;}
+.sa-pill.bad{background:rgba(231,76,60,.13);color:#c0392b;}
 .sa-note{font-size:12px;color:#a0968a;margin-top:12px;line-height:1.5;}
 .sa-note b{color:#8a6d1f;font-weight:700;}
 .sa-ch.clk{cursor:pointer;}
@@ -207,7 +208,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   </nav>
   <div class="page-wrap">
     <h2 class="section-title">Social analytics</h2>
-    <p class="section-sub">How your posts perform across channels. <span id="sa-updated"></span></p>
+    <p class="section-sub">How your posts perform across channels. <span id="sa-updated"></span><span id="sa-deliv" style="display:none;color:#c0392b;margin-top:3px"></span></p>
 
     <div class="sa-controls">
       <div class="sa-windows" id="sa-windows"></div>
@@ -575,6 +576,29 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     }});
   };
 
+  /* Delivery state. Separate fact from SA.raw.availability, which is about whether we can
+     READ metrics. This is whether scheduled posts LANDED. A channel counts as failing only
+     if its most recent attempt failed, so the notice clears itself as soon as one goes out. */
+  SA.deliv={};
+  SA.loadDeliv=async function(){
+    var r;
+    try{ r=await sb.from('channel_delivery_health').select('channel,failing_now,last_ok_at,last_error'); }
+    catch(e){ console.error('[delivery] read threw:', e); return; }
+    if(!r||r.error||!r.data){ console.error('[delivery] read failed:', r&&r.error); return; }
+    SA.deliv={}; r.data.forEach(function(d){ SA.deliv[d.channel]=d; });
+    var el=$('sa-deliv'); if(!el) return;
+    var names={facebook:'Facebook',instagram:'Instagram',threads:'Threads',bluesky:'Bluesky',x:'X',substack:'Substack'};
+    var bad=r.data.filter(function(d){ return d.failing_now && names[d.channel]; });
+    if(!bad.length){ el.style.display='none'; el.textContent=''; SA.renderTable(); return; }
+    el.style.display='block';
+    el.textContent = bad.map(function(d){
+      var ago = d.last_ok_at ? Math.floor((Date.now()-new Date(d.last_ok_at).getTime())/864e5) : null;
+      return names[d.channel]+' is not delivering'
+           + (ago===null ? '' : ' (last post landed '+(ago===0?'today':(ago===1?'yesterday':ago+' days ago'))+')');
+    }).join(' · ') + '. ' + (bad[0].last_error||'');
+    SA.renderTable();
+  };
+
   SA.renderTable=function(){
     var tot=SA.effTotals(), av=(SA.raw&&SA.raw.availability)||{};
     var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
@@ -584,6 +608,9 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
       if(st==='needs_insights'){ label='Reconnect for insights'; cls='warn'; }
       else if(st==='views_need_insights'){ label='Views need reconnect'; cls='warn'; }
       else if(st==='no_token'){ label='Not connected'; cls='na'; }
+      // Posts not going out beats anything about metrics. "Live" meant the token works, which
+      // is how Substack read Live for sixteen days while every scheduled post failed.
+      if(SA.deliv[k]&&SA.deliv[k].failing_now){ label='Not delivering'; cls='bad'; }
       var noViews=(k==='bluesky');
       html+='<tr><td><span class="sa-ch clk" data-ch="'+k+'" title="See your '+c[1]+' posts"><span class="dot" style="background:'+c[2]+'"></span>'+c[1]+'</span></td>'
         +'<td class="num">'+(p.posts||0)+'</td>'
@@ -598,6 +625,7 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
   };
 
   checkSession();
+  SA.loadDeliv();
 })();
 </script>
 </body>
