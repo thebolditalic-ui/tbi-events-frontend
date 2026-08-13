@@ -1559,7 +1559,7 @@
   async function fetchEditorsPicksFromSupabase() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
+      var url = SUPABASE_URL + '/rest/v1/events_public?select=*&editors_pick=eq.true&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')&order=event_date.asc&limit=10';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1678,7 +1678,7 @@
     var offset = (page - 1) * EVENTS_PER_PAGE;
     query += '&order=event_date.asc&limit=' + EVENTS_PER_PAGE + '&offset=' + offset;
 
-    var url = SUPABASE_URL + '/rest/v1/events' + query;
+    var url = SUPABASE_URL + '/rest/v1/events_public' + query;
     var resp = await fetch(url, {
       headers: {
         'apikey': SUPABASE_ANON,
@@ -1734,7 +1734,7 @@
   async function fetchCategoryCounts() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=category,categories,editors_pick&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
+      var url = SUPABASE_URL + '/rest/v1/events_public?select=category,categories,editors_pick&sold_out=eq.false&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1762,7 +1762,7 @@
   async function fetchAvailableMonths() {
     try {
       var today = new Date().toISOString().slice(0, 10);
-      var url = SUPABASE_URL + '/rest/v1/events?select=event_date&sold_out=eq.false&event_date=gte.' + today;
+      var url = SUPABASE_URL + '/rest/v1/events_public?select=event_date&sold_out=eq.false&event_date=gte.' + today;
       var resp = await fetch(url, {
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON }
       });
@@ -1848,7 +1848,7 @@
       var query = '?select=title,slug,event_date,image_url,category,categories,venue,description&sold_out=eq.false';
       query += '&or=(event_date.gte.' + today + ',end_date.gte.' + today + ')';
       query += '&order=event_date.asc&limit=' + (limit || 3);
-      var resp = await fetch(SUPABASE_URL + '/rest/v1/events' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/events_public' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
       var rows = await resp.json();
       if (!Array.isArray(rows)) return [];
       return rows.map(function(r){ var category = r.category || 'Events'; return { title: r.title, slug: r.slug, url: '/' + r.slug + '/', image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'], category: category, catColor: CATEGORY_COLORS[category] || '#cdd6f4', excerpt: '', date: isoToHumanDate(r.event_date), venue: r.venue || '' }; });
@@ -1862,7 +1862,7 @@
       if (cat === 'editors-pick') { query += '&editors_pick=eq.true'; }
       else { var catEq = encodeURIComponent(cat); var catArr = encodeURIComponent('["' + cat + '"]'); query += '&or=(category.eq.' + catEq + ',categories.cs.' + catArr + ')'; }
       query += '&order=event_date.asc&limit=3';
-      var resp = await fetch(SUPABASE_URL + '/rest/v1/events' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
+      var resp = await fetch(SUPABASE_URL + '/rest/v1/events_public' + query, { headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + SUPABASE_ANON } });
       var rows = await resp.json();
       if (!Array.isArray(rows)) return [];
       return rows.map(function(r){ var category = r.category || 'Events'; return { title: r.title, slug: r.slug, url: '/' + r.slug + '/', image: r.image_url || CATEGORY_IMAGES[category] || CATEGORY_IMAGES['Events'], category: category, catColor: CATEGORY_COLORS[category] || '#cdd6f4', excerpt: '', date: isoToHumanDate(r.event_date), venue: r.venue || '' }; });
