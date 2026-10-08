@@ -334,12 +334,13 @@ async function checkChannels(force){
     ['threads','Threads','Auto-renews weekly (60-day token)'],
     ['bluesky','Bluesky','Permanent (app password)'],
     ['x','X','Long-lived (via Buffer)'],
-    ['substack','Substack','~Months — re-paste if you fully sign out']
+    ['substack','Substack','~Months — re-paste if you fully sign out'],
+    ['linkedin','LinkedIn','Auto-renews (60-day token)']
   ];
   host.innerHTML=defs.map(function(d){return '<div class="chan-row"><span class="chan-name">'+d[1]+'</span><span class="chan-life">'+d[2]+'</span><span class="chan-deliv d-idle" id="cd-'+d[0]+'">…</span><span class="statuspill no" id="cc-'+d[0]+'">checking…</span></div>';}).join('');
   function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
   async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
-  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
+  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack'); ck('linkedin','linkedin');
   // X goes through Buffer, which is rate-limited and shares the posting quota. So check at most once
   // every 6h per browser, and treat a throttle ("too many requests") as still-connected — a throttle
   // means the token works, Buffer is just busy — instead of a misleading "not set". Re-check forces it.
@@ -367,7 +368,7 @@ async function checkDelivery(){
   catch(e){ console.error('[delivery] read threw:', e); return; }
   if(!r||r.error||!r.data){ console.error('[delivery] read failed:', r&&r.error); return; }
   var by={}; r.data.forEach(function(x){ by[x.channel]=x; });
-  ['facebook','instagram','threads','bluesky','x','substack'].forEach(function(k){
+  ['facebook','instagram','threads','bluesky','x','substack','linkedin'].forEach(function(k){
     var el=document.getElementById('cd-'+k); if(!el) return;
     var d=by[k];
     if(!d){ el.className='chan-deliv d-idle'; el.textContent='no posts yet'; return; }
