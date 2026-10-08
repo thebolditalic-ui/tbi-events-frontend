@@ -361,7 +361,7 @@ body { font-family: var(--font); background: var(--cream); color: var(--dark); m
       var g = d.grand || {};
       var views = g.views || 0, posts = g.posts || 0, eng = (g.reactions || 0) + (g.comments || 0) + (g.shares || 0);
       var series = d.series || [];
-      var vals = series.map(function (x) { var s = 0; ['facebook', 'instagram', 'threads', 'bluesky', 'x', 'substack'].forEach(function (c) { s += (x[c] && x[c].views) || 0; }); return s; });
+      var vals = series.map(function (x) { var s = 0; ['facebook', 'instagram', 'threads', 'bluesky', 'x', 'substack', 'linkedin'].forEach(function (c) { s += (x[c] && x[c].views) || 0; }); return s; });
       var W = 300, H = 56, n = vals.length, max = Math.max.apply(null, vals.concat([1])), spark;
       if (n >= 2) {
         var pts = vals.map(function (v, i) { return ((i / (n - 1)) * W).toFixed(1) + ',' + (52 - (v / max) * 44).toFixed(1); });
