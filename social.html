@@ -1088,11 +1088,11 @@ function setPill(sel,ok,noText){
 }
 async function checkChannels(){
   var host=$('#chan-conns'); if(!host) return;
-  var defs=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack']];
+  var defs=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack'],['linkedin','LinkedIn']];
   host.innerHTML=defs.map(function(d){return '<div class="toggle-row"><span>'+d[1]+'</span><span class="statuspill no" id="cc-'+d[0]+'">checking...</span></div>';}).join('');
   function setc(k,ok){ var el=$('#cc-'+k); if(!el) return; el.className='statuspill '+(ok?'ok':'no'); el.textContent=ok?'connected':'not set'; }
   async function ck(fn,k){ try{ var r=await sb.functions.invoke(fn,{body:{action:'check'}}); setc(k, !!(r.data&&r.data.connected)); }catch(e){ setc(k,false); } }
-  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack');
+  ck('facebook','facebook'); ck('instagram','instagram'); ck('threads','threads'); ck('bluesky','bluesky'); ck('substack','substack'); ck('linkedin','linkedin');
   try{ var rx=await sb.functions.invoke('buffer',{body:{action:'channels'}}); setc('x', !!(rx.data&&rx.data.connected)); }catch(e){ setc('x',false); }
 }
 if($('#chan-recheck')) $('#chan-recheck').onclick=checkChannels;
@@ -1580,7 +1580,7 @@ function schedShow(v){
 }
 var TBI_MARK_URL='https://scawgrjcjgcmvsimvash.supabase.co/storage/v1/object/public/site-assets/tbi-mark.png';
 try{ document.fonts.load("400 40px 'EdsMarket'"); }catch(_e){}
-var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'},{k:'substack',l:'Substack'}];
+var DIRECT_CH=[{k:'facebook',l:'Facebook'},{k:'threads',l:'Threads'},{k:'bluesky',l:'Bluesky'},{k:'x',l:'X'},{k:'substack',l:'Substack'},{k:'linkedin',l:'LinkedIn'}];
 var IMG_CH=[{k:'instagram',l:'Instagram'},{k:'facebook',l:'Facebook'},{k:'x',l:'X'},{k:'substack',l:'Substack'}];
 var CH_SVG={
   facebook:'<svg viewBox="0 0 24 24" fill="#1877F2" xmlns="http://www.w3.org/2000/svg"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
@@ -1672,7 +1672,7 @@ async function loadStaged(){
     var metaRow=isVid?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(vbits.join(' · '))+'</div>')
       :(isImg?('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">Image card &middot; '+it.image_urls.length+' photo'+(it.image_urls.length>1?'s':'')+(it.options&&it.options.ig_story?' &middot; <b style="color:#b8742a">IG Story</b> (9:16)':' &middot; <b style="color:#5b7bd5">IG grid</b>')+'</div>'):('<div class="meta" style="font-size:11px;color:#8a8178;margin-top:6px">'+esc(it.story_title||'')+'</div>'+'<div class="when-row" style="margin:6px 0"><span class="when-hint">Link card:</span> <input type="text" class="linkfield" value="'+esc(it.story_url||'')+'" placeholder="(no link)" style="flex:1;min-width:140px"> <a href="#" class="linkopen" title="Open the link to verify">open ↗</a></div>'));
     var _cd=(it.options&&Array.isArray(it.options.channels_default))?it.options.channels_default:null;
-    var toggles=(isVid||isImg)?chTogglesHtml(_cd||(isVid?['instagram','facebook']:['instagram','facebook','x']),IMG_CH):chTogglesHtml(_cd||['facebook','threads','bluesky','x','substack']);
+    var toggles=(isVid||isImg)?chTogglesHtml(_cd||(isVid?['instagram','facebook']:['instagram','facebook','x']),IMG_CH):chTogglesHtml(_cd||['facebook','threads','bluesky','x','substack','linkedin']);
     return '<div class="sugg comp" data-id="'+it.id+'"><div class="body">'+
       (it.angle?'<span class="angle">'+esc(it.angle)+'</span><br>':'')+
       '<span class="text">'+esc(it.content)+'</span>'+
@@ -1768,7 +1768,7 @@ async function autoFillSlots(){
     if(pickIdx<0) continue;
     var it2=pool.splice(pickIdx,1)[0];
     var isVid=!!it2.video_url, isImg=!isVid&&Array.isArray(it2.image_urls)&&it2.image_urls.length;
-    var channels=isVid?['instagram','facebook']:(isImg?(demote?['facebook','x']:['instagram','facebook','x']):['facebook','threads','bluesky','x','substack']);
+    var channels=isVid?['instagram','facebook']:(isImg?(demote?['facebook','x']:['instagram','facebook','x']):['facebook','threads','bluesky','x','substack','linkedin']);
     var link=(isImg||isVid)?'':sLink(it2);
     var msg=(isImg||isVid||!link)?String(it2.content||'').trim():fbStripLink(it2.content);
     plan.push({ sugg:it2, when:slots[si], channels:channels, link:link, msg:msg, demoted:demote });
@@ -3305,8 +3305,8 @@ gate();
 <script>
 (function(){
   var P=document.getElementById('panel-compose'); if(!P) return;
-  var CH=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack']];
-  var sel={facebook:true,instagram:false,threads:true,bluesky:true,x:true,substack:false};
+  var CH=[['facebook','Facebook'],['instagram','Instagram'],['threads','Threads'],['bluesky','Bluesky'],['x','X'],['substack','Substack'],['linkedin','LinkedIn']];
+  var sel={facebook:true,instagram:false,threads:true,bluesky:true,x:true,substack:false,linkedin:true};
   var imgs=[]; var when='now'; var lmManual=false; window.cmpAddImages=function(urls){(urls||[]).forEach(function(u){imgs.push({url:u});});try{renderThumbs();}catch(e){}};
   var chans=document.getElementById('cmp-chans');
   function renderChans(){ chans.innerHTML=''; CH.forEach(function(c){ var on=sel[c[0]]; var b=document.createElement('button'); b.textContent=c[1]; b.style.cssText='font-size:13px;font-weight:600;padding:7px 13px;border-radius:18px;border:1px solid '+(on?'var(--dark)':'var(--border)')+';background:'+(on?'var(--dark)':'var(--bg-alt)')+';color:'+(on?'#fff':'var(--dark)')+';cursor:pointer'; b.onclick=function(){ sel[c[0]]=!sel[c[0]]; renderChans(); }; chans.appendChild(b); }); }
