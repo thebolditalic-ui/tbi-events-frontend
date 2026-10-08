@@ -606,7 +606,8 @@ body{font-family:var(--font);background:var(--cream);color:var(--dark);min-heigh
     var html='<tr><th>Channel</th><th class="num">Posts</th><th class="num">Views</th><th class="num">Reactions</th><th class="num">Comments</th><th class="num">Shares</th><th>Status</th></tr>';
     CH.forEach(function(c){
       var k=c[0], p=tot[k]||{views:0,reach:0,reactions:0,comments:0,shares:0,posts:0};
-      var st=av[k]||'ok', label='Live', cls='live';
+      // Default to NOT connected, not Live. A channel the function does not report on must not read as healthy.
+      var st=av[k]||'no_token', label='Live', cls='live';
       if(st==='needs_insights'){ label='Reconnect for insights'; cls='warn'; }
       else if(st==='views_need_insights'){ label='Views need reconnect'; cls='warn'; }
       else if(st==='no_token'){ label='Not connected'; cls='na'; }
